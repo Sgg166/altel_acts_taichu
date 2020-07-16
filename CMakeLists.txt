@@ -27,28 +27,14 @@ set(CMAKE_FIND_USE_CMAKE_SYSTEM_PATH       ON)   # 7. system CMAKE_SYSTEM_PREFIX
 set(CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY OFF)  # 8. system registery: somewhere
 #                                                # 9. find_package option PATHS
 
-
                                                   
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-set(Boost_USE_STATIC_RUNTIME ON)
-set(Boost_USE_STATIC_LIBS ON) 
-find_package(Boost REQUIRED COMPONENTS system thread filesystem chrono regex program_options unit_test_framework)
-
-find_package(ROOT REQUIRED HINTS $ENV{ROOTSYS}/cmake NO_CMAKE_SYSTEM_PATH)
-
-
-find_package(Acts REQUIRED COMPONENTS  Core Fatras DigitizationPlugin IdentificationPlugin
-
-  HINTS
-  ${PROJECT_SOURCE_DIR}/../acts-core/INSTALL/share/cmake/Acts
-  )
-# find_package(Acts REQUIRED COMPONENTS  JsonPlugin IdentificationPluginTGeoPlugin)
-
-
 include(cmake/ActsExamples.cmake)
+
+
 add_subdirectory(source)
 
 # install-tree

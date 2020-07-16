@@ -1,9 +1,21 @@
 
-set(ACTS_SRC_DIR ${CMAKE_SOURCE_DIR}/../acts-core)
-set(ACTS_INSTALL_DIR ${CMAKE_SOURCE_DIR}/../acts-core/INSTALL)
+find_package(Boost REQUIRED COMPONENTS system thread filesystem chrono regex program_options unit_test_framework)
+find_package(ROOT REQUIRED HINTS $ENV{ROOTSYS}/cmake NO_CMAKE_SYSTEM_PATH)
+
+if(NOT DEFINED ACTS_SRC_DIR)
+  set(ACTS_SRC_DIR ACTS_SRC_DIR-NOTFOUND  CACHE PATH "ACTS top source folder")
+  message(FATAL_ERROR "<ACTS_SRC_DIR> is not defined, please set it to ACTS top source folder")
+endif()
+
+find_package(Acts REQUIRED COMPONENTS  Core Fatras DigitizationPlugin IdentificationPlugin TGeoPlugin # JsonPlugin
+  HINTS
+  ${ACTS_SRC_DIR}/INSTALL/share/cmake/Acts
+  )
+
+set(ACTS_INSTALL_DIR ${Acts_DIR}/../../..)
 
 set(ACTS_INSTALL_LIB_DIR  ${ACTS_INSTALL_DIR}/lib64)
-  
+
 include_directories(${ACTS_INSTALL_DIR}/include/ActsFatras)
 
 add_library(ActsExamplesFramework SHARED IMPORTED)
@@ -29,19 +41,6 @@ add_library(ActsExamplesPropagation INTERFACE)
 target_include_directories(ActsExamplesPropagation INTERFACE
   ${ACTS_SRC_DIR}/Examples/Algorithms/Propagation/include
   )
-
-
-
-# set_target_properties(ActsExamplesDetectorsCommon PROPERTIES
-#   IMPORTED_LOCATION  ${ACTS_INSTALL_LIB_DIR}/libActsExamplesDetectorsCommon.so
-#   INTERFACE_INCLUDE_DIRECTORIES ${ACTS_SRC_DIR}/Examples/Detectors/Common/include
-#   )
-
-# add_library(ActsExamplesPropagation SHARED IMPORTED)
-# set_target_properties(ActsExamplesPropagation PROPERTIES
-#   IMPORTED_LOCATION  ${ACTS_INSTALL_LIB_DIR}/libActsExamplesPropagation.so
-#   INTERFACE_INCLUDE_DIRECTORIES ${ACTS_SRC_DIR}/Examples/Algorithms/Propagation/include
-#   )
 
 add_library(ActsExamplesTruthTracking SHARED IMPORTED)
 set_target_properties(ActsExamplesTruthTracking PROPERTIES
