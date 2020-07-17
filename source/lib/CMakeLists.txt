@@ -42,12 +42,12 @@ target_link_libraries(
   PRIVATE
   ActsExamplesDetectorsCommon
   ActsExamplesPropagation
-
   
   PRIVATE
   ROOT::Core
   ROOT::Hist
   ROOT::Tree
+  rapidjson
   )
 
 file(GLOB LIB_ALL_HEADERS "include/*.hpp")

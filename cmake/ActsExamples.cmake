@@ -1,5 +1,12 @@
 
-find_package(Boost REQUIRED COMPONENTS system thread filesystem chrono regex program_options unit_test_framework)
+set(Boost_NO_BOOST_CMAKE ON) # disable new cmake features from Boost 1.70 on
+
+find_package(Boost 1.69 REQUIRED
+  COMPONENTS
+  system thread filesystem chrono regex program_options unit_test_framework
+  # NO_CMAKE_SYSTEM_PATH
+  )
+
 find_package(ROOT REQUIRED HINTS $ENV{ROOTSYS}/cmake NO_CMAKE_SYSTEM_PATH)
 
 if(NOT DEFINED ACTS_SRC_DIR)
