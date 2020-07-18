@@ -107,6 +107,7 @@ int main(int argc, char* argv[]) {
     }
     return false;
   };
+  // Set up the detector elements to be aligned (fix the first one)
   std::vector<Acts::DetectorElementBase*> dets;
   dets.reserve(detector.detectorStore.size());
   unsigned int idet = 0;
@@ -121,36 +122,29 @@ int main(int argc, char* argv[]) {
   std::cout << "There are " << dets.size() << " detector elements to be aligned"
             << std::endl;
   alignment.alignedDetElements = std::move(dets);
-  // set up the source link covariance for each iteration
-  std::map<unsigned int, std::pair<Acts::BoundMatrix, std::bitset<6>>>
-      covariance;
-  for (unsigned int iIter = 0; iIter < 60; iIter++) {
-    Acts::BoundMatrix cov = Acts::BoundMatrix::Zero();
-    std::bitset<6> mask(std::string("000110"));
-    //  if(iIter <=20){
-    cov(0, 0) = std::pow(150_um, 2);
-    cov(1, 1) = std::pow(150_um, 2);
-    //  } else if(iIter<=30){
-    //	  cov(0,0) = std::pow(50_um,2);
-    //  cov(1,1) = std::pow(50_um,2);
-    //  } else {
-    //  cov(0,0) = std::pow(50_um,2);
-    //  cov(1,1) = std::pow(50_um,2);
-    //  }
-
+   // The criteria to determine if the iteration has converged. @Todo: to use
+  // delta chi2 instead
+  alignment.chi2ONdfCutOff = 0.1;
+  // The maximum number of iterations
+  alignment.maxNumIterations = 160;
+  // set up the alignment dnf for each iteration
+  std::map<unsigned int, std::bitset<6>> iterationState;
+  for (unsigned int iIter = 0; iIter < alignment.maxNumIterations; iIter++) {
+    std::bitset<6> mask(std::string("111111"));
     if (iIter % 4 == 0 or iIter % 4 == 1) {
       // fix the x offset (i.e. offset along the beam) and rotation around y
       mask = std::bitset<6>(std::string("101110"));
     } else if (iIter % 4 == 2) {
-      // align only the x offset
+      // align only the x offset (the x offset and y, z offset could not be
+      // aligned together)
       mask = std::bitset<6>(std::string("000001"));
     } else {
       // fix the x offset and rotation around x, z
       mask = std::bitset<6>(std::string("010110"));
     }
-    covariance.emplace(iIter, std::make_pair(cov, mask));
+    iterationState.emplace(iIter, mask);
   }
-  alignment.covariance = std::move(covariance);
+  alignment.iterationState = std::move(iterationState);
   alignment.align = TelescopeAlignmentAlgorithm::makeAlignmentFunction(
       trackingGeometry, magneticField, logLevel);
   sequencer.addAlgorithm(

@@ -44,6 +44,14 @@ class PixelSourceLink {
   // should be done by calibrator?
   void setCovariance(const Acts::BoundMatrix& cov) { m_cov = cov; }
 
+  // get the global position
+  Acts::Vector3D globalPosition(const Acts::GeometryContext& gctx) const {
+    Acts::Vector3D global(0, 0, 0);
+    Acts::Vector3D mom(1, 1, 1);
+    m_surface->localToGlobal(gctx, m_values, mom, global);
+    return global;
+  }
+
  private:
   Acts::Vector2D m_values;
   Acts::BoundMatrix m_cov;

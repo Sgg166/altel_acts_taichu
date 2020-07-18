@@ -37,7 +37,7 @@ struct AlignmentFunctionImpl {
   AlignmentFunctionImpl(Alignment&& a) : align(std::move(a)) {}
 
   FW::TelescopeAlignmentAlgorithm::AlignResult operator()(
-      std::vector<std::vector<FW::PixelSourceLink>>& sourceLinks,
+      const std::vector<std::vector<FW::PixelSourceLink>>& sourceLinks,
       const std::vector<Acts::CurvilinearParameters>& initialParameters,
       const FW::AlignmentOptions<
           Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>& options) const {

@@ -29,7 +29,7 @@ class TelescopeAlignmentAlgorithm final : public BareAlgorithm {
   /// Fit function that takes input measurements, initial trackstate and fitter
   /// options and returns some fit-specific result.
   using AlignmentFunction = std::function<AlignResult(
-      std::vector<std::vector<PixelSourceLink>>&,
+      const std::vector<std::vector<PixelSourceLink>>&,
       const std::vector<Acts::CurvilinearParameters>&,
       const AlignmentOptions<
           Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>&)>;
@@ -60,9 +60,12 @@ class TelescopeAlignmentAlgorithm final : public BareAlgorithm {
     AlignedTransformUpdater alignedTransformUpdater;
     /// The surfaces (or detector elements?) to be aligned
     std::vector<Acts::DetectorElementBase*> alignedDetElements;
-    /// The source link covariance at each iteration
-    std::map<unsigned int, std::pair<Acts::BoundMatrix, std::bitset<6>>>
-        covariance;
+    /// The alignment mask at each iteration
+    std::map<unsigned int, std::bitset<6>> iterationState;
+    /// Maximum number of iterations
+    size_t maxNumIterations = 100;
+    /// Cutoff value for average chi2/ndf
+    double chi2ONdfCutOff = 0.10;
   };
 
   /// Constructor of the alignment algorithm
