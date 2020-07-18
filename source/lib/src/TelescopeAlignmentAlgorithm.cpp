@@ -52,9 +52,9 @@ FW::ProcessCode FW::TelescopeAlignmentAlgorithm::execute(
     // The position is taken from the first measurement
     const auto& sourcelinks = sourcelinkTracks.at(iTrack);
     const Acts::Vector3D global0 =
-        sourcelinks.at(0).globalPosition(fitOptions.geoContext);
+        sourcelinks.at(0).globalPosition(ctx.geoContext);
     const Acts::Vector3D global1 =
-        sourcelinks.at(1).globalPosition(fitOptions.geoContext);
+        sourcelinks.at(1).globalPosition(ctx.geoContext);
     Acts::Vector3D distance = global1 - global0;
 
     const double phi = Acts::VectorHelpers::phi(distance);
@@ -94,7 +94,7 @@ FW::ProcessCode FW::TelescopeAlignmentAlgorithm::execute(
   AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>
       alignOptions(kfOptions, m_cfg.alignedTransformUpdater,
                    m_cfg.alignedDetElements, m_cfg.chi2ONdfCutOff,
-                   m_cfg.maxNumIterations, m_cfg.covariance);
+                   m_cfg.maxNumIterations, m_cfg.iterationState);
 
   ACTS_DEBUG("Invoke alignment");
   auto result = m_cfg.align(sourcelinkTracks, initialParameters, alignOptions);
