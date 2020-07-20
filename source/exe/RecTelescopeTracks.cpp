@@ -8,110 +8,147 @@
 
 #include <memory>
 
-#include "ACTFW/EventData/Track.hpp"
+#include "Acts/Utilities/Units.hpp"
+#include "Acts/MagneticField/ConstantBField.hpp"
+
 #include "ACTFW/Framework/Sequencer.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
+
+#include "ACTFW/EventData/Track.hpp"
+
 #include "ACTFW/Geometry/CommonGeometry.hpp"
+
 #include "ACTFW/Options/CommonOptions.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
 #include "ACTFW/Utilities/Options.hpp"
 #include "ACTFW/Utilities/Paths.hpp"
-#include "Acts/Utilities/Units.hpp"
+
 
 #include "ObjTelescopeTrackWriter.hpp"
 #include "RootTelescopeTrackWriter.hpp"
 #include "TelescopeAlignmentAlgorithm.hpp"
-#include "TelescopeDetector.hpp"
+#include "BuildTelescopeDetector.hpp"
 #include "TelescopeDetectorElement.hpp"
 #include "TelescopeFittingAlgorithm.hpp"
 #include "TelescopeTrackingPerformanceWriter.hpp"
 
 #include "TelescopeTrackReader.hpp"
 
+#include "getopt.h"
+
 using namespace Acts::UnitLiterals;
 using namespace FW;
 
-int main(int argc, char* argv[]) {
-  TelescopeDetector detector;
+static const std::string help_usage = R"(
+Usage:
+  -help              help message
+  -verbose           verbose flag
+  -file [jsonfile]   name of data json file
+)";
 
-  // setup and parse options
-  auto desc = FW::Options::makeDefaultOptions();
-  Options::addSequencerOptions(desc);
-  Options::addRandomNumbersOptions(desc);
-  Options::addGeometryOptions(desc);
-  Options::addMaterialOptions(desc);
-  Options::addInputOptions(desc);
-  Options::addOutputOptions(desc);
-  //  detector.addOptions(desc);
-  Options::addBFieldOptions(desc);
+int main(int argc, char* argv[]) {  
+  int do_help = false;
+  int do_verbose = false;
+  struct option longopts[] =
+    {
+     { "help",       no_argument,       &do_help,      1  },
+     { "verbose",    no_argument,       &do_verbose,   1  },
+     { "file",     required_argument, NULL,           'f' },
+     { 0, 0, 0, 0 }};
+  
+  std::string datafile_name;
 
-  auto vm = Options::parse(desc, argc, argv);
-  if (vm.empty()) {
-    return EXIT_FAILURE;
+  int c;
+  opterr = 1;
+  while ((c = getopt_long_only(argc, argv, "", longopts, NULL))!= -1) {
+    switch (c) {
+    case 'h':
+      do_help = 1;
+      break;
+    case 'f':
+      datafile_name = optarg;
+      break;
+      /////generic part below///////////
+    case 0: /* getopt_long() set a variable, just keep going */
+      break;
+    case 1:
+      fprintf(stderr,"case 1\n");
+      exit(1);
+      break;
+    case ':':
+      fprintf(stderr,"case :\n");
+      exit(1);
+      break;
+    case '?':
+      fprintf(stderr,"case ?\n");
+      exit(1);
+      break;
+    default:
+      fprintf(stderr, "case default, missing branch in switch-case\n");
+      exit(1);
+      break;
+    }
   }
 
-  Sequencer sequencer(Options::readSequencerConfig(vm));
-
-  // Read some standard options
-  auto logLevel = Options::readLogLevel(vm);
-  auto inputDir = vm["input-dir"].as<std::string>();
-  auto outputDir = ensureWritableDirectory(vm["output-dir"].as<std::string>());
-  auto rnd =
-      std::make_shared<FW::RandomNumbers>(Options::readRandomNumbersConfig(vm));
-
-  // Setup detector geometry
-  auto geometry = Geometry::build(vm, detector);
-  auto trackingGeometry = geometry.first;
-  // Add context decorators
-  for (auto cdr : geometry.second) {
-    sequencer.addContextDecorator(cdr);
+  if(do_help){
+    std::fprintf(stdout, "%s\n", help_usage.c_str());
+    exit(0);
   }
-
+  
+  Acts::Logging::Level logLevel = Acts::Logging::INFO;
+  std::string inputDir = "./";
+  std::string outputDir = "./";
+  
   // Setup the magnetic field
-  auto magneticField = Options::readBField(vm);
+  auto magneticField = std::make_shared<Acts::ConstantBField>(0_T, 0_T, 0_T);
 
+  // Setup detector geometry  
+  FW::Telescope::TelescopeDetectorElement::ContextType nominalContext;
+  std::vector<std::shared_ptr<FW::Telescope::TelescopeDetectorElement>> detectorStore;
+  std::shared_ptr<const Acts::IMaterialDecorator> matDeco = nullptr;
+  std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry
+    = FW::Telescope::buildDetector<FW::Telescope::TelescopeDetectorElement>(nominalContext, detectorStore, matDeco);
+  
   // Get the surfaces;
   std::vector<const Acts::Surface*> surfaces;
-  surfaces.reserve(6);
-  trackingGeometry->visitSurfaces([&](const Acts::Surface* surface) {
-    if (surface and surface->associatedDetectorElement()) {
-      surfaces.push_back(surface);
-    }
-  });
-  std::cout << "There are " << surfaces.size() << " surfaces" << std::endl;
+  trackingGeometry->visitSurfaces
+    ([&](const Acts::Surface* s) {
+       if (s and s->associatedDetectorElement()) {
+         surfaces.push_back(s);
+       }
+     });
 
   // The source link tracks reader
   TelescopeTrackReader trackReader;
-  trackReader.detectorSurfaces = surfaces;
+  trackReader.detectorSurfaces = surfaces;  
 
   // setup the alignment algorithm
-  TelescopeAlignmentAlgorithm::Config alignment;
+  TelescopeAlignmentAlgorithm::Config conf_alignment;
   //@Todo: add run number information in the file name
-  alignment.inputFileName = inputDir + "/alpide-data.json";
-  alignment.outputTrajectories = "trajectories";
-  alignment.trackReader = trackReader;
+  conf_alignment.inputFileName = inputDir + datafile_name;
+  conf_alignment.outputTrajectories = "trajectories";
+  conf_alignment.trackReader = trackReader;
   // The number of tracks you want to process (in default, all of tracks will be
   // read and fitted)
-  alignment.maxNumTracks = 20000;
-  alignment.alignedTransformUpdater = [](Acts::DetectorElementBase* detElement,
-                                         const Acts::GeometryContext& gctx,
-                                         const Acts::Transform3D& aTransform) {
-    Telescope::TelescopeDetectorElement* telescopeDetElement =
-        dynamic_cast<Telescope::TelescopeDetectorElement*>(detElement);
-    auto alignContext =
-        std::any_cast<Telescope::TelescopeDetectorElement::ContextType>(gctx);
-    if (telescopeDetElement) {
-      telescopeDetElement->addAlignedTransform(
-          std::make_unique<Acts::Transform3D>(aTransform), alignContext.iov);
-      return true;
-    }
-    return false;
-  };
+  conf_alignment.maxNumTracks = 20000;
+  conf_alignment.alignedTransformUpdater
+    = [](Acts::DetectorElementBase* detElement,
+         const Acts::GeometryContext& gctx,
+         const Acts::Transform3D& aTransform) {
+        Telescope::TelescopeDetectorElement* telescopeDetElement =
+          dynamic_cast<Telescope::TelescopeDetectorElement*>(detElement);
+        if (telescopeDetElement) {
+          telescopeDetElement->addAlignedTransform
+            (std::make_unique<Acts::Transform3D>(aTransform));
+          return true;
+        }
+        return false;
+      };  
+  
   // Set up the detector elements to be aligned (fix the first one)
   std::vector<Acts::DetectorElementBase*> dets;
-  dets.reserve(detector.detectorStore.size());
   unsigned int idet = 0;
-  for (const auto& det : detector.detectorStore) {
+  for (const auto& det : detectorStore) {
     idet++;
     // Skip the first detector element
     if (idet == 1) {
@@ -119,17 +156,16 @@ int main(int argc, char* argv[]) {
     }
     dets.push_back(det.get());
   }
-  std::cout << "There are " << dets.size() << " detector elements to be aligned"
-            << std::endl;
-  alignment.alignedDetElements = std::move(dets);
+  conf_alignment.alignedDetElements = std::move(dets);
+  
    // The criteria to determine if the iteration has converged. @Todo: to use
   // delta chi2 instead
-  alignment.chi2ONdfCutOff = 0.1;
+  conf_alignment.chi2ONdfCutOff = 0.1;
   // The maximum number of iterations
-  alignment.maxNumIterations = 160;
+  conf_alignment.maxNumIterations = 160;
   // set up the alignment dnf for each iteration
   std::map<unsigned int, std::bitset<6>> iterationState;
-  for (unsigned int iIter = 0; iIter < alignment.maxNumIterations; iIter++) {
+  for (unsigned int iIter = 0; iIter < conf_alignment.maxNumIterations; iIter++) {
     std::bitset<6> mask(std::string("111111"));
     if (iIter % 4 == 0 or iIter % 4 == 1) {
       // fix the x offset (i.e. offset along the beam) and rotation around y
@@ -144,53 +180,65 @@ int main(int argc, char* argv[]) {
     }
     iterationState.emplace(iIter, mask);
   }
-  alignment.iterationState = std::move(iterationState);
-  alignment.align = TelescopeAlignmentAlgorithm::makeAlignmentFunction(
-      trackingGeometry, magneticField, logLevel);
-  sequencer.addAlgorithm(
-      std::make_shared<TelescopeAlignmentAlgorithm>(alignment, logLevel));
+  conf_alignment.iterationState = std::move(iterationState);
+  conf_alignment.align = TelescopeAlignmentAlgorithm::makeAlignmentFunction
+    (trackingGeometry, magneticField, logLevel);
 
-  // setup the fitting algorithm
-  TelescopeFittingAlgorithm::Config fitter;
-  //@Todo: add run number information in the file name
-  fitter.inputFileName = inputDir + "/alpide-data.json";
-  fitter.outputTrajectories = "trajectories";
-  fitter.trackReader = trackReader;
-  // The number of tracks you want to process (in default, all of tracks will be
-  // read and fitted)
-  fitter.maxNumTracks = 20000;
-  fitter.fit = TelescopeFittingAlgorithm::makeFitterFunction(
-      trackingGeometry, magneticField, logLevel);
-  sequencer.addAlgorithm(
-      std::make_shared<TelescopeFittingAlgorithm>(fitter, logLevel));
+  Sequencer::Config conf_seq;
+  conf_seq.logLevel  = logLevel;
+  conf_seq.outputDir =  outputDir;  
+  conf_seq.numThreads = 1;
+  conf_seq.events = 1;
 
-  // write tracks as root tree
-  RootTelescopeTrackWriter::Config trackRootWriter;
-  trackRootWriter.inputTrajectories = fitter.outputTrajectories;
-  trackRootWriter.outputDir = outputDir;
-  trackRootWriter.outputFilename = "telescope_tracks.root";
-  trackRootWriter.outputTreename = "tracks";
-  sequencer.addWriter(
-      std::make_shared<RootTelescopeTrackWriter>(trackRootWriter, logLevel));
+  Sequencer seq(conf_seq);
+  
+  seq.addAlgorithm(std::make_shared<TelescopeAlignmentAlgorithm>(conf_alignment, logLevel));
+  // seq.addAlgorithm(std::make_shared<TelescopeFittingAlgorithm>(conf_fitter, logLevel));
 
-  if (vm["output-obj"].template as<bool>()) {
-    // write the tracks (measurements only for the moment) as Csv
-    Obj::ObjTelescopeTrackWriter::Config trackObjWriter;
-    trackObjWriter.inputTrajectories = fitter.outputTrajectories;
-    trackObjWriter.outputDir = outputDir;
-    // The number of tracks you want to show (in default, all of tracks will be
-    // shown)
-    trackObjWriter.maxNumTracks = 100;
-    sequencer.addWriter(std::make_shared<Obj::ObjTelescopeTrackWriter>(
-        trackObjWriter, logLevel));
-  }
+  seq.run();
 
-  // write reconstruction performance data
-  TelescopeTrackingPerformanceWriter::Config perfFitter;
-  perfFitter.inputTrajectories = fitter.outputTrajectories;
-  perfFitter.outputDir = outputDir;
-  sequencer.addWriter(std::make_shared<TelescopeTrackingPerformanceWriter>(
-      perfFitter, logLevel));
 
-  return sequencer.run();
+  
+  
+  return 0;
 }
+
+
+  // // setup the fitting algorithm
+  // TelescopeFittingAlgorithm::Config conf_fitter;
+  // //@Todo: add run number information in the file name
+  // conf_fitter.inputFileName = inputDir + "/alpide-data.json";
+  // conf_fitter.outputTrajectories = "trajectories";
+  // conf_fitter.trackReader = trackReader;
+  // // The number of tracks you want to process (in default, all of tracks will be
+  // // read and fitted)
+  // conf_fitter.maxNumTracks = 20000;
+  // conf_fitter.fit = TelescopeFittingAlgorithm::makeFitterFunction
+  //   (trackingGeometry, magneticField, logLevel);
+
+
+  // // write tracks as root tree
+  // RootTelescopeTrackWriter::Config conf_trackRootWriter;
+  // conf_trackRootWriter.inputTrajectories = conf_fitter.outputTrajectories;
+  // conf_trackRootWriter.outputDir = outputDir;
+  // conf_trackRootWriter.outputFilename = "telescope_tracks.root";
+  // conf_trackRootWriter.outputTreename = "tracks";
+
+  // // write the tracks (measurements only for the moment) as Csv
+  // Obj::ObjTelescopeTrackWriter::Config conf_trackObjWriter;
+  // conf_trackObjWriter.inputTrajectories = conf_fitter.outputTrajectories;
+  // conf_trackObjWriter.outputDir = outputDir;
+  // // The number of tracks you want to show (in default, all of tracks will be
+  // // shown)
+  // conf_trackObjWriter.maxNumTracks = 100;
+  
+  // // write reconstruction performance data
+  // TelescopeTrackingPerformanceWriter::Config conf_perfFitter;
+  // conf_perfFitter.inputTrajectories = conf_fitter.outputTrajectories;
+  // conf_perfFitter.outputDir = outputDir;
+
+
+
+  // seq.addWriter(std::make_shared<RootTelescopeTrackWriter>(conf_trackRootWriter, logLevel));
+  // seq.addWriter(std::make_shared<Obj::ObjTelescopeTrackWriter>(conf_trackObjWriter, logLevel));
+  // seq.addWriter(std::make_shared<TelescopeTrackingPerformanceWriter>(conf_perfFitter, logLevel));

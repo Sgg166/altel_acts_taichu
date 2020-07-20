@@ -12,7 +12,6 @@
 
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
-#include "Acts/Surfaces/PerigeeSurface.hpp"
 
 FW::TelescopeFittingAlgorithm::TelescopeFittingAlgorithm(
     Config cfg, Acts::Logging::Level level)

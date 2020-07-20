@@ -80,15 +80,10 @@ FW::ProcessCode FW::TelescopeAlignmentAlgorithm::execute(
   TrajectoryContainer trajectories;
   trajectories.reserve(sourcelinkTracks.size());
 
-  // Construct a plane surface centered around (0., 0., 0) and has a normal
-  // vector (1., 0., 0.) as the target surface
-  auto pSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
-      Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
-
   // Set the KalmanFitter options
   Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions(
       ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
-      Acts::VoidOutlierFinder(), &(*pSurface));
+      Acts::VoidOutlierFinder());
 
   // Set the alignment options
   AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>
