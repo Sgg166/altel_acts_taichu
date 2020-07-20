@@ -167,10 +167,14 @@ int main(int argc, char* argv[]) {
   std::map<unsigned int, std::bitset<6>> iterationState;
   for (unsigned int iIter = 0; iIter < conf_alignment.maxNumIterations; iIter++) {
     std::bitset<6> mask(std::string("111111"));
-    if (iIter % 4 == 0 or iIter % 4 == 1) {
+    if (iIter % 4 == 0 ) {
       // fix the x offset (i.e. offset along the beam) and rotation around y
-      mask = std::bitset<6>(std::string("101110"));
-    } else if (iIter % 4 == 2) {
+      mask = std::bitset<6>(std::string("000110"));
+    }
+    else if(iIter % 4 == 1){
+      mask = std::bitset<6>(std::string("101000"));
+    }
+    else if (iIter % 4 == 2) {
       // align only the x offset (the x offset and y, z offset could not be
       // aligned together)
       mask = std::bitset<6>(std::string("000001"));
@@ -182,7 +186,7 @@ int main(int argc, char* argv[]) {
   }
   conf_alignment.iterationState = std::move(iterationState);
   conf_alignment.align = TelescopeAlignmentAlgorithm::makeAlignmentFunction
-    (trackingGeometry, magneticField, logLevel);
+    (trackingGeometry, magneticField, Acts::Logging::INFO);
 
   Sequencer::Config conf_seq;
   conf_seq.logLevel  = logLevel;
@@ -192,7 +196,7 @@ int main(int argc, char* argv[]) {
 
   Sequencer seq(conf_seq);
   
-  seq.addAlgorithm(std::make_shared<TelescopeAlignmentAlgorithm>(conf_alignment, logLevel));
+  seq.addAlgorithm(std::make_shared<TelescopeAlignmentAlgorithm>(conf_alignment, Acts::Logging::INFO));
   // seq.addAlgorithm(std::make_shared<TelescopeFittingAlgorithm>(conf_fitter, logLevel));
 
   seq.run();
