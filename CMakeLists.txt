@@ -1,5 +1,18 @@
+
+# string (REGEX MATCH "\\.el[1-9]" os_version_suffix ${CMAKE_SYSTEM})
+# message("-- os_version_suffix:      ${os_version_suffix}")
+
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 project(altel_acts VERSION 1.0.0 LANGUAGES CXX)
+
+
+message("-- CMAKE_HOST_SYSTEM:           ${CMAKE_HOST_SYSTEM}")
+message("-- CMAKE_HOST_SYSTEM_PROCESSOR: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+message("-- CMAKE_SYSTEM:                ${CMAKE_SYSTEM}")
+message("-- CMAKE_SYSTEM_PROCESSOR:      ${CMAKE_SYSTEM_PROCESSOR}")
+message("-- CMAKE_ROOT:                  ${CMAKE_ROOT}")
+message("-- CMAKE_VERSION:               ${CMAKE_VERSION}")
+
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/INSTALL CACHE PATH "Default prefix of install directories" FORCE)
@@ -23,7 +36,7 @@ set(CMAKE_CXX_STANDARD 17)
 # set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 
 
-
+set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(CMAKE_INSTALL_RPATH "@loader_path/../lib")
 else()
@@ -44,33 +57,15 @@ set(CMAKE_FIND_USE_PACKAGE_REGISTRY        OFF)  # 6. user registery: /home/user
 set(CMAKE_FIND_USE_CMAKE_SYSTEM_PATH       ON)   # 7. system CMAKE_SYSTEM_PREFIX_PATH
 set(CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY OFF)  # 8. system registery: somewhere
 #                                                # 9. find_package option PATHS
-
-
-
                                                   
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 include(cmake/ActsExamples.cmake)
-
-
 add_subdirectory(source)
+
 
 # install-tree
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../include")

@@ -1,6 +1,10 @@
 
 set(Boost_NO_BOOST_CMAKE ON) # disable new cmake features from Boost 1.70 on
 
+if(EXISTS /usr/include/boost169)
+  set(BOOST_INCLUDEDIR /usr/include/boost169)
+endif()
+  
 find_package(Boost 1.69 REQUIRED
   COMPONENTS
   system thread filesystem chrono regex program_options unit_test_framework
