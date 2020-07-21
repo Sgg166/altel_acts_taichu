@@ -67,16 +67,16 @@ TelescopeTrackReader::operator()(const std::string& fileName, size_t nTracks) co
     // Create the track sourcelinks
     std::vector<FW::PixelSourceLink> sourcelinks; 
     
-    std::printf("%u ", good_datapack_count);
+    //std::printf("%u ", good_datapack_count);
     for(size_t i= 0; i< 6; i++){
-      double x = frames[i]["hit"][0]["pos"][0].GetDouble();
-      double y = frames[i]["hit"][0]["pos"][1].GetDouble();
+      double x = frames[i]["hit"][0]["pos"][0].GetDouble() - pitchX*nPixX/2.0;
+      double y = frames[i]["hit"][0]["pos"][1].GetDouble() - pitchY*nPixY/2.0;
       Acts::Vector2D loc;
       loc << x, y;
-      std::printf("<%f, %f, %u> ", x, y, i);
+    //  std::printf("<%f, %f, %u> ", x, y, i);
       sourcelinks.emplace_back(*detectorSurfaces.at(i), loc, cov);
     }
-    std::printf("\n");
+    //std::printf("\n");
     
     sourcelinkTracks.push_back(sourcelinks);
   }
