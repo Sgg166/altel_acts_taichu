@@ -5,13 +5,12 @@
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 project(altel_acts VERSION 1.0.0 LANGUAGES CXX)
 
-
-message("-- CMAKE_HOST_SYSTEM:           ${CMAKE_HOST_SYSTEM}")
-message("-- CMAKE_HOST_SYSTEM_PROCESSOR: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
-message("-- CMAKE_SYSTEM:                ${CMAKE_SYSTEM}")
-message("-- CMAKE_SYSTEM_PROCESSOR:      ${CMAKE_SYSTEM_PROCESSOR}")
-message("-- CMAKE_ROOT:                  ${CMAKE_ROOT}")
-message("-- CMAKE_VERSION:               ${CMAKE_VERSION}")
+message(STATUS "CMAKE_ROOT:                  ${CMAKE_ROOT}")
+message(STATUS "CMAKE_VERSION:               ${CMAKE_VERSION}")
+message(STATUS "CMAKE_HOST_SYSTEM:           ${CMAKE_HOST_SYSTEM}")
+message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+message(STATUS "CMAKE_SYSTEM:                ${CMAKE_SYSTEM}")
+message(STATUS "CMAKE_SYSTEM_PROCESSOR:      ${CMAKE_SYSTEM_PROCESSOR}")
 
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)

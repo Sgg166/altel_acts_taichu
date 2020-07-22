@@ -4,7 +4,10 @@ set(Boost_NO_BOOST_CMAKE ON) # disable new cmake features from Boost 1.70 on
 if(EXISTS /usr/include/boost169)
   set(BOOST_INCLUDEDIR /usr/include/boost169)
 endif()
-  
+if(EXISTS /usr/lib64/boost169)
+  set(BOOST_LIBRARYDIR /usr/lib64/boost169)
+endif()
+
 find_package(Boost 1.69 REQUIRED
   COMPONENTS
   system thread filesystem chrono regex program_options unit_test_framework
@@ -13,19 +16,24 @@ find_package(Boost 1.69 REQUIRED
 
 find_package(ROOT REQUIRED HINTS $ENV{ROOTSYS}/cmake NO_CMAKE_SYSTEM_PATH)
 
-if(NOT DEFINED ACTS_SRC_DIR)
-  set(ACTS_SRC_DIR ACTS_SRC_DIR-NOTFOUND  CACHE PATH "ACTS top source folder")
+
+set(ACTS_SRC_DIR ACTS_SRC_DIR-NOTFOUND CACHE PATH "ACTS top source folder")
+if(NOT ACTS_SRC_DIR)
   message(FATAL_ERROR "<ACTS_SRC_DIR> is not defined, please set it to ACTS top source folder")
 endif()
+message(STATUS "acts source folder <ACTS_SRC_DIR>:  ${ACTS_SRC_DIR}")
 
 find_package(Acts REQUIRED COMPONENTS  Core Fatras DigitizationPlugin IdentificationPlugin TGeoPlugin # JsonPlugin
   HINTS
   ${ACTS_SRC_DIR}/INSTALL/share/cmake/Acts
   )
 
-set(ACTS_INSTALL_DIR ${Acts_DIR}/../../..)
-
+get_filename_component(ACTS_INSTALL_DIR ${Acts_DIR}/../../.. ABSOLUTE)
 set(ACTS_INSTALL_LIB_DIR  ${ACTS_INSTALL_DIR}/lib64)
+
+message(STATUS "FOUND acts install cmake folder <Acts_DIR>:  ${Acts_DIR}")
+message(STATUS "FOUND acts install folder <ACTS_INSTALL_DIR>:  ${ACTS_INSTALL_DIR}")
+
 
 include_directories(${ACTS_INSTALL_DIR}/include/ActsFatras)
 
