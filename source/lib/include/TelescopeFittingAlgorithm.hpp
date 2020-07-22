@@ -22,15 +22,15 @@
 #include "PixelMultiTrajectory.hpp"
 #include "PixelSourceLink.hpp"
 
-namespace FW {
+namespace Telescope {
 
-class TelescopeFittingAlgorithm final : public BareAlgorithm {
+  class TelescopeFittingAlgorithm final : public FW::BareAlgorithm {
  public:
   using FitterResult = Acts::Result<Acts::KalmanFitterResult<PixelSourceLink>>;
   /// Fit function that takes input measurements, initial trackstate and fitter
   /// options and returns some fit-specific result.
   using FitterFunction = std::function<FitterResult(
-      const std::vector<PixelSourceLink>&, const TrackParameters&,
+                                                    const std::vector<PixelSourceLink>&, const FW::TrackParameters&,
       const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>&)>;
   using SourceLinkTrack = std::vector<PixelSourceLink>;
   using SourceLinkTrackReader =
@@ -42,7 +42,7 @@ class TelescopeFittingAlgorithm final : public BareAlgorithm {
   /// contains shared_ptr anyways.
   static FitterFunction makeFitterFunction(
       std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
-      Options::BFieldVariant magneticField, Acts::Logging::Level lvl);
+      FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl);
 
   struct Config {
     /// Input data file name.

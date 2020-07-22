@@ -16,7 +16,8 @@
 #include "Acts/EventData/TrackParameters.hpp"
 #include "PixelSourceLink.hpp"
 
-namespace FW {
+
+namespace Telescope{
 using IndexedParams = std::unordered_map<size_t, Acts::BoundParameters>;
 
 /// @brief Struct for truth track fitting/finding result with
@@ -143,4 +144,4 @@ struct PixelMultiTrajectory {
   IndexedParams m_trackParameters = {};
 };
 
-}  // namespace FW
+}

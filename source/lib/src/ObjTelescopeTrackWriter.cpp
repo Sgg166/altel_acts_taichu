@@ -17,11 +17,15 @@
 #include <iostream>
 #include <stdexcept>
 
-using Measurement = Acts::Measurement<FW::PixelSourceLink, Acts::ParDef::eLOC_0,
-                                      Acts::ParDef::eLOC_1>;
 
-FW::Obj::ObjTelescopeTrackWriter::ObjTelescopeTrackWriter(
-    const FW::Obj::ObjTelescopeTrackWriter::Config& cfg,
+namespace Telescope{
+  using Measurement = Acts::Measurement<Telescope::PixelSourceLink,
+                                        Acts::ParDef::eLOC_0,
+                                        Acts::ParDef::eLOC_1>;
+}
+
+Telescope::ObjTelescopeTrackWriter::ObjTelescopeTrackWriter(
+    const Telescope::ObjTelescopeTrackWriter::Config& cfg,
     Acts::Logging::Level level)
     : WriterT(cfg.inputTrajectories, "ObjTelescopeTrackWriter", level),
       m_cfg(cfg) {
@@ -30,12 +34,12 @@ FW::Obj::ObjTelescopeTrackWriter::ObjTelescopeTrackWriter(
   }
 }
 
-FW::ProcessCode FW::Obj::ObjTelescopeTrackWriter::endRun() {
+FW::ProcessCode Telescope::ObjTelescopeTrackWriter::endRun() {
   return FW::ProcessCode::SUCCESS;
 }
 
-FW::ProcessCode FW::Obj::ObjTelescopeTrackWriter::writeT(
-    const AlgorithmContext& context,
+FW::ProcessCode Telescope::ObjTelescopeTrackWriter::writeT(
+                                                           const FW::AlgorithmContext& context,
     const std::vector<PixelMultiTrajectory>& trajectories) {
   // open per-event file
   std::string path = FW::perEventFilepath(m_cfg.outputDir, "TelescopeTrack.obj",
@@ -84,7 +88,7 @@ FW::ProcessCode FW::Obj::ObjTelescopeTrackWriter::writeT(
           }
 
           // get the measurement
-          auto meas = std::get<Measurement>(*state.uncalibrated());
+          auto meas = std::get<Telescope::Measurement>(*state.uncalibrated());
 
           // get local position
           Acts::Vector2D local(meas.parameters()[Acts::ParDef::eLOC_0],

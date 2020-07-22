@@ -12,26 +12,27 @@
 #include <memory>
 #include <vector>
 
-#include "ACTFW/Alignment/Alignment.hpp"
+#include "Alignment.hpp"
+#include "PixelSourceLink.hpp"
+
+#include "Acts/Fitter/KalmanFitter.hpp"
+#include "Acts/Geometry/TrackingGeometry.hpp"
 
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/BareAlgorithm.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
-#include "Acts/Fitter/KalmanFitter.hpp"
-#include "Acts/Geometry/TrackingGeometry.hpp"
-#include "PixelSourceLink.hpp"
 
-namespace FW {
+namespace Telescope{
 
-class TelescopeAlignmentAlgorithm final : public BareAlgorithm {
+  class TelescopeAlignmentAlgorithm final : public FW::BareAlgorithm {
  public:
-  using AlignResult = Acts::Result<AlignmentResult>;
+    using AlignResult = Acts::Result<FW::AlignmentResult>;
   /// Fit function that takes input measurements, initial trackstate and fitter
   /// options and returns some fit-specific result.
   using AlignmentFunction = std::function<AlignResult(
       const std::vector<std::vector<PixelSourceLink>>&,
       const std::vector<Acts::CurvilinearParameters>&,
-      const AlignmentOptions<
+      const FW::AlignmentOptions<
           Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>&)>;
   using SourceLinkTrack = std::vector<PixelSourceLink>;
   using SourceLinkTrackReader =
@@ -43,7 +44,7 @@ class TelescopeAlignmentAlgorithm final : public BareAlgorithm {
   /// contains shared_ptr anyways.
   static AlignmentFunction makeAlignmentFunction(
       std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
-      Options::BFieldVariant magneticField, Acts::Logging::Level lvl);
+      FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl);
 
   struct Config {
     /// Input data file name.
@@ -57,7 +58,7 @@ class TelescopeAlignmentAlgorithm final : public BareAlgorithm {
     /// Type erased fitter function.
     AlignmentFunction align;
     /// The alignd transform updater
-    AlignedTransformUpdater alignedTransformUpdater;
+    FW::AlignedTransformUpdater alignedTransformUpdater;
     /// The surfaces (or detector elements?) to be aligned
     std::vector<Acts::DetectorElementBase*> alignedDetElements;
     /// The alignment mask at each iteration

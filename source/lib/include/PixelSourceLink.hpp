@@ -13,7 +13,7 @@
 
 #include "Acts/EventData/Measurement.hpp"
 
-namespace FW {
+namespace Telescope{
 
 /// Source link class for Alpide pixel hit.
 ///

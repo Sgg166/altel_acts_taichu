@@ -44,7 +44,6 @@ namespace Acts {
 class TrackingGeometry;
 }
 
-namespace FW {
 namespace Telescope {
 
 /// Global method to build the telescope tracking geometry
@@ -76,7 +75,7 @@ std::unique_ptr<const Acts::TrackingGeometry> buildDetector(
   // Boundaries of the surfaces (ALPIDE SIZE: 27.52512 * 13.76256_mm*mm)
   const auto rBounds = std::make_shared<const Acts::RectangleBounds>(
       // Acts::RectangleBounds(27.52512_mm, 13.76256_mm));
-      Acts::RectangleBounds(100_mm, 100_mm));
+      Acts::RectangleBounds(1000_mm, 1000_mm));
 
   // Material of the surfaces
   Acts::MaterialProperties matProp(95.7, 465.2, 28.03, 14., 2.32e-3, 50_um);
@@ -178,4 +177,3 @@ std::unique_ptr<const Acts::TrackingGeometry> buildDetector(
 }
 
 }  // end of namespace Telescope
-}  // end of namespace FW

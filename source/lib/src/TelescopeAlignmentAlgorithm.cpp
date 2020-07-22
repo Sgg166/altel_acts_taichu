@@ -14,10 +14,9 @@
 #include "ACTFW/EventData/ProtoTrack.hpp"
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
-#include "Acts/Surfaces/PerigeeSurface.hpp"
 #include "Acts/Utilities/Helpers.hpp"
 
-FW::TelescopeAlignmentAlgorithm::TelescopeAlignmentAlgorithm(
+Telescope::TelescopeAlignmentAlgorithm::TelescopeAlignmentAlgorithm(
     Config cfg, Acts::Logging::Level level)
     : FW::BareAlgorithm("TelescopeAlignmentAlgorithm", level),
       m_cfg(std::move(cfg)) {
@@ -29,11 +28,11 @@ FW::TelescopeAlignmentAlgorithm::TelescopeAlignmentAlgorithm(
   }
 }
 
-FW::ProcessCode FW::TelescopeAlignmentAlgorithm::execute(
+FW::ProcessCode Telescope::TelescopeAlignmentAlgorithm::execute(
     const FW::AlgorithmContext& ctx) const {
   using namespace Acts::UnitLiterals;
   using Measurement =
-      Acts::Measurement<FW::PixelSourceLink, Acts::ParDef::eLOC_0,
+      Acts::Measurement<Telescope::PixelSourceLink, Acts::ParDef::eLOC_0,
                         Acts::ParDef::eLOC_1>;
 
   // Read input data
@@ -62,12 +61,12 @@ FW::ProcessCode FW::TelescopeAlignmentAlgorithm::execute(
 
     // shift along the beam by 100_mm
     Acts::Vector3D rPos = global0 - distance / 2;
-    Acts::Vector3D rMom(4_GeV * sin(theta) * cos(phi),
-                        4_GeV * sin(theta) * sin(phi), 4_GeV * cos(theta));
+    Acts::Vector3D rMom(6_GeV * sin(theta) * cos(phi),
+                        6_GeV * sin(theta) * sin(phi), 6_GeV * cos(theta));
 
     Acts::BoundSymMatrix cov;
     cov << std::pow(50_um, 2), 0., 0., 0., 0., 0., 0., std::pow(50_um, 2), 0.,
-        0., 0., 0., 0., 0., 0.0001, 0., 0., 0., 0., 0., 0., 0.0001, 0., 0., 0.,
+        0., 0., 0., 0., 0., 0.01, 0., 0., 0., 0., 0., 0., 0.01, 0., 0., 0.,
         0., 0., 0., 0.0001, 0., 0., 0., 0., 0., 0., 1.;
 
     Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(
@@ -77,7 +76,7 @@ FW::ProcessCode FW::TelescopeAlignmentAlgorithm::execute(
   }
 
   // Prepare the output data with MultiTrajectory
-  TrajectoryContainer trajectories;
+  FW::TrajectoryContainer trajectories;
   trajectories.reserve(sourcelinkTracks.size());
 
 
@@ -91,10 +90,12 @@ FW::ProcessCode FW::TelescopeAlignmentAlgorithm::execute(
       Acts::VoidOutlierFinder(), pSurface.get());
 
   // Set the alignment options
-  AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>
+  FW::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>
       alignOptions(kfOptions, m_cfg.alignedTransformUpdater,
                    m_cfg.alignedDetElements, m_cfg.chi2ONdfCutOff,
                    m_cfg.maxNumIterations, m_cfg.iterationState);
+
+  
 
   ACTS_DEBUG("Invoke alignment");
   auto result = m_cfg.align(sourcelinkTracks, initialParameters, alignOptions);

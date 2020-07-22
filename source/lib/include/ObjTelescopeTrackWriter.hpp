@@ -14,9 +14,8 @@
 #include "Acts/Utilities/ParameterDefinitions.hpp"
 #include "PixelMultiTrajectory.hpp"
 
-namespace FW {
+namespace Telescope{
 
-namespace Obj {
 
 /// @class ObjTelescopeTrackWriter
 ///
@@ -28,7 +27,7 @@ namespace Obj {
 ///
 /// One Thread per write call and hence thread safe
 class ObjTelescopeTrackWriter
-    : public WriterT<std::vector<PixelMultiTrajectory>> {
+  : public FW::WriterT<std::vector<PixelMultiTrajectory>> {
  public:
   struct Config {
     std::string inputTrajectories;  ///< input (fitted) trajectories collection
@@ -51,7 +50,7 @@ class ObjTelescopeTrackWriter
   ~ObjTelescopeTrackWriter() override = default;
 
   /// End-of-run hook
-  ProcessCode endRun() final override;
+  FW::ProcessCode endRun() final override;
 
  private:
   Config m_cfg;  ///!< Internal configuration represenation
@@ -59,9 +58,8 @@ class ObjTelescopeTrackWriter
  protected:
   /// This implementation holds the actual writing method
   /// and is called by the WriterT<>::write interface
-  ProcessCode writeT(
-      const AlgorithmContext& context,
-      const std::vector<PixelMultiTrajectory>& trackCollection) final override;
+  FW::ProcessCode writeT(
+                         const FW::AlgorithmContext& context,
+                         const std::vector<PixelMultiTrajectory>& trackCollection) final override;
 };
-}  // namespace Obj
-}  // namespace FW
+}

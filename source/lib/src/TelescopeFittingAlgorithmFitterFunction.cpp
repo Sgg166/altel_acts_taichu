@@ -28,15 +28,15 @@
 #include "Acts/Utilities/Helpers.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
 
-namespace {
+namespace Telescope{
 template <typename Fitter>
 struct FitterFunctionImpl {
   Fitter fitter;
 
   FitterFunctionImpl(Fitter&& f) : fitter(std::move(f)) {}
 
-  FW::TelescopeFittingAlgorithm::FitterResult operator()(
-      const std::vector<FW::PixelSourceLink>& sourceLinks,
+  Telescope::TelescopeFittingAlgorithm::FitterResult operator()(
+      const std::vector<PixelSourceLink>& sourceLinks,
       const FW::TrackParameters& initialParameters,
       const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>& options) const {
     return fitter.fit(sourceLinks, initialParameters, options);
@@ -44,10 +44,10 @@ struct FitterFunctionImpl {
 };
 }  // namespace
 
-FW::TelescopeFittingAlgorithm::FitterFunction
-FW::TelescopeFittingAlgorithm::makeFitterFunction(
+Telescope::TelescopeFittingAlgorithm::FitterFunction
+Telescope::TelescopeFittingAlgorithm::makeFitterFunction(
     std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
-    Options::BFieldVariant magneticField, Acts::Logging::Level lvl) {
+    FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl) {
   using Updater = Acts::GainMatrixUpdater;
   using Smoother = Acts::GainMatrixSmoother;
 

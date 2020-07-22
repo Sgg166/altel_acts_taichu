@@ -24,8 +24,6 @@ class PlanarBounds;
 class ISurfaceMaterial;
 }  // namespace Acts
 
-namespace FW {
-
 namespace Telescope {
 
 /// @class TelescopeDetectorElement
@@ -146,4 +144,3 @@ inline double TelescopeDetectorElement::thickness() const {
   return m_elementThickness;
 }
 }  // namespace Telescope
-}  // namespace FW

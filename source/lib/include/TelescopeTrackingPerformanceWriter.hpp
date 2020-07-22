@@ -19,7 +19,7 @@
 class TFile;
 class TTree;
 
-namespace FW {
+namespace Telescope{
 
 /// Write out the residual and pull of track parameters and efficiency.
 ///
@@ -30,7 +30,7 @@ namespace FW {
 ///
 /// Safe to use from multiple writer threads - uses a std::mutex lock.
 class TelescopeTrackingPerformanceWriter final
-    : public WriterT<std::vector<PixelMultiTrajectory>> {
+  : public FW::WriterT<std::vector<PixelMultiTrajectory>> {
  public:
   struct Config {
     /// Input (fitted) trajectories collection.
@@ -40,9 +40,9 @@ class TelescopeTrackingPerformanceWriter final
     /// Output filename.
     std::string outputFilename = "performance_telescope_tracking.root";
     /// Plot tool configurations.
-    ResPlotTool::Config resPlotToolConfig;
-    EffPlotTool::Config effPlotToolConfig;
-    TrackSummaryPlotTool::Config trackSummaryPlotToolConfig;
+    FW::ResPlotTool::Config resPlotToolConfig;
+    FW::EffPlotTool::Config effPlotToolConfig;
+    FW::TrackSummaryPlotTool::Config trackSummaryPlotToolConfig;
   };
 
   /// Construct from configuration and log level.
@@ -50,11 +50,11 @@ class TelescopeTrackingPerformanceWriter final
   ~TelescopeTrackingPerformanceWriter() override;
 
   /// Finalize plots.
-  ProcessCode endRun() final override;
+  FW::ProcessCode endRun() final override;
 
  private:
-  ProcessCode writeT(
-      const AlgorithmContext& ctx,
+  FW::ProcessCode writeT(
+                     const FW::AlgorithmContext& ctx,
       const std::vector<PixelMultiTrajectory>& trajectories) final override;
 
   Config m_cfg;
@@ -62,14 +62,14 @@ class TelescopeTrackingPerformanceWriter final
   std::mutex m_writeMutex;
   TFile* m_outputFile{nullptr};
   /// Plot tool for residuals and pulls.
-  ResPlotTool m_resPlotTool;
-  ResPlotTool::ResPlotCache m_resPlotCache;
+  FW::ResPlotTool m_resPlotTool;
+  FW::ResPlotTool::ResPlotCache m_resPlotCache;
   /// Plot tool for efficiency
-  EffPlotTool m_effPlotTool;
-  EffPlotTool::EffPlotCache m_effPlotCache;
+  FW::EffPlotTool m_effPlotTool;
+  FW::EffPlotTool::EffPlotCache m_effPlotCache;
   /// Plot tool for track hit info
-  TrackSummaryPlotTool m_trackSummaryPlotTool;
-  TrackSummaryPlotTool::TrackSummaryPlotCache m_trackSummaryPlotCache;
+  FW::TrackSummaryPlotTool m_trackSummaryPlotTool;
+  FW::TrackSummaryPlotTool::TrackSummaryPlotCache m_trackSummaryPlotCache;
 };
 
 }  // namespace FW

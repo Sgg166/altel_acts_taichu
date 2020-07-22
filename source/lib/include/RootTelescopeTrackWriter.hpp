@@ -18,7 +18,7 @@
 class TFile;
 class TTree;
 
-namespace FW {
+namespace Telescope{
 
 /// @class RootTelescopeTrackWriter
 ///
@@ -36,7 +36,7 @@ namespace FW {
 ///
 /// Safe to use from multiple writer threads - uses a std::mutex lock.
 class RootTelescopeTrackWriter final
-    : public WriterT<std::vector<PixelMultiTrajectory>> {
+  : public FW::WriterT<std::vector<PixelMultiTrajectory>> {
  public:
   /// @brief The nested configuration struct
   struct Config {
@@ -58,14 +58,14 @@ class RootTelescopeTrackWriter final
   ~RootTelescopeTrackWriter() final override;
 
   /// End-of-run hook
-  ProcessCode endRun() final override;
+  FW::ProcessCode endRun() final override;
 
  protected:
   /// @brief Write method called by the base class
   /// @param [in] ctx is the algorithm context for event information
   /// @param [in] trajectories are what to be written out
-  ProcessCode writeT(
-      const AlgorithmContext& ctx,
+  FW::ProcessCode writeT(
+                         const FW::AlgorithmContext& ctx,
       const std::vector<PixelMultiTrajectory>& trajectories) final override;
 
  private:

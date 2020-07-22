@@ -4,11 +4,12 @@
 #include "TelescopeTrackReader.hpp"
 #include "myrapidjson.h"
 
-std::vector<std::vector<FW::PixelSourceLink>>
-TelescopeTrackReader::operator()(const std::string& fileName, size_t nTracks) const
+
+std::vector<std::vector<Telescope::PixelSourceLink>>
+Telescope::TelescopeTrackReader::operator()(const std::string& fileName, size_t nTracks) const
 {
   // Create a container for the output tracks
-  std::vector<std::vector<FW::PixelSourceLink>> sourcelinkTracks;
+  std::vector<std::vector<Telescope::PixelSourceLink>> sourcelinkTracks;
   sourcelinkTracks.reserve(nTracks);
   
   std::FILE* fp = std::fopen(fileName.c_str(), "r");
@@ -65,7 +66,7 @@ TelescopeTrackReader::operator()(const std::string& fileName, size_t nTracks) co
     cov(0, 0) = resolution[0] * resolution[0];
     cov(1, 1) = resolution[1] * resolution[1];
     // Create the track sourcelinks
-    std::vector<FW::PixelSourceLink> sourcelinks; 
+    std::vector<Telescope::PixelSourceLink> sourcelinks; 
     
     //std::printf("%u ", good_datapack_count);
     for(size_t i= 0; i< 6; i++){

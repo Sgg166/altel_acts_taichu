@@ -37,7 +37,6 @@
 #include "getopt.h"
 
 using namespace Acts::UnitLiterals;
-using namespace FW;
 
 static const std::string help_usage = R"(
 Usage:
@@ -103,11 +102,13 @@ int main(int argc, char* argv[]) {
   auto magneticField = std::make_shared<Acts::ConstantBField>(0_T, 0_T, 0_T);
 
   // Setup detector geometry  
-  FW::Telescope::TelescopeDetectorElement::ContextType nominalContext;
-  std::vector<std::shared_ptr<FW::Telescope::TelescopeDetectorElement>> detectorStore;
+  Telescope::TelescopeDetectorElement::ContextType nominalContext;
+  std::vector<std::shared_ptr<Telescope::TelescopeDetectorElement>> detectorStore;
   std::shared_ptr<const Acts::IMaterialDecorator> matDeco = nullptr;
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry
-    = FW::Telescope::buildDetector<FW::Telescope::TelescopeDetectorElement>(nominalContext, detectorStore, matDeco);
+    = Telescope::buildDetector<Telescope::TelescopeDetectorElement>(nominalContext, detectorStore, matDeco);
+
+  
   
   // Get the surfaces;
   std::vector<const Acts::Surface*> surfaces;
@@ -119,11 +120,11 @@ int main(int argc, char* argv[]) {
      });
 
   // The source link tracks reader
-  TelescopeTrackReader trackReader;
+  Telescope::TelescopeTrackReader trackReader;
   trackReader.detectorSurfaces = surfaces;  
 
   // setup the alignment algorithm
-  TelescopeAlignmentAlgorithm::Config conf_alignment;
+  Telescope::TelescopeAlignmentAlgorithm::Config conf_alignment;
   //@Todo: add run number information in the file name
   conf_alignment.inputFileName = inputDir + datafile_name;
   conf_alignment.outputTrajectories = "trajectories";
@@ -143,7 +144,8 @@ int main(int argc, char* argv[]) {
           return true;
         }
         return false;
-      };  
+      };
+
   
   // Set up the detector elements to be aligned (fix the first one)
   std::vector<Acts::DetectorElementBase*> dets;
@@ -160,48 +162,38 @@ int main(int argc, char* argv[]) {
   
    // The criteria to determine if the iteration has converged. @Todo: to use
   // delta chi2 instead
-  conf_alignment.chi2ONdfCutOff = 0.1;
+  conf_alignment.chi2ONdfCutOff = 0.005;
   // The maximum number of iterations
-  conf_alignment.maxNumIterations = 160;
+  conf_alignment.maxNumIterations = 400;
   // set up the alignment dnf for each iteration
   std::map<unsigned int, std::bitset<6>> iterationState;
   for (unsigned int iIter = 0; iIter < conf_alignment.maxNumIterations; iIter++) {
     std::bitset<6> mask(std::string("111111"));
-    if (iIter % 4 == 0 ) {
+    if (iIter % 2 == 0 ) {
       // fix the x offset (i.e. offset along the beam) and rotation around y
-      mask = std::bitset<6>(std::string("000110"));
-    }
-    else if(iIter % 4 == 1){
-      mask = std::bitset<6>(std::string("101000"));
-    }
-    else if (iIter % 4 == 2) {
-      // align only the x offset (the x offset and y, z offset could not be
-      // aligned together)
-      mask = std::bitset<6>(std::string("000001"));
-    } else {
-      // fix the x offset and rotation around x, z
       mask = std::bitset<6>(std::string("010110"));
+    }else {
+      // fix the x offset and rotation aroundi x, z
+      mask = std::bitset<6>(std::string("101001"));
     }
     iterationState.emplace(iIter, mask);
   }
   conf_alignment.iterationState = std::move(iterationState);
-  conf_alignment.align = TelescopeAlignmentAlgorithm::makeAlignmentFunction
+  conf_alignment.align = Telescope::TelescopeAlignmentAlgorithm::makeAlignmentFunction
     (trackingGeometry, magneticField, Acts::Logging::INFO);
 
-  Sequencer::Config conf_seq;
+  FW::Sequencer::Config conf_seq;
   conf_seq.logLevel  = logLevel;
   conf_seq.outputDir =  outputDir;  
   conf_seq.numThreads = 1;
   conf_seq.events = 1;
 
-  Sequencer seq(conf_seq);
+  FW::Sequencer seq(conf_seq);
   
-  seq.addAlgorithm(std::make_shared<TelescopeAlignmentAlgorithm>(conf_alignment, Acts::Logging::INFO));
-  // seq.addAlgorithm(std::make_shared<TelescopeFittingAlgorithm>(conf_fitter, logLevel));
+  seq.addAlgorithm(std::make_shared<Telescope::TelescopeAlignmentAlgorithm>(conf_alignment, Acts::Logging::INFO));
+  // seq.addAlgorithm(std::make_shared<Telescope::TelescopeFittingAlgorithm>(conf_fitter, logLevel));
 
   seq.run();
-
-
   
   
   return 0;

@@ -13,7 +13,7 @@
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
 
-FW::TelescopeFittingAlgorithm::TelescopeFittingAlgorithm(
+Telescope::TelescopeFittingAlgorithm::TelescopeFittingAlgorithm(
     Config cfg, Acts::Logging::Level level)
     : FW::BareAlgorithm("TelescopeFittingAlgorithm", level),
       m_cfg(std::move(cfg)) {
@@ -25,7 +25,7 @@ FW::TelescopeFittingAlgorithm::TelescopeFittingAlgorithm(
   }
 }
 
-FW::ProcessCode FW::TelescopeFittingAlgorithm::execute(
+FW::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
     const FW::AlgorithmContext& ctx) const {
   using namespace Acts::UnitLiterals;
 

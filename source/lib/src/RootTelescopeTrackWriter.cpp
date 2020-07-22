@@ -24,11 +24,12 @@ using Acts::VectorHelpers::eta;
 using Acts::VectorHelpers::perp;
 using Acts::VectorHelpers::phi;
 using Acts::VectorHelpers::theta;
-using Measurement = Acts::Measurement<FW::PixelSourceLink, Acts::ParDef::eLOC_0,
+
+using Measurement = Acts::Measurement<Telescope::PixelSourceLink, Acts::ParDef::eLOC_0,
                                       Acts::ParDef::eLOC_1>;
 
-FW::RootTelescopeTrackWriter::RootTelescopeTrackWriter(
-    const FW::RootTelescopeTrackWriter::Config& cfg, Acts::Logging::Level lvl)
+Telescope::RootTelescopeTrackWriter::RootTelescopeTrackWriter(
+    const Telescope::RootTelescopeTrackWriter::Config& cfg, Acts::Logging::Level lvl)
     : WriterT(cfg.inputTrajectories, "RootTelescopeTrackWriter", lvl),
       m_cfg(cfg),
       m_outputFile(cfg.rootFile) {
@@ -43,7 +44,7 @@ FW::RootTelescopeTrackWriter::RootTelescopeTrackWriter(
 
   // Setup ROOT I/O
   if (m_outputFile == nullptr) {
-    auto path = joinPaths(m_cfg.outputDir, m_cfg.outputFilename);
+    auto path = FW::joinPaths(m_cfg.outputDir, m_cfg.outputFilename);
     m_outputFile = TFile::Open(path.c_str(), m_cfg.fileMode.c_str());
     if (m_outputFile == nullptr) {
       throw std::ios_base::failure("Could not open '" + path);
@@ -175,28 +176,28 @@ FW::RootTelescopeTrackWriter::RootTelescopeTrackWriter(
   }
 }
 
-FW::RootTelescopeTrackWriter::~RootTelescopeTrackWriter() {
+Telescope::RootTelescopeTrackWriter::~RootTelescopeTrackWriter() {
   if (m_outputFile) {
     m_outputFile->Close();
   }
 }
 
-FW::ProcessCode FW::RootTelescopeTrackWriter::endRun() {
+FW::ProcessCode Telescope::RootTelescopeTrackWriter::endRun() {
   if (m_outputFile) {
     m_outputFile->cd();
     m_outputTree->Write();
     ACTS_INFO("Write trajectories to tree '"
               << m_cfg.outputTreename << "' in '"
-              << joinPaths(m_cfg.outputDir, m_cfg.outputFilename) << "'");
+              << FW::joinPaths(m_cfg.outputDir, m_cfg.outputFilename) << "'");
   }
-  return ProcessCode::SUCCESS;
+  return FW::ProcessCode::SUCCESS;
 }
 
-FW::ProcessCode FW::RootTelescopeTrackWriter::writeT(
-    const AlgorithmContext& ctx,
+FW::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
+                                                            const FW::AlgorithmContext& ctx,
     const std::vector<PixelMultiTrajectory>& trajectories) {
   if (m_outputFile == nullptr)
-    return ProcessCode::SUCCESS;
+    return FW::ProcessCode::SUCCESS;
 
   auto& gctx = ctx.geoContext;
 
@@ -221,7 +222,7 @@ FW::ProcessCode FW::RootTelescopeTrackWriter::writeT(
     // should be at most one trajectory
     if (trackTips.size() > 1) {
       ACTS_ERROR("Track fitting should not result in multiple trajectories.");
-      return ProcessCode::ABORT;
+      return FW::ProcessCode::ABORT;
     }
     // Get the entry index for the single trajectory
     auto& trackTip = trackTips.front();
@@ -676,5 +677,5 @@ FW::ProcessCode FW::RootTelescopeTrackWriter::writeT(
     iTraj++;
   }  // all trajectories
 
-  return ProcessCode::SUCCESS;
+  return FW::ProcessCode::SUCCESS;
 }
