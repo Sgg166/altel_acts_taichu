@@ -37,11 +37,12 @@ struct AlignmentFunctionImpl {
 
   AlignmentFunctionImpl(Alignment&& a) : align(std::move(a)) {}
 
-  Telescope::TelescopeAlignmentAlgorithm::AlignResult operator()(
-      const std::vector<std::vector<Telescope::PixelSourceLink>>& sourceLinks,
-      const std::vector<Acts::CurvilinearParameters>& initialParameters,
-      const FW::AlignmentOptions<
-          Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>& options) const {
+  Telescope::TelescopeAlignmentAlgorithm::AlignResult operator()
+  (
+   const std::vector<std::vector<Telescope::PixelSourceLink>>& sourceLinks,
+   const std::vector<Acts::CurvilinearParameters>& initialParameters,
+   const FW::AlignmentOptions< Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>& options) const
+  {
     return align.align(sourceLinks, initialParameters, options);
   };
 };
@@ -78,11 +79,11 @@ Telescope::TelescopeAlignmentAlgorithm::makeAlignmentFunction(
                       Propagator propagator(std::move(stepper), std::move(navigator));
                       Fitter fitter(std::move(propagator),
                                     Acts::getDefaultLogger("KalmanFitter", lvl));
-                      Alignment alignment(std::move(fitter),
-                                          Acts::getDefaultLogger("Alignment", lvl));
-
+                      FW::Alignment<Fitter> alignment(std::move(fitter),
+                                                      Acts::getDefaultLogger("Alignment", lvl));
+                      
                       // build the alignment functions. owns the alignment object.
-                      return AlignmentFunctionImpl<Alignment>(std::move(alignment));
+                      return AlignmentFunctionImpl<FW::Alignment<Fitter>>(std::move(alignment));
                     },
                     std::move(magneticField)
                     );

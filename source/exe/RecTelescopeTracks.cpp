@@ -101,13 +101,16 @@ int main(int argc, char* argv[]) {
   // Setup the magnetic field
   auto magneticField = std::make_shared<Acts::ConstantBField>(0_T, 0_T, 0_T);
 
+  
+  
+
+  
   // Setup detector geometry  
   Telescope::TelescopeDetectorElement::ContextType nominalContext;
   std::vector<std::shared_ptr<Telescope::TelescopeDetectorElement>> detectorStore;
   std::shared_ptr<const Acts::IMaterialDecorator> matDeco = nullptr;
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry
     = Telescope::buildDetector<Telescope::TelescopeDetectorElement>(nominalContext, detectorStore, matDeco);
-
   
   
   // Get the surfaces;
@@ -126,7 +129,7 @@ int main(int argc, char* argv[]) {
   // setup the alignment algorithm
   Telescope::TelescopeAlignmentAlgorithm::Config conf_alignment;
   //@Todo: add run number information in the file name
-  conf_alignment.inputFileName = inputDir + datafile_name;
+  conf_alignment.inputFileName = datafile_name;
   conf_alignment.outputTrajectories = "trajectories";
   conf_alignment.trackReader = trackReader;
   // The number of tracks you want to process (in default, all of tracks will be
@@ -162,7 +165,8 @@ int main(int argc, char* argv[]) {
   
    // The criteria to determine if the iteration has converged. @Todo: to use
   // delta chi2 instead
-  conf_alignment.chi2ONdfCutOff = 0.005;
+  conf_alignment.chi2ONdfCutOff = 0.05;
+  conf_alignment.deltaChi2ONdfCutOff = {10,0.00001};
   // The maximum number of iterations
   conf_alignment.maxNumIterations = 400;
   // set up the alignment dnf for each iteration

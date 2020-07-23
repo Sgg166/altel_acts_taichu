@@ -10,6 +10,7 @@
 
 #include <limits>
 #include <map>
+#include <queue>
 #include <vector>
 
 #include "ACTFW/Alignment/AlignmentError.hpp"
@@ -30,7 +31,6 @@ namespace FW {
 using AlignedTransformUpdater =
     std::function<bool(Acts::DetectorElementBase*, const Acts::GeometryContext&,
                        const Acts::Transform3D&)>;
-using namespace Acts::UnitLiterals;
 ///
 /// @brief Options for align() call
 ///
@@ -54,13 +54,16 @@ struct AlignmentOptions {
       const fit_options_t& fOptions,
       const AlignedTransformUpdater& aTransformUpdater,
       const std::vector<Acts::DetectorElementBase*>& aDetElements = {},
-      double chi2CutOff = 0.05, size_t maxIters = 5,
+      double chi2CutOff = 0.05,
+      const std::pair<size_t, double>& deltaChi2CutOff = {10, 0.00001},
+      size_t maxIters = 5,
       const std::map<unsigned int, std::bitset<Acts::eAlignmentParametersSize>>&
           iterState = {})
       : fitOptions(fOptions),
         alignedTransformUpdater(aTransformUpdater),
         alignedDetElements(aDetElements),
         averageChi2ONdfCutOff(chi2CutOff),
+        deltaAverageChi2ONdfCutOff(deltaChi2CutOff),
         maxIterations(maxIters),
         iterationState(iterState) {}
 
@@ -75,6 +78,10 @@ struct AlignmentOptions {
 
   // The alignment tolerance
   double averageChi2ONdfCutOff = 0.05;
+
+  // The delta of average chi2/ndf within a couple of iterations to determine if
+  // alignment is converged
+  std::pair<size_t, double> deltaAverageChi2ONdfCutOff = {10, 0.00001};
 
   // The maximum number of iterations to run alignment
   size_t maxIterations = 5;
@@ -91,6 +98,10 @@ struct AlignmentResult {
   // The change of alignment parameters
   Acts::ActsVectorX<Acts::BoundParametersScalar> deltaAlignmentParameters;
 
+  // The aligned parameters
+  std::unordered_map<Acts::DetectorElementBase*, Acts::Transform3D>
+      alignedParameters;
+
   // The covariance of alignment parameters
   Acts::ActsMatrixX<Acts::BoundParametersScalar> alignmentCovariance;
 
@@ -103,13 +114,14 @@ struct AlignmentResult {
   // The chi2
   double chi2 = 0;
 
-  // The number of alignment dof
-  size_t alignmentDof = 0;
-
   // The measurement dim from all track
   size_t measurementDim = 0;
 
-  Acts::Result<void> result{Acts::Result<void>::success()};
+  // The number of alignment dof
+  size_t alignmentDof = 0;
+
+  // The number of tracks used for alignment
+  size_t numTracks = 0;
 };
 
 /// @brief KalmanFitter-based alignment implementation
@@ -168,7 +180,7 @@ struct Alignment {
         gctx, fitOutput.fittedStates, fitOutput.trackTip, globalTrackParamsCov,
         idxedAlignSurfaces, alignMask);
     if (alignState.alignmentDof == 0) {
-      ACTS_WARNING("No alignment dof on track");
+      ACTS_VERBOSE("No alignment dof on track");
       return AlignmentError::NoAlignmentDofOnTrack;
     }
     return alignState;
@@ -230,29 +242,11 @@ struct Alignment {
     // @Todo: How to update the source link error iteratively?
     alignResult.chi2 = 0;
     alignResult.measurementDim = 0;
-    std::cout << "starting loop for " << trajectoryCollection.size() << "tracks"
-              << std::endl;
+    alignResult.numTracks = trajectoryCollection.size();
+    double sumChi2ONdf = 0;
     for (unsigned int iTraj = 0; iTraj < trajectoryCollection.size(); iTraj++) {
       const auto& sourcelinks = trajectoryCollection.at(iTraj);
-      const Acts::Vector3D global1 =
-          sourcelinks.at(0).globalPosition(fitOptions.geoContext);
-      const Acts::Vector3D global2 =
-          sourcelinks.at(1).globalPosition(fitOptions.geoContext);
-      Acts::Vector3D direction = global2 - global1;
-      const double phi = Acts::VectorHelpers::phi(direction);
-      const double theta = Acts::VectorHelpers::theta(direction);
-      Acts::Vector3D rPos = global1 - direction / 2;
-      Acts::Vector3D rMom(5_GeV * sin(theta) * cos(phi),
-                          5_GeV * sin(theta) * sin(phi), 5_GeV * cos(theta));
-      Acts::BoundSymMatrix cov;
-      cov << std::pow(50_um, 2), 0., 0., 0., 0., 0., 0., std::pow(50_um, 2), 0.,
-          0., 0., 0., 0., 0., 0.01, 0., 0., 0., 0., 0., 0., 0.01, 0., 0., 0., 0.,
-          0., 0., 0.0001, 0., 0., 0., 0., 0., 0., 1.;
-
-      Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> sParameters(
-          cov, rPos, rMom, 1., 0);
-
-      //     const auto& sParameters = startParametersCollection.at(iTraj);
+      const auto& sParameters = startParametersCollection.at(iTraj);
       // Set the target surface
       fitOptionsWithRefSurface.referenceSurface =
           &sParameters.referenceSurface();
@@ -290,10 +284,9 @@ struct Alignment {
       }
       alignResult.chi2 += alignState.chi2;
       alignResult.measurementDim += alignState.measurementDim;
+      sumChi2ONdf += alignState.chi2 / alignState.measurementDim;
     }
-    std::cout << "end loop for " << trajectoryCollection.size() << "tracks"
-              << std::endl;
-    alignResult.averageChi2ONdf = alignResult.chi2 / alignResult.measurementDim;
+    alignResult.averageChi2ONdf = sumChi2ONdf / alignResult.numTracks;
 
     // Get the inverse of chi2 second derivative matrix (we need this to
     // calculate the covariance of the alignment parameters)
@@ -404,6 +397,7 @@ struct Alignment {
 
     // Start the iteration to minimize the chi2
     bool converged = false;
+    std::queue<double> recentChi2ONdf;
     ACTS_INFO("Max number of iterations: " << alignOptions.maxIterations);
     for (unsigned int iIter = 0; iIter < alignOptions.maxIterations; iIter++) {
       // Perform the fit to the trajectories and update alignment parameters
@@ -426,29 +420,54 @@ struct Alignment {
                            << alignRes.measurementDim);
       ACTS_INFO("Average chi2/ndf = " << alignRes.averageChi2ONdf);
       // Check if it has converged against the provided precision
-      // @Todo: should we use the deltaChi2 instead?
+      // (1) firstly check the average chi2/ndf (is this correct?)
       if (alignRes.averageChi2ONdf <= alignOptions.averageChi2ONdfCutOff) {
+        ACTS_INFO("Alignment has converaged with average chi2/ndf smaller than "
+                  << alignOptions.averageChi2ONdfCutOff);
         converged = true;
         break;
       }
+      // (2) secondly check if the delta average chi2/ndf in the last few
+      // iterations is within tolerance
+      if (recentChi2ONdf.size() >=
+          alignOptions.deltaAverageChi2ONdfCutOff.first) {
+        if (std::abs(recentChi2ONdf.front() - alignRes.averageChi2ONdf) <=
+            alignOptions.deltaAverageChi2ONdfCutOff.second) {
+          ACTS_INFO(
+              "Alignment has converaged with change of chi2/ndf smaller than "
+              << alignOptions.deltaAverageChi2ONdfCutOff.second
+              << " in the latest "
+              << alignOptions.deltaAverageChi2ONdfCutOff.first
+              << " iterations");
+          converged = true;
+          break;
+        }
+        // Remove the first element
+        recentChi2ONdf.pop();
+      }
+      // Store the result in the queue
+      recentChi2ONdf.push(alignRes.averageChi2ONdf);
     }
     // Alignment failure if not converged
     if (not converged) {
       ACTS_ERROR("Alignment is not converged.");
-      alignRes.result = AlignmentError::ConvergeFailure;
+      return  AlignmentError::ConvergeFailure;
     }
 
     // Print out the final aligned parameters
     unsigned int iDetElement = 0;
     for (const auto& det : alignOptions.alignedDetElements) {
+      const auto& surface = &det->surface();
       const auto& transform =
           det->transform(alignOptions.fitOptions.geoContext);
+      // write it to the result
+      alignRes.alignedParameters.emplace(det, transform);
       const auto& translation = transform.translation();
       const auto& rotation = transform.rotation();
       const Acts::Vector3D rotAngles = rotation.eulerAngles(2, 1, 0);
-      ACTS_INFO("Detector element "
-                << iDetElement
-                << " has aligned geometry position as below: \n");
+      ACTS_INFO("Detector element with surface "
+                << surface->geoID()
+                << " has aligned geometry position as below:");
       ACTS_INFO("Center (cenX, cenY, cenZ) = " << translation.transpose());
       ACTS_INFO("Euler angles (rotZ, rotY, rotX) = " << rotAngles.transpose());
       ACTS_INFO("Rotation marix = \n" << rotation);

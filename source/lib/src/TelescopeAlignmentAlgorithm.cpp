@@ -14,6 +14,7 @@
 #include "ACTFW/EventData/ProtoTrack.hpp"
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
+
 #include "Acts/Utilities/Helpers.hpp"
 
 Telescope::TelescopeAlignmentAlgorithm::TelescopeAlignmentAlgorithm(
@@ -29,11 +30,11 @@ Telescope::TelescopeAlignmentAlgorithm::TelescopeAlignmentAlgorithm(
 }
 
 FW::ProcessCode Telescope::TelescopeAlignmentAlgorithm::execute(
-    const FW::AlgorithmContext& ctx) const {
+    const FW::AlgorithmContext& ctx) const {  
   using namespace Acts::UnitLiterals;
   using Measurement =
-      Acts::Measurement<Telescope::PixelSourceLink, Acts::ParDef::eLOC_0,
-                        Acts::ParDef::eLOC_1>;
+    Acts::Measurement<Telescope::PixelSourceLink, Acts::ParDef::eLOC_0,
+                      Acts::ParDef::eLOC_1>;
 
   // Read input data
   std::vector<SourceLinkTrack> sourcelinkTracks =
@@ -79,7 +80,6 @@ FW::ProcessCode Telescope::TelescopeAlignmentAlgorithm::execute(
   FW::TrajectoryContainer trajectories;
   trajectories.reserve(sourcelinkTracks.size());
 
-
   auto pSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
       Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
 
@@ -92,19 +92,24 @@ FW::ProcessCode Telescope::TelescopeAlignmentAlgorithm::execute(
   // Set the alignment options
   FW::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>
       alignOptions(kfOptions, m_cfg.alignedTransformUpdater,
-                   m_cfg.alignedDetElements, m_cfg.chi2ONdfCutOff,
+                   m_cfg.alignedDetElements, m_cfg.chi2ONdfCutOff,m_cfg.deltaChi2ONdfCutOff,
                    m_cfg.maxNumIterations, m_cfg.iterationState);
-
   
 
   ACTS_DEBUG("Invoke alignment");
   auto result = m_cfg.align(sourcelinkTracks, initialParameters, alignOptions);
+
   if (result.ok()) {
-    ACTS_VERBOSE(
-        "Alignment finished with deltaChi2 = " << result.value().deltaChi2);
+    ACTS_VERBOSE("Alignment finished with deltaChi2 = " << result.value().deltaChi2);
+    ctx.eventStore.add("TeleAlignResult", std::move( result.value() ) );
+    
   } else {
     ACTS_WARNING("Alignment failed with " << result.error());
   }
+
+
+  // int a = 11;
+  // wb.add("TelAlignResult", std::move(a) ) ;
 
   // ctx.eventStore.add(m_cfg.outputTrajectories, std::move(trajectories));
   return FW::ProcessCode::SUCCESS;
