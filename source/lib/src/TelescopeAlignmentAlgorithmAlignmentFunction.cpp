@@ -12,8 +12,8 @@
 #include <random>
 #include <stdexcept>
 
-#include "TelescopeAlignmentAlgorithm.hpp"
 #include "Alignment.hpp"
+#include "TelescopeTrack.hpp"
 
 
 #include "ACTFW/Plugins/BField/ScalableBField.hpp"
@@ -31,27 +31,27 @@
 #include "Acts/Utilities/ParameterDefinitions.hpp"
 
 namespace {
-template <typename Alignment>
-struct AlignmentFunctionImpl {
-  Alignment align;
+  template <typename Alignment>
+  struct AlignmentFunctionImpl {
+    Alignment align;
 
-  AlignmentFunctionImpl(Alignment&& a) : align(std::move(a)) {}
+    AlignmentFunctionImpl(Alignment&& a) : align(std::move(a)) {}
 
-  Telescope::TelescopeAlignmentAlgorithm::AlignResult operator()
-  (
-   const std::vector<std::vector<Telescope::PixelSourceLink>>& sourceLinks,
-   const std::vector<Acts::CurvilinearParameters>& initialParameters,
-   const FW::AlignmentOptions< Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>& options) const
-  {
-    return align.align(sourceLinks, initialParameters, options);
+    Telescope::AlignResult operator()
+    (
+     const std::vector<std::vector<Telescope::PixelSourceLink>>& sourceLinks,
+     const std::vector<Acts::CurvilinearParameters>& initialParameters,
+     const FW::AlignmentOptions< Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>& options) const
+    {
+      return align.align(sourceLinks, initialParameters, options);
+    };
   };
-};
 }  // namespace
 
-Telescope::TelescopeAlignmentAlgorithm::AlignmentFunction
-Telescope::TelescopeAlignmentAlgorithm::makeAlignmentFunction(
-    std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
-    FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl) {
+Telescope::AlignmentFunction Telescope::makeAlignmentFunction
+(std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
+ FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl){
+  
   using Updater = Acts::GainMatrixUpdater;
   using Smoother = Acts::GainMatrixSmoother;
 
@@ -85,6 +85,8 @@ Telescope::TelescopeAlignmentAlgorithm::makeAlignmentFunction(
                       // build the alignment functions. owns the alignment object.
                       return AlignmentFunctionImpl<FW::Alignment<Fitter>>(std::move(alignment));
                     },
+                    
                     std::move(magneticField)
                     );
+  
 }

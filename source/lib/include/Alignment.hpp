@@ -29,7 +29,7 @@
 
 namespace FW {
 using AlignedTransformUpdater =
-    std::function<bool(Acts::DetectorElementBase*, const Acts::GeometryContext&,
+  std::function<bool(Acts::DetectorElementBase&, const Acts::GeometryContext&,
                        const Acts::Transform3D&)>;
 ///
 /// @brief Options for align() call
@@ -51,21 +51,21 @@ struct AlignmentOptions {
   //  @param iterState The alignment mask for each
   //  iteration @Todo: use a json file to handle this
   AlignmentOptions(
-      const fit_options_t& fOptions,
-      const AlignedTransformUpdater& aTransformUpdater,
-      const std::vector<Acts::DetectorElementBase*>& aDetElements = {},
-      double chi2CutOff = 0.05,
-      const std::pair<size_t, double>& deltaChi2CutOff = {10, 0.00001},
-      size_t maxIters = 5,
-      const std::map<unsigned int, std::bitset<Acts::eAlignmentParametersSize>>&
-          iterState = {})
-      : fitOptions(fOptions),
-        alignedTransformUpdater(aTransformUpdater),
-        alignedDetElements(aDetElements),
-        averageChi2ONdfCutOff(chi2CutOff),
-        deltaAverageChi2ONdfCutOff(deltaChi2CutOff),
-        maxIterations(maxIters),
-        iterationState(iterState) {}
+                   const fit_options_t& fOptions,
+                   const AlignedTransformUpdater& aTransformUpdater,
+                   const std::vector<std::shared_ptr<Acts::DetectorElementBase>>& aDetElements = {},
+                   double chi2CutOff = 0.05,
+                   const std::pair<size_t, double>& deltaChi2CutOff = {10, 0.00001},
+                   size_t maxIters = 5,
+                   const std::map<unsigned int, std::bitset<Acts::eAlignmentParametersSize>>&
+                   iterState = {})
+  : fitOptions(fOptions),
+    alignedTransformUpdater(aTransformUpdater),
+    alignedDetElements(aDetElements),
+    averageChi2ONdfCutOff(chi2CutOff),
+    deltaAverageChi2ONdfCutOff(deltaChi2CutOff),
+    maxIterations(maxIters),
+    iterationState(iterState) {}
 
   // The fit options
   fit_options_t fitOptions;
@@ -74,7 +74,7 @@ struct AlignmentOptions {
   AlignedTransformUpdater alignedTransformUpdater;
 
   // The detector elements to be aligned
-  std::vector<Acts::DetectorElementBase*> alignedDetElements;
+  std::vector<std::shared_ptr<Acts::DetectorElementBase>> alignedDetElements;
 
   // The alignment tolerance
   double averageChi2ONdfCutOff = 0.05;
@@ -99,7 +99,7 @@ struct AlignmentResult {
   Acts::ActsVectorX<Acts::BoundParametersScalar> deltaAlignmentParameters;
 
   // The aligned parameters
-  std::unordered_map<Acts::DetectorElementBase*, Acts::Transform3D>
+  std::unordered_map<std::shared_ptr<Acts::DetectorElementBase>, Acts::Transform3D>
       alignedParameters;
 
   // The covariance of alignment parameters
@@ -205,15 +205,15 @@ struct Alignment {
   template <typename trajectory_container_t,
             typename start_parameters_container_t, typename fit_options_t>
   Acts::Result<void> updateAlignmentParameters(
-      trajectory_container_t& trajectoryCollection,
-      const start_parameters_container_t& startParametersCollection,
-      const fit_options_t& fitOptions,
-      const std::vector<Acts::DetectorElementBase*>& alignedDetElements,
-      const AlignedTransformUpdater& alignedTransformUpdater,
-      AlignmentResult& alignResult,
-      const std::bitset<Acts::eAlignmentParametersSize>& alignMask =
-          std::bitset<Acts::eAlignmentParametersSize>(std::string("111111")))
-      const {
+                                               trajectory_container_t& trajectoryCollection,
+                                               const start_parameters_container_t& startParametersCollection,
+                                               const fit_options_t& fitOptions,
+                                               const std::vector<std::shared_ptr<Acts::DetectorElementBase>>& alignedDetElements,
+                                               const AlignedTransformUpdater& alignedTransformUpdater,
+                                               AlignmentResult& alignResult,
+                                               const std::bitset<Acts::eAlignmentParametersSize>& alignMask =
+                                               std::bitset<Acts::eAlignmentParametersSize>(std::string("111111")))
+  const {
     // The number of trajectories must be eual to the number of starting
     // parameters
     assert(trajectoryCollection.size() == startParametersCollection.size());
@@ -363,7 +363,7 @@ struct Alignment {
                    << index << "= \n"
                    << deltaAlignmentParam);
       bool updated = alignedTransformUpdater(
-          alignedDetElements.at(index), fitOptions.geoContext, newTransform);
+          *alignedDetElements.at(index), fitOptions.geoContext, newTransform);
       if (not updated) {
         ACTS_ERROR("Update alignment parameters for detector element failed");
         return AlignmentError::AlignmentParametersUpdateFailure;
