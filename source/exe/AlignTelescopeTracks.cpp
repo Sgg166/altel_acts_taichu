@@ -39,6 +39,9 @@
 
 #include <memory>
 #include "getopt.h"
+#include "myrapidjson.h"
+
+
 
 using namespace Acts::UnitLiterals;
 
@@ -190,30 +193,11 @@ int main(int argc, char* argv[]) {
 
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry(new Acts::TrackingGeometry(mtvpWorld));
 
-
-  ////////////////////////////////  
-  // Get the surfaces;
-  std::vector<const Acts::Surface*> detsurfaces;
-  trackingGeometry->visitSurfaces
-    ([&](const Acts::Surface* s) {
-       if (s and s->associatedDetectorElement()) {
-         detsurfaces.push_back(s);
-       }
-     });
-
-  // The source link tracks reader
-  Telescope::TelescopeTrackReader trackReader;
-  trackReader.detectorSurfaces = detsurfaces;  
-
   // setup the alignment algorithm
   Telescope::TelescopeAlignmentAlgorithm::Config conf_alignment;
   //@Todo: add run number information in the file name
-  conf_alignment.inputFileName = datafile_name;
-  conf_alignment.outputTrajectories = "trajectories";
-  conf_alignment.trackReader = trackReader;
   // The number of tracks you want to process (in default, all of tracks will be
   // read and fitted)
-  conf_alignment.maxNumTracks = 20000;
   conf_alignment.alignedTransformUpdater
     = [](Acts::DetectorElementBase* detElement,
          const Acts::GeometryContext& gctx,
@@ -264,22 +248,154 @@ int main(int argc, char* argv[]) {
   conf_alignment.align = Telescope::TelescopeAlignmentAlgorithm::makeAlignmentFunction
                         (trackingGeometry, magneticField, Acts::Logging::INFO);
 
-                        
-
   
   auto algAlign = std::make_shared<Telescope::TelescopeAlignmentAlgorithm>(conf_alignment, Acts::Logging::INFO);
 
+
+  std::FILE* fp = std::fopen(datafile_name.c_str(), "r");
+  if(!fp) {
+    std::fprintf(stderr, "File opening failed: %s \n", datafile_name.c_str());
+    throw;
+  }
+
+
+  char readBuffer[1000000];
+  rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+  rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc;
+  // rapidjson::Document doc;
+  doc.ParseStream(is);
+  if(!doc.IsArray() || !doc.GetArray().Size()){
+    std::fprintf(stderr, "no, it is not data array\n");
+    throw;
+  }
+
   while(1){
     FW::WhiteBoard wb;
-    
     FW::AlgorithmContext ctx(0, 0, wb);
+
+    // new sourcelink
+    // Read input data
+    std::vector<std::vector<Telescope::PixelSourceLink>> sourcelinkTracks;
+
+    auto ev_it = doc.Begin();
+    auto ev_it_end = doc.End();  
+    uint64_t processed_datapack_count = 0;
+    uint64_t good_datapack_count = 0;
+    while(ev_it != ev_it_end && good_datapack_count < 20000){
+      const auto &evpack = *ev_it;
+      ev_it++;
+      processed_datapack_count ++;
+    
+      const auto &frames = evpack["layers"];
+    
+      bool is_good_datapack = true;
+      for(const auto& layer : evpack["layers"].GetArray()){
+        uint64_t l_hit_n = layer["hit"].GetArray().Size();
+        if(l_hit_n != 1){
+          is_good_datapack = false;
+          continue;
+        }
+      }
+      if(!is_good_datapack){
+        continue;
+      }    
+      good_datapack_count ++;
+
+      // Setup local covariance
+      Acts::BoundMatrix cov = Acts::BoundMatrix::Zero();
+      cov(0, 0) = 50_um * 50_um;
+      cov(1, 1) = 50_um * 50_um;
+      // Create the track sourcelinks
+      std::vector<Telescope::PixelSourceLink> sourcelinks;
+      
+      for(size_t i= 0; i< 6; i++){
+        double x = frames[i]["hit"][0]["pos"][0].GetDouble() - 0.02924*1024/2.0;
+        double y = frames[i]["hit"][0]["pos"][1].GetDouble() - 0.02688*512/2.0;
+        Acts::Vector2D loc;
+        loc << x, y;
+        sourcelinks.emplace_back(*surface_col.at(i), loc, cov);
+      }
+      sourcelinkTracks.push_back(sourcelinks);
+    }
+    
+    std::cout << "There are " << sourcelinkTracks.size() << " tracks read-in"<< std::endl;    
+    // ctx.eventStore.add("TeleSourcelinkTracks", std::move(sourcelinkTracks));
+
+
+
+    // Prepare the initial track parameters collection
+    std::vector<Acts::CurvilinearParameters> initialParameters;
+    initialParameters.reserve(sourcelinkTracks.size());
+    unsigned int iTrack = 0;
+    while (iTrack < sourcelinkTracks.size()) {
+      // Create initial parameters
+      // The position is taken from the first measurement
+      const auto& sourcelinks = sourcelinkTracks.at(iTrack);
+      const Acts::Vector3D global0 =
+        sourcelinks.at(0).globalPosition(ctx.geoContext);
+      const Acts::Vector3D global1 =
+        sourcelinks.at(1).globalPosition(ctx.geoContext);
+      Acts::Vector3D distance = global1 - global0;
+
+      const double phi = Acts::VectorHelpers::phi(distance);
+      const double theta = Acts::VectorHelpers::theta(distance);
+
+      // shift along the beam by 100_mm
+      Acts::Vector3D rPos = global0 - distance / 2;
+      Acts::Vector3D rMom(6_GeV * sin(theta) * cos(phi),
+                          6_GeV * sin(theta) * sin(phi), 6_GeV * cos(theta));
+
+      Acts::BoundSymMatrix cov;
+      cov <<
+        std::pow(50_um, 2), 0., 0.,   0.,   0.,     0.,
+        0., std::pow(50_um, 2), 0.,   0.,   0.,     0.,
+        0.,                 0., 0.01, 0.,   0.,     0.,
+        0.,                 0., 0.,   0.01, 0.,     0.,
+        0.,                 0., 0.,   0.,   0.0001, 0.,
+        0.,                 0., 0.,   0.,   0.,     1.;
+
+    
+      Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(
+                                                                         cov, rPos, rMom, 1., 0);
+      initialParameters.push_back(rStart);
+      iTrack++;
+    }
+
+    auto pSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
+                                                                  Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
+
+  
+    // Set the KalmanFitter options
+    Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions(
+                                                                 ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
+                                                                 Acts::VoidOutlierFinder(), pSurface.get());
+
+    // Set the alignment options
+    FW::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>
+      alignOptions(kfOptions, conf_alignment.alignedTransformUpdater,
+                   conf_alignment.alignedDetElements, conf_alignment.chi2ONdfCutOff, conf_alignment.deltaChi2ONdfCutOff,
+                   conf_alignment.maxNumIterations, conf_alignment.iterationState);
+  
+    std::printf("Invoke alignment");
+    auto result = conf_alignment.align(sourcelinkTracks, initialParameters, alignOptions);
+
+    if (result.ok()) {
+      std::cout<<"Alignment finished with deltaChi2 = " << result.value().deltaChi2;
+      // ctx.eventStore.add("TeleAlignResult", std::move( result.value() ) );
+    
+    } else {
+      std::cout<<"Alignment failed with " << result.error();
+    }    
+    
     if (algAlign->execute(++ctx) != FW::ProcessCode::SUCCESS) {
       throw std::runtime_error("Failed to process event data");
     }
 
-    auto &result = wb.get<FW::AlignmentResult>("TeleAlignResult");
-    
+    // auto &result = wb.get<FW::AlignmentResult>("TeleAlignResult");
+    // std::cout<< "main Alignment finished with deltaChi2 = " << result.deltaChi2<< std::endl;    
 
+    /////////////////////////////
+    
     break;
   }  
   return 0;
