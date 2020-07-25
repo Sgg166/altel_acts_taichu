@@ -49,6 +49,7 @@ Usage:
   -help              help message
   -verbose           verbose flag
   -file [jsonfile]   name of data json file
+  -gev [energy_gev]  beam energy
 )";
 
 int main(int argc, char* argv[]) {  
@@ -58,11 +59,13 @@ int main(int argc, char* argv[]) {
     {
      { "help",       no_argument,       &do_help,      1  },
      { "verbose",    no_argument,       &do_verbose,   1  },
-     { "file",     required_argument, NULL,           'f' },
+     { "file",      required_argument, NULL,           'f' },
+     { "gev",       required_argument, NULL,           'e' },
      { 0, 0, 0, 0 }};
   
   std::string datafile_name;
-
+  uint32_t energy_opt = 4;
+  
   int c;
   opterr = 1;
   while ((c = getopt_long_only(argc, argv, "", longopts, NULL))!= -1) {
@@ -73,6 +76,10 @@ int main(int argc, char* argv[]) {
     case 'f':
       datafile_name = optarg;
       break;
+    case 'e':
+      energy_opt = std::stoul(optarg);
+      break;
+
       /////generic part below///////////
     case 0: /* getopt_long() set a variable, just keep going */
       break;
@@ -100,7 +107,7 @@ int main(int argc, char* argv[]) {
     exit(0);
   }
   
-  double beamEnergy = 2_GeV;
+  double beamEnergy = energy_opt * Acts::UnitConstants::GeV;
   Acts::GeometryContext gctx;
   Acts::MagneticFieldContext mctx;
   Acts::CalibrationContext cctx;
@@ -290,7 +297,20 @@ int main(int argc, char* argv[]) {
 
     if (result.ok()) {
       std::cout<<"Alignment finished with deltaChi2 = " << result.value().deltaChi2;
-    
+      // Print out the alignment parameters of all detector elements (including those not aligned)
+      idet=0;
+      std::cout<<"iDet, centerX, centerY, centerZ, rotX, rotY, rotZ"<<std::endl; 
+      for (const auto& det : element_col) {
+        const auto& surface = &det->surface();
+        const auto& transform =
+            det->transform(gctx);
+        const auto& translation = transform.translation();
+        const auto& rotation = transform.rotation();
+        const Acts::Vector3D rotAngles = rotation.eulerAngles(2, 1, 0);
+      //  std::cout<<"Rotation marix = \n" << rotation<<std::endl;
+        std::cout<<idet<<","<<translation.x()<<","<<translation.y()<<","<<translation.z()<<","<<rotAngles(2)<<","<<rotAngles(1)<<","<<rotAngles(0)<<std::endl;
+        idet++;
+      }
     } else {
       std::cout<<"Alignment failed with " << result.error();
     }
