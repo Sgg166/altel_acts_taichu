@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
     exit(0);
   }
   
-
+  double beamEnergy = 2_GeV;
   Acts::GeometryContext gctx;
   Acts::MagneticFieldContext mctx;
   Acts::CalibrationContext cctx;
@@ -126,19 +126,19 @@ int main(int argc, char* argv[]) {
 
   // The criteria to determine if the iteration has converged. @Todo: to use
   // delta chi2 instead
-  double chi2ONdfCutOff = 0.05;
-  std::pair<size_t, double> deltaChi2ONdfCutOff = {10,0.00001};
+  double chi2ONdfCutOff = 0.01;
+  std::pair<size_t, double> deltaChi2ONdfCutOff = {10,0.000001};
   // The maximum number of iterations
-  size_t maxNumIterations = 400;
+  size_t maxNumIterations = 800;
   // set up the alignment dnf for each iteration
   std::map<unsigned int, std::bitset<6>> iterationState;
   for (unsigned int iIter = 0; iIter < maxNumIterations; iIter++) {
     std::bitset<6> mask(std::string("111111"));
-    if (iIter % 2 == 0 ) {
-      // fix the x offset (i.e. offset along the beam) and rotation around y
-      mask = std::bitset<6>(std::string("010110"));
-    }else {
-      // fix the x offset and rotation aroundi x, z
+    if (iIter % 3 == 0) {
+      mask = std::bitset<6>(std::string("000110"));
+    } else if (iIter % 3 == 1) {
+      mask = std::bitset<6>(std::string("010000"));
+    } else {
       mask = std::bitset<6>(std::string("101001"));
     }
     iterationState.emplace(iIter, mask);
@@ -229,17 +229,17 @@ int main(int argc, char* argv[]) {
       // Create initial parameters
       // The position is taken from the first measurement
       const auto& sourcelinks = sourcelinkTracks.at(iTrack);
-      const Acts::Vector3D global0 = sourcelinks.at(0).globalPosition(0);
-      const Acts::Vector3D global1 = sourcelinks.at(1).globalPosition(0);
+      const Acts::Vector3D global0 = sourcelinks.at(0).globalPosition(gctx);
+      const Acts::Vector3D global1 = sourcelinks.at(1).globalPosition(gctx);
       Acts::Vector3D distance = global1 - global0;
 
       const double phi = Acts::VectorHelpers::phi(distance);
       const double theta = Acts::VectorHelpers::theta(distance);
-
+      
       // shift along the beam by 100_mm
       Acts::Vector3D rPos = global0 - distance / 2;
-      Acts::Vector3D rMom(6_GeV * sin(theta) * cos(phi),
-                          6_GeV * sin(theta) * sin(phi), 6_GeV * cos(theta));
+      Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
+                          beamEnergy * sin(theta) * sin(phi), beamEnergy * cos(theta));
 
       Acts::BoundSymMatrix cov;
       cov <<
@@ -262,11 +262,23 @@ int main(int argc, char* argv[]) {
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions
       (gctx, mctx, cctx, Acts::VoidOutlierFinder(), refSurface.get()); //pSurface default nullptr
 
+    // Set up the detector elements to be aligned (fix the first one)
+    std::vector<std::shared_ptr<Acts::DetectorElementBase>> dets;
+    unsigned int idet = 0;
+    for (const auto& det : element_col) {
+      idet++;
+      // Skip the first detector element
+      if (idet == 1) {
+        continue;
+      }
+      dets.push_back(det);
+    }
+
     // Set the alignment options
     FW::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>> alignOptions
       (kfOptions,
        alignedTransformUpdaterFun,
-       element_col,
+       dets,
        chi2ONdfCutOff,
        deltaChi2ONdfCutOff,
        maxNumIterations,
