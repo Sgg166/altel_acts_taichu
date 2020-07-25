@@ -42,6 +42,8 @@
 
 
 
+using JsonValue = rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
+
 using namespace Acts::UnitLiterals;
 
 static const std::string help_usage = R"(
@@ -50,6 +52,8 @@ Usage:
   -verbose           verbose flag
   -file [jsonfile]   name of data json file
   -gev [energy_gev]  beam energy
+  -out [jsonfile]    alignment result
+ 
 )";
 
 int main(int argc, char* argv[]) {  
@@ -61,9 +65,11 @@ int main(int argc, char* argv[]) {
      { "verbose",    no_argument,       &do_verbose,   1  },
      { "file",      required_argument, NULL,           'f' },
      { "gev",       required_argument, NULL,           'e' },
+     { "out",       required_argument, NULL,           'o' },
      { 0, 0, 0, 0 }};
   
   std::string datafile_name;
+  std::string outputfile_name;
   uint32_t energy_opt = 4;
   
   int c;
@@ -72,6 +78,8 @@ int main(int argc, char* argv[]) {
     switch (c) {
     case 'h':
       do_help = 1;
+      std::fprintf(stdout, "%s\n", help_usage.c_str());
+      exit(0);
       break;
     case 'f':
       datafile_name = optarg;
@@ -79,7 +87,9 @@ int main(int argc, char* argv[]) {
     case 'e':
       energy_opt = std::stoul(optarg);
       break;
-
+    case 'o':
+      outputfile_name = optarg;
+      break;
       /////generic part below///////////
     case 0: /* getopt_long() set a variable, just keep going */
       break;
@@ -102,10 +112,14 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if(do_help){
-    std::fprintf(stdout, "%s\n", help_usage.c_str());
+
+  if(datafile_name.empty() || outputfile_name.empty()){
+    std::fprintf(stderr, "%s\n", help_usage.c_str());
     exit(0);
   }
+  
+  
+  rapidjson::CrtAllocator jsa;
   
   double beamEnergy = energy_opt * Acts::UnitConstants::GeV;
   Acts::GeometryContext gctx;
@@ -299,18 +313,40 @@ int main(int argc, char* argv[]) {
       std::cout<<"Alignment finished with deltaChi2 = " << result.value().deltaChi2;
       // Print out the alignment parameters of all detector elements (including those not aligned)
       idet=0;
-      std::cout<<"iDet, centerX, centerY, centerZ, rotX, rotY, rotZ"<<std::endl; 
+      std::cout<<"iDet, centerX, centerY, centerZ, rotX, rotY, rotZ"<<std::endl;
+
+      JsonValue js_output(rapidjson::kObjectType);
+      JsonValue js_align_result(rapidjson::kArrayType);
+      
       for (const auto& det : element_col) {
+        JsonValue js_ele(rapidjson::kObjectType);
         const auto& surface = &det->surface();
         const auto& transform =
             det->transform(gctx);
         const auto& translation = transform.translation();
         const auto& rotation = transform.rotation();
         const Acts::Vector3D rotAngles = rotation.eulerAngles(2, 1, 0);
-      //  std::cout<<"Rotation marix = \n" << rotation<<std::endl;
-        std::cout<<idet<<","<<translation.x()<<","<<translation.y()<<","<<translation.z()<<","<<rotAngles(2)<<","<<rotAngles(1)<<","<<rotAngles(0)<<std::endl;
+      //  std::cout<<"Rotation marix = \n" << rotation<<std::endl;        
+        js_ele.AddMember("idet",       JsonValue(idet), jsa);
+        js_ele.AddMember("trans_x",    JsonValue(translation.x()), jsa);
+        js_ele.AddMember("trans_y",    JsonValue(translation.y()), jsa);
+        js_ele.AddMember("trans_z",    JsonValue(translation.z()), jsa);
+        js_ele.AddMember("rot_2", JsonValue(rotAngles(2)), jsa);
+        js_ele.AddMember("rot_1", JsonValue(rotAngles(1)), jsa);
+        js_ele.AddMember("rot_0", JsonValue(rotAngles(0)), jsa);
+        js_align_result.PushBack(std::move(js_ele), jsa);
+        std::cout<<idet<<","<<translation.x()<<","<<translation.y()<<","<<translation.z()<<","<<rotAngles(2)<<","<<rotAngles(1)<<","<<rotAngles(0)<<std::endl;        
         idet++;
       }
+      
+      js_output.AddMember("alignment_ressult", std::move(js_align_result), jsa);
+      std::FILE* fp = std::fopen(outputfile_name.c_str(), "w");
+      char writeBuffer[65536];
+      rapidjson::FileWriteStream os(fp, writeBuffer, sizeof(writeBuffer));
+      rapidjson::PrettyWriter< rapidjson::FileWriteStream> writer(os);
+      js_output.Accept(writer);
+      std::fclose(fp);
+      
     } else {
       std::cout<<"Alignment failed with " << result.error();
     }
