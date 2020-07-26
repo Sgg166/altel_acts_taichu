@@ -58,8 +58,8 @@ Usage:
   -resPhi     [float]      preset seed track resolution Phi
   -resTheta   [float]      preset seed track resolution Theta
   -maxItera   [integer]    max time of alignement iterations
-  -deltaItera [integer]    converge conditaon: delta iteration
-  -deltaChi2  [float]      converge conditaon: delta Chi2ONdf
+  -deltaItera [integer]    converge condition: delta iteration
+  -deltaChi2  [float]      converge condition: delta Chi2ONdf
 
 )";
 
@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
 
     char readBuffer[UINT16_MAX];
     rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc;
+    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(&jsa);
     doc.ParseStream(is);
     std::fclose(fp);
 
@@ -240,7 +240,7 @@ int main(int argc, char* argv[]) {
     }
     char readBuffer[UINT16_MAX];
     rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc;
+    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(&jsa);
     doc.ParseStream(is);
     std::fclose(fp);
     js_geometry.CopyFrom<rapidjson::CrtAllocator>(doc["alignment_result"],jsa);

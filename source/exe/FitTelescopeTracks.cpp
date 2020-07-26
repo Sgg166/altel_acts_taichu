@@ -31,6 +31,7 @@
 
 #include "ACTFW/Framework/Sequencer.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
+#include "ACTFW/Framework/IWriter.hpp"
 
 #include "TelescopeDetectorElement.hpp"
 #include "TelescopeTrackReader.hpp"
@@ -40,6 +41,7 @@
 #include "ObjTelescopeTrackWriter.hpp"
 #include "RootTelescopeTrackWriter.hpp"
 #include "TelescopeTrackReader.hpp"
+#include "ACTFW/EventData/SimMultiTrajectory.hpp"
 
 #include <memory>
 #include "getopt.h"
@@ -178,7 +180,7 @@ int main(int argc, char* argv[]) {
 
     char readBuffer[UINT16_MAX];
     rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc;
+    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(&jsa);
     doc.ParseStream(is);
     std::fclose(fp);
 
@@ -223,7 +225,7 @@ int main(int argc, char* argv[]) {
     }
     char readBuffer[UINT16_MAX];
     rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc;
+    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(&jsa);
     doc.ParseStream(is);
     std::fclose(fp);
     js_geometry.CopyFrom<rapidjson::CrtAllocator>(doc["alignment_result"],jsa);
@@ -276,31 +278,19 @@ int main(int argc, char* argv[]) {
   //
 
   /////////////////////////////////////
-  Telescope::TelescopeTrackReader trackReader;
-  trackReader.detectorSurfaces = surface_col;
-
-  // setup the fitting algorithm
-  Telescope::TelescopeFittingAlgorithm::Config conf_fitter;
-  //@Todo: add run number information in the file name
-  conf_fitter.inputFileName = datafile_name;
-  conf_fitter.outputTrajectories = "trajectories";
-  conf_fitter.trackReader = trackReader;
-  // The number of tracks you want to process (in default, all of tracks will be
-  // read and fitted)
-  conf_fitter.maxNumTracks = 20000;
-  conf_fitter.fit = Telescope::TelescopeFittingAlgorithm::makeFitterFunction
+  auto fitFun = Telescope::TelescopeFittingAlgorithm::makeFitterFunction
     (trackingGeometry, magneticField,  Acts::Logging::INFO);
 
   // write tracks as root tree
   Telescope::RootTelescopeTrackWriter::Config conf_trackRootWriter;
-  conf_trackRootWriter.inputTrajectories = conf_fitter.outputTrajectories;
+  conf_trackRootWriter.inputTrajectories = "trajectories";
   conf_trackRootWriter.outputDir = outputDir;
   conf_trackRootWriter.outputFilename = "telescope_tracks.root";
   conf_trackRootWriter.outputTreename = "tracks";
 
   // write the tracks (measurements only for the moment) as Csv
   Telescope::ObjTelescopeTrackWriter::Config conf_trackObjWriter;
-  conf_trackObjWriter.inputTrajectories = conf_fitter.outputTrajectories;
+  conf_trackObjWriter.inputTrajectories = "trajectories";
   conf_trackObjWriter.outputDir = outputDir;
   // The number of tracks you want to show (in default, all of tracks will be
   // shown)
@@ -308,7 +298,7 @@ int main(int argc, char* argv[]) {
   
   // write reconstruction performance data
   Telescope::TelescopeTrackingPerformanceWriter::Config conf_perfFitter;
-  conf_perfFitter.inputTrajectories = conf_fitter.outputTrajectories;
+  conf_perfFitter.inputTrajectories = "trajectories";
   conf_perfFitter.outputDir = outputDir;
 
   ////////////////seq////////////////////////
@@ -318,14 +308,113 @@ int main(int argc, char* argv[]) {
   conf_seq.numThreads = 1;
   conf_seq.events = 1;
 
-  FW::Sequencer seq(conf_seq);
 
-  seq.addAlgorithm(std::make_shared<Telescope::TelescopeFittingAlgorithm>(conf_fitter,  Acts::Logging::INFO));
-  seq.addWriter(std::make_shared<Telescope::RootTelescopeTrackWriter>(conf_trackRootWriter,  Acts::Logging::INFO));
-  seq.addWriter(std::make_shared<Telescope::ObjTelescopeTrackWriter>(conf_trackObjWriter,  Acts::Logging::INFO));
-  seq.addWriter(std::make_shared<Telescope::TelescopeTrackingPerformanceWriter>(conf_perfFitter,  Acts::Logging::INFO));
+  std::vector<std::shared_ptr<FW::IWriter>> writer_col;
+  writer_col.push_back(std::make_shared<Telescope::RootTelescopeTrackWriter>(conf_trackRootWriter,  Acts::Logging::INFO));
+  writer_col.push_back(std::make_shared<Telescope::ObjTelescopeTrackWriter>(conf_trackObjWriter,  Acts::Logging::INFO));
+  writer_col.push_back(std::make_shared<Telescope::TelescopeTrackingPerformanceWriter>(conf_perfFitter,  Acts::Logging::INFO));
 
-  seq.run();
+  //run
+  {
+    FW::WhiteBoard eventStore;
+    FW::AlgorithmContext context(0, 0, eventStore);
+
+    // Setup local covariance
+    Acts::BoundMatrix cov_hit = Acts::BoundMatrix::Zero();
+    cov_hit(0, 0) =resX*resX;
+    cov_hit(1, 1) =resY*resY;
+
+    std::vector<std::vector<Telescope::PixelSourceLink>> sourcelinkTracks;
+    sourcelinkTracks.reserve(js_selected_datapack_col.Size());
+    for(auto ev_it = js_selected_datapack_col.Begin(); ev_it != js_selected_datapack_col.End() ; ev_it++ ){
+      const auto &evpack = *ev_it;
+      std::vector<Telescope::PixelSourceLink> sourcelinks;
+      auto &frames = evpack["layers"];
+      for(size_t i= 0; i< 6; i++){
+        double x = frames[i]["hit"][0]["pos"][0].GetDouble() - 0.02924*1024/2.0;
+        double y = frames[i]["hit"][0]["pos"][1].GetDouble() - 0.02688*512/2.0;
+        Acts::Vector2D loc;
+        loc << x, y;
+        sourcelinks.emplace_back(*surface_col.at(i), loc, cov_hit);
+      }
+      sourcelinkTracks.push_back(sourcelinks);
+    }
+
+    std::vector<Telescope::PixelMultiTrajectory> trajectories;
+    trajectories.reserve(js_selected_datapack_col.Size());
+    size_t itrack = 0;
+    for(const auto& trackSourcelinks : sourcelinkTracks) {
+      itrack++;
+      if (trackSourcelinks.empty()) {
+        trajectories.push_back(Telescope::PixelMultiTrajectory());
+        std::cout<<"Empty track " << itrack << " found."<<std::endl;
+        continue;
+      }
+      Acts::BoundSymMatrix cov;
+      cov <<
+        10_mm * 10_mm, 0., 0., 0., 0., 0.,
+        0., 10_mm * 10_mm, 0., 0., 0., 0.,
+        0., 0., 0.0001, 0., 0., 0.,
+        0., 0., 0., 0.0001, 0., 0.,
+        0., 0., 0., 0., 0.0001, 0.,
+        0., 0., 0., 0.,     0., 1.;
+
+      Acts::Vector3D rPos(-120_mm, 0, 0);
+      Acts::Vector3D rMom(beamEnergy, 0, 0);
+      Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(cov, rPos, rMom, 1., 0);
+
   
+      auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>
+        (Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
+      Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions
+        (gctx, mctx, cctx,Acts::VoidOutlierFinder(),  refSurface.get());
+        
+      auto result = fitFun(trackSourcelinks, rStart, kfOptions);
+
+      if (result.ok()) {
+        // Get the fit output object
+        const auto& fitOutput = result.value();
+        // The track entry indices container. One element here.
+        std::vector<size_t> trackTips;
+        trackTips.reserve(1);
+        trackTips.emplace_back(fitOutput.trackTip);
+        // The fitted parameters container. One element (at most) here.
+        FW::IndexedParams indexedParams;
+        if (fitOutput.fittedParameters) {
+          const auto& params = fitOutput.fittedParameters.value();
+          std::cout<<"Fitted paramemeters for track " << itrack<<std::endl;
+          std::cout<<"  position: " << params.position().transpose()<<std::endl;
+          std::cout<<"  momentum: " << params.momentum().transpose()<<std::endl;
+          // Push the fitted parameters to the container
+          indexedParams.emplace(fitOutput.trackTip, std::move(params));
+        } else {
+          // ACTS_DEBUG("No fitted paramemeters for track " << itrack);
+        }
+        // Create a PixelMultiTrajectory
+        trajectories.emplace_back(std::move(fitOutput.fittedStates),
+                                  std::move(trackTips), std::move(indexedParams));
+      } else {
+        std::cout<<"Fit failed for track " << itrack << " with error"
+                 << result.error()<<std::endl;
+        // Fit failed, but still create an empty PixelMultiTrajectory
+        trajectories.push_back(Telescope::PixelMultiTrajectory());
+      }
+    }
+
+    eventStore.add("trajectories", std::move(trajectories));
+
+    for (auto& wrt : writer_col) {
+      if (wrt->write(++context) != FW::ProcessCode::SUCCESS) {
+        throw std::runtime_error("Failed to write output data");
+      }
+    }
+
+    for (auto& wrt : writer_col) {
+      if (wrt->endRun() != FW::ProcessCode::SUCCESS) {
+        throw std::runtime_error("Failed to write output data");
+      }
+    }
+
+  }
   return 0;
 }
