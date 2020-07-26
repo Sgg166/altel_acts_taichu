@@ -18,8 +18,29 @@ target_link_libraries(AlignTelescopeTracks PRIVATE
   )
 
 
+add_executable(FitTelescopeTracks FitTelescopeTracks.cpp)
+target_link_libraries(FitTelescopeTracks PRIVATE
+  altel-acts
+
+  ActsExamplesFramework
+  ActsExamplesCommon
+  ActsExamplesDetectorsCommon
+  ActsExamplesMagneticField
+  ActsExamplesIoCsv
+  ActsExamplesIoObj
+  ActsExamplesIoPerformance
+  rapidjson
+
+  ROOT::Core
+  ROOT::Hist
+  ROOT::Tree
+  )
+
+
+
+
 # install-tree
-install(TARGETS AlignTelescopeTracks
+install(TARGETS AlignTelescopeTracks FitTelescopeTracks
   EXPORT ${PROJECT_NAME}Targets
   RUNTIME       DESTINATION bin      COMPONENT runtime
   LIBRARY       DESTINATION lib      COMPONENT runtime

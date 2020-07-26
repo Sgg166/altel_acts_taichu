@@ -35,7 +35,7 @@ struct TelescopeTrackReader {
   std::array<double, 2> resolution = {150 * Acts::UnitConstants::um, 150 * Acts::UnitConstants::um};
 
   /// The ordered detector surfaces
-  std::vector<const Acts::Surface*> detectorSurfaces;
+  std::vector<std::shared_ptr<const Acts::Surface>> detectorSurfaces;
 
   /// Function to read and create source link tracks as input of fitter
   ///
