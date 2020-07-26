@@ -49,9 +49,17 @@ static const std::string help_usage = R"(
 Usage:
   -help              help message
   -verbose           verbose flag
-  -file [jsonfile]   name of data json file
-  -gev [energy_gev]  beam energy
-  -out [jsonfile]    alignment result
+  -file       [jsonfile]   name of data json file
+  -energy     [float]      beam energy
+  -out        [jsonfile]   alignment result
+  -geo        [jsonfile]   geometry input file
+  -resX       [float]      preset detector hit resolution X
+  -resY       [float]      preset detector hit resolution Y
+  -resPhi     [float]      preset seed track resolution Phi
+  -resTheta   [float]      preset seed track resolution Theta
+  -maxItera   [integer]    max time of alignement iterations
+  -deltaItera [integer]    converge conditaon: delta iteration
+  -deltaChi2  [float]      converge conditaon: delta Chi2ONdf
 
 )";
 
@@ -65,25 +73,31 @@ int main(int argc, char* argv[]) {
      { "help",       no_argument,       &do_help,      1  },
      { "verbose",    no_argument,       &do_verbose,   1  },
      { "file",      required_argument, NULL,           'f' },
-     { "gev",       required_argument, NULL,           'e' },
+     { "energy",       required_argument, NULL,        'e' },
      { "out",       required_argument, NULL,           'o' },
-     { "geo",       required_argument, NULL,           'g' },
+     { "geomerty",       required_argument, NULL,      'g' },
+     { "resX",       required_argument, NULL,          'r' },
+     { "resY",       required_argument, NULL,          's' },
+     { "resPhi",       required_argument, NULL,        't' },
+     { "resTheta",       required_argument, NULL,      'w' },
+     { "maxItera",       required_argument, NULL,      'x' },
+     { "deltaItera",       required_argument, NULL,    'y' },
+     { "deltaChi2",       required_argument, NULL,     'z' },
      { 0, 0, 0, 0 }};
-  
+
+
   std::string datafile_name;
   std::string outputfile_name;
   std::string geofile_name;
-  uint32_t energy_opt = 4;
-
-  //@todo: add options for following parameters
+  double beamEnergy = 4 * Acts::UnitConstants::GeV;
   double resX = 150_um;
   double resY = 150_um;
   double resPhi = 0.3;
   double resTheta = 0.3;
   size_t maxNumIterations = 400;
   size_t nIterations = 10;
-  double deltaChi2ONdf = 1e-6; 
-  
+  double deltaChi2ONdf = 1e-6;
+
   int c;
   opterr = 1;
   while ((c = getopt_long_only(argc, argv, "", longopts, NULL))!= -1) {
@@ -97,13 +111,34 @@ int main(int argc, char* argv[]) {
       datafile_name = optarg;
       break;
     case 'e':
-      energy_opt = std::stoul(optarg);
+      beamEnergy = std::stod(optarg) * Acts::UnitConstants::GeV;
       break;
     case 'o':
       outputfile_name = optarg;
       break;
     case 'g':
       geofile_name = optarg;
+      break;
+    case 'r':
+      resX = std::stod(optarg);
+      break;
+    case 's':
+      resY = std::stod(optarg);
+      break;
+    case 't':
+      resPhi = std::stod(optarg);
+      break;
+    case 'w':
+      resTheta = std::stod(optarg);
+      break;
+    case 'x':
+      maxNumIterations = std::stoul(optarg);
+      break;
+    case 'y':
+      nIterations = std::stoul(optarg);
+      break;
+    case 'z':
+      deltaChi2ONdf = std::stod(optarg);
       break;
 
       /////generic part below///////////
@@ -133,7 +168,21 @@ int main(int argc, char* argv[]) {
     exit(0);
   }
 
+  std::fprintf(stdout, "\n");
+  std::fprintf(stdout, "datafile:         %s\n", datafile_name.c_str());
+  std::fprintf(stdout, "outfile:          %s\n", outputfile_name.c_str());
+  std::fprintf(stdout, "geofile:          %s\n", geofile_name.c_str());
+  std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
+  std::fprintf(stdout, "resX:             %f\n", resX);
+  std::fprintf(stdout, "resY:             %f\n", resY);
+  std::fprintf(stdout, "resPhi:           %f\n", resPhi);
+  std::fprintf(stdout, "resTheta:         %f\n", resTheta);
+  std::fprintf(stdout, "maxNumIterations: %lu\n", maxNumIterations);
+  std::fprintf(stdout, "nIterations:      %lu\n", nIterations);
+  std::fprintf(stdout, "deltaChi2ONdf:    %f\n", deltaChi2ONdf);
+  std::fprintf(stdout, "\n");
 
+  
   ///////select datapacks/////////////////////
   JsonValue js_selected_datapack_col(rapidjson::kArrayType);
   size_t n_datapack_select_opt = 20000;
@@ -217,7 +266,6 @@ int main(int argc, char* argv[]) {
 
   }
 
-  double beamEnergy = energy_opt * Acts::UnitConstants::GeV;
   Acts::GeometryContext gctx;
   Acts::MagneticFieldContext mctx;
   Acts::CalibrationContext cctx;
@@ -334,7 +382,7 @@ int main(int argc, char* argv[]) {
       Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
                           beamEnergy * sin(theta) * sin(phi),
                           beamEnergy * cos(theta));
-      
+
       Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(cov_seed, rPos, rMom, 1., 0);
       initialParameters.push_back(rStart);
     }
@@ -356,7 +404,7 @@ int main(int argc, char* argv[]) {
        maxNumIterations,
        iterationState
        );
-    
+
     std::printf("Invoke alignment");
     auto result = alignFun(sourcelinkTracks, initialParameters, alignOptions);
 
