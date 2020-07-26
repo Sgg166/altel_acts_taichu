@@ -173,6 +173,7 @@ int main(int argc, char* argv[]) {
   ///////end of select datapacks/////////////////////
 
   JsonValue js_geometry(rapidjson::kArrayType);
+  if(!geofile_name.empty())
   {
     std::FILE* fp = std::fopen(geofile_name.c_str(), "r");
     if(!fp) {
@@ -185,6 +186,26 @@ int main(int argc, char* argv[]) {
     doc.ParseStream(is);
     std::fclose(fp);
     js_geometry.CopyFrom<rapidjson::CrtAllocator>(doc["alignment_result"],jsa);
+  }
+  else{
+    std::vector<std::vector<double>> positions{{-95_mm, 0., 0.},
+                                                {-57_mm, 0., 0.},
+                                                {-19_mm, 0., 0.},
+                                                {19_mm, 0., 0.},
+                                                {57_mm, 0., 0.},
+                                                {95_mm, 0., 0.}};
+
+    for(auto &p: positions){
+      JsonValue js_ele(rapidjson::kObjectType);
+      js_ele.AddMember("centerX",    JsonValue(p[0]), jsa);
+      js_ele.AddMember("centerY",    JsonValue(0), jsa);
+      js_ele.AddMember("centerZ",    JsonValue(0), jsa);
+      js_ele.AddMember("rotX", JsonValue(0), jsa);
+      js_ele.AddMember("rotY", JsonValue(0), jsa);
+      js_ele.AddMember("rotZ", JsonValue(0), jsa);
+      js_geometry.PushBack(std::move(js_ele), jsa);
+    }
+
   }
 
   double beamEnergy = energy_opt * Acts::UnitConstants::GeV;
@@ -200,12 +221,6 @@ int main(int argc, char* argv[]) {
   std::vector<std::shared_ptr<const Acts::Surface>> surface_col;
   std::vector<Acts::LayerPtr> layer_col;
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
-                                           // {-95_mm, 0., 0.},
-                                           // {-57_mm, 0., 0.},
-                                           // {-19_mm, 0., 0.},
-                                           // {19_mm, 0., 0.},
-                                           // {57_mm, 0., 0.},
-                                           // {95_mm, 0., 0.}};
 
 
   Telescope::BuildGeometry(gctx, trackingGeometry, element_col, surface_col, layer_col, js_geometry);
@@ -356,7 +371,7 @@ int main(int argc, char* argv[]) {
         const auto& rotation = transform.rotation();
         const Acts::Vector3D rotAngles = rotation.eulerAngles(2, 1, 0);
       //std::cout<<"Rotation marix = \n" << rotation<<std::endl;
-        js_ele.AddMember("idet",       JsonValue(idet), jsa);
+        // js_ele.AddMember("idet",       JsonValue(idet), jsa);
         js_ele.AddMember("centerX",    JsonValue(translation.x()), jsa);
         js_ele.AddMember("centerY",    JsonValue(translation.y()), jsa);
         js_ele.AddMember("centerZ",    JsonValue(translation.z()), jsa);
