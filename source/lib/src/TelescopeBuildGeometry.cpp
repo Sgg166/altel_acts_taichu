@@ -34,6 +34,8 @@
 #include "TelescopeTrack.hpp"
 #include "TelescopeDetectorElement.hpp"
 
+#include "myrapidjson.h"
+
 using namespace Acts::UnitLiterals;
 
 void Telescope::BuildGeometry(
@@ -42,17 +44,35 @@ void Telescope::BuildGeometry(
                               std::vector<std::shared_ptr<Acts::DetectorElementBase>>& element_col,
                               std::vector<std::shared_ptr<const Acts::Surface>>& surface_col,
                               std::vector<Acts::LayerPtr>& layer_col,
-                              std::vector<Acts::Vector3D> translations
+                              const rapidjson::GenericValue<rapidjson::UTF8<>, rapidjson::CrtAllocator> &js_opt
                               ){
-  
-  // Construct the rotation
-  Acts::RotationMatrix3D rotation = Acts::RotationMatrix3D::Identity();
-  // Euler angle around y will be -90_degree
-  double rotationAngle = 90_degree;
-  rotation.col(0) = Acts::Vector3D(std::cos(rotationAngle), 0., std::sin(rotationAngle));
-  rotation.col(1) = Acts::Vector3D(0., 1., 0.);
-  rotation.col(2) = Acts::Vector3D(-std::sin(rotationAngle), 0., std::cos(rotationAngle));
-  
+
+  std::vector<Acts::Transform3D> transforms;
+  for(const auto& js_l: js_opt.GetArray()){
+    double cx = js_l["centerX"].GetDouble();
+    double cy = js_l["centerY"].GetDouble();
+    double cz = js_l["centerZ"].GetDouble();
+    double rx = js_l["rotX"].GetDouble();
+    double ry = js_l["rotY"].GetDouble();
+    double rz = js_l["rotZ"].GetDouble();
+    // Acts::Vector3D center3d;
+    Acts::Vector3D translation(cx,cy,cz);
+     // The rotation around global z axis
+      Acts::AngleAxis3D rotZ(rz,
+                             Acts::Vector3D::UnitZ());
+      // The rotation around global y axis
+      Acts::AngleAxis3D rotY(ry,
+                             Acts::Vector3D::UnitY());
+      // The rotation around global x axis
+      Acts::AngleAxis3D rotX(rx,
+                             Acts::Vector3D::UnitX());
+      Acts::Rotation3D rotation = rotZ * rotY * rotX;
+
+      const Acts::Transform3D transform =
+          Acts::Translation3D(translation) * rotation;
+    transforms.push_back(std::move(transform));
+  }
+
   // Boundaries of the surfaces (ALPIDE SIZE: 27.52512 * 13.76256_mm*mm)
   const auto rBounds = std::make_shared<const Acts::RectangleBounds>
     (Acts::RectangleBounds(1000_mm, 1000_mm));
@@ -63,9 +83,8 @@ void Telescope::BuildGeometry(
     (Acts::MaterialProperties(95.7, 465.2, 28.03, 14., 2.32e-3, 50_um));
   
   // Set translation vectors
-  for (unsigned int i = 0; i < translations.size(); i++) {
-    auto trafo = std::make_shared<Acts::Transform3D>(Acts::Transform3D::Identity() * rotation);
-    trafo->translation() = translations[i];
+  for (unsigned int i = 0; i < transforms.size(); i++) {
+    auto trafo = std::make_shared<Acts::Transform3D>(transforms[i]);
     // Create the detector element
     auto detElement = std::make_shared<Telescope::TelescopeDetectorElement>(trafo, rBounds, 1_um, surfaceMaterial);
     auto detSurface = detElement->surface().getSharedPtr();

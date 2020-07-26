@@ -21,11 +21,11 @@
 #include "Acts/Geometry/TrackingVolume.hpp"
 #include "Acts/Geometry/TrackingVolumeArrayCreator.hpp"
 
-
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/BareAlgorithm.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
 
+#include "myrapidjson.h"
 
 namespace Telescope{
   using AlignResult = Acts::Result<FW::AlignmentResult>;
@@ -48,7 +48,7 @@ namespace Telescope{
                      std::vector<std::shared_ptr<Acts::DetectorElementBase>>& element_col,
                      std::vector<std::shared_ptr<const Acts::Surface>>& surface_col,
                      std::vector<Acts::LayerPtr>& layer_col,
-                     std::vector<Acts::Vector3D> translations
+                     const rapidjson::GenericValue<rapidjson::UTF8<>, rapidjson::CrtAllocator> &js_opt
                      );
 
 }
