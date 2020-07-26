@@ -74,6 +74,15 @@ int main(int argc, char* argv[]) {
   std::string outputfile_name;
   std::string geofile_name;
   uint32_t energy_opt = 4;
+
+  //@todo: add options for following parameters
+  double resX = 150_um;
+  double resY = 150_um;
+  double resPhi = 0.3;
+  double resTheta = 0.3;
+  size_t maxNumIterations = 400;
+  size_t nIterations = 10;
+  double deltaChi2ONdf = 1e-6; 
   
   int c;
   opterr = 1;
@@ -201,7 +210,7 @@ int main(int argc, char* argv[]) {
       js_ele.AddMember("centerY",    JsonValue(0), jsa);
       js_ele.AddMember("centerZ",    JsonValue(0), jsa);
       js_ele.AddMember("rotX", JsonValue(0), jsa);
-      js_ele.AddMember("rotY", JsonValue(0), jsa);
+      js_ele.AddMember("rotY", JsonValue(-M_PI/2), jsa);
       js_ele.AddMember("rotZ", JsonValue(0), jsa);
       js_geometry.PushBack(std::move(js_ele), jsa);
     }
@@ -244,9 +253,7 @@ int main(int argc, char* argv[]) {
   // The criteria to determine if the iteration has converged. @Todo: to use
   // delta chi2 instead
   double chi2ONdfCutOff = 0.01;
-  std::pair<size_t, double> deltaChi2ONdfCutOff = {10,0.000001};
-  // The maximum number of iterations
-  size_t maxNumIterations = 800;
+  std::pair<size_t, double> deltaChi2ONdfCutOff = {nIterations,deltaChi2ONdf};
   // set up the alignment dnf for each iteration
   std::map<unsigned int, std::bitset<6>> iterationState;
   for (unsigned int iIter = 0; iIter < maxNumIterations; iIter++) {
@@ -282,8 +289,8 @@ int main(int argc, char* argv[]) {
   while(1){
     // Setup local covariance
     Acts::BoundMatrix cov_hit = Acts::BoundMatrix::Zero();
-    cov_hit(0, 0) =150_um * 150_um;
-    cov_hit(1, 1) =150_um * 150_um;
+    cov_hit(0, 0) =resX*resX;
+    cov_hit(1, 1) =resY*resY;
 
     std::vector<std::vector<Telescope::PixelSourceLink>> sourcelinkTracks;
     sourcelinkTracks.reserve(js_selected_datapack_col.Size());
@@ -306,8 +313,8 @@ int main(int argc, char* argv[]) {
     cov_seed <<
         50_um * 50_um,     0.,  0.,   0.,   0.,  0.,
         0., 50_um * 50_um,      0.,   0.,   0.,  0.,
-        0.,                 0., 0.1, 0.,   0.,  0.,
-        0.,                 0., 0.,   0.1, 0.,  0.,
+        0.,                 0., resPhi*resPhi, 0.,   0.,  0.,
+        0.,                 0., 0.,   resTheta*resTheta, 0.,  0.,
         0.,                 0., 0.,   0.,   0.001,  0.,
         0.,                 0., 0.,   0.,   0.,  1.;
     
