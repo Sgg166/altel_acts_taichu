@@ -78,7 +78,7 @@ std::unique_ptr<const Acts::TrackingGeometry> buildDetector(
       Acts::RectangleBounds(1000_mm, 1000_mm));
 
   // Material of the surfaces
-  Acts::MaterialProperties matProp(95.7, 465.2, 28.03, 14., 2.32e-3, 50_um);
+  Acts::MaterialProperties matProp(95.7, 465.2, 28.03, 14., 2.32e-3, 80_um);
   const auto surfaceMaterial =
       std::make_shared<Acts::HomogeneousSurfaceMaterial>(matProp);
 

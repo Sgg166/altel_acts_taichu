@@ -92,11 +92,13 @@ int main(int argc, char* argv[]) {
   double beamEnergy = 4 * Acts::UnitConstants::GeV;
   double resX = 150_um;
   double resY = 150_um;
+  double resLoc1 = 50_um;
+  double resLoc2 = 50_um;
   double resPhi = 0.3;
   double resTheta = 0.3;
   size_t maxNumIterations = 400;
   size_t nIterations = 10;
-  double deltaChi2ONdf = 1e-6;
+  double deltaChi2ONdf = 1e-5;
 
   int c;
   opterr = 1;
@@ -359,11 +361,11 @@ int main(int argc, char* argv[]) {
     // Prepare the initial track parameters collection
     Acts::BoundSymMatrix cov_seed;
     cov_seed <<
-        50_um * 50_um,     0.,  0.,   0.,   0.,  0.,
-        0., 50_um * 50_um,      0.,   0.,   0.,  0.,
+        resLoc1 * resLoc1,     0.,  0.,   0.,   0.,  0.,
+        0., resLoc2 * resLoc2,      0.,   0.,   0.,  0.,
         0.,                 0., resPhi*resPhi, 0.,   0.,  0.,
         0.,                 0., 0.,   resTheta*resTheta, 0.,  0.,
-        0.,                 0., 0.,   0.,   0.001,  0.,
+        0.,                 0., 0.,   0.,   0.0001,  0.,
         0.,                 0., 0.,   0.,   0.,  1.;
     
     std::vector<Acts::CurvilinearParameters> initialParameters;

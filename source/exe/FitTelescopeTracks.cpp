@@ -90,10 +90,10 @@ int main(int argc, char* argv[]) {
   std::string geofile_name;
   std::string outputDir = "./";
   double beamEnergy = 4 * Acts::UnitConstants::GeV;
-  double resX = 150_um;
-  double resY = 150_um;
-  double resPhi = 0.3;
-  double resTheta = 0.3;
+  double resX = 5_um;
+  double resY = 5_um;
+  double resPhi = 0.7;
+  double resTheta = 0.7;
 
   int c;
   opterr = 1;
@@ -354,15 +354,25 @@ int main(int argc, char* argv[]) {
       cov <<
         10_mm * 10_mm, 0., 0., 0., 0., 0.,
         0., 10_mm * 10_mm, 0., 0., 0., 0.,
-        0., 0., 0.0001, 0., 0., 0.,
-        0., 0., 0., 0.0001, 0., 0.,
+        0., 0., resPhi*resPhi, 0., 0., 0.,
+        0., 0., 0., resTheta*resTheta, 0., 0.,
         0., 0., 0., 0., 0.0001, 0.,
         0., 0., 0., 0.,     0., 1.;
 
-      Acts::Vector3D rPos(-120_mm, 0, 0);
-      Acts::Vector3D rMom(beamEnergy, 0, 0);
-      Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(cov, rPos, rMom, 1., 0);
+      const Acts::Vector3D global0 = trackSourcelinks.at(0).globalPosition(gctx);
+      const Acts::Vector3D global1 = trackSourcelinks.at(1).globalPosition(gctx);
+      Acts::Vector3D distance = global1 - global0;
+      const double phi = Acts::VectorHelpers::phi(distance);
+      const double theta = Acts::VectorHelpers::theta(distance);
+      // shift along the beam by 100_mm
+      Acts::Vector3D rPos = global0 - distance / 2;
+      Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
+                          beamEnergy * sin(theta) * sin(phi),
+                          beamEnergy * cos(theta));
 
+      //Acts::Vector3D rPos(-120_mm, 0, 0);
+      //Acts::Vector3D rMom(beamEnergy, 0, 0);
+      Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(cov, rPos, rMom, 1., 0);
   
       auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>
         (Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
