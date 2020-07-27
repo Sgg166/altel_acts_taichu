@@ -330,9 +330,10 @@ int main(int argc, char* argv[]) {
       }
       return false;
     };
-  
+ 
+  Acts::Logging::Level logLevel = do_verbose? (Acts::Logging::VERBOSE):(Acts::Logging::INFO); 
   auto alignFun = Telescope::makeAlignmentFunction
-    (trackingGeometry, magneticField, Acts::Logging::INFO);
+    (trackingGeometry, magneticField, logLevel);
 
   
   while(1){

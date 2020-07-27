@@ -278,8 +278,9 @@ int main(int argc, char* argv[]) {
   //
 
   /////////////////////////////////////
+  Acts::Logging::Level logLevel = do_verbose? (Acts::Logging::VERBOSE):(Acts::Logging::INFO); 
   auto fitFun = Telescope::TelescopeFittingAlgorithm::makeFitterFunction
-    (trackingGeometry, magneticField,  Acts::Logging::INFO);
+    (trackingGeometry, magneticField,  logLevel);
 
   // write tracks as root tree
   Telescope::RootTelescopeTrackWriter::Config conf_trackRootWriter;
@@ -364,7 +365,6 @@ int main(int argc, char* argv[]) {
       Acts::Vector3D distance = global1 - global0;
       const double phi = Acts::VectorHelpers::phi(distance);
       const double theta = Acts::VectorHelpers::theta(distance);
-      // shift along the beam by 100_mm
       Acts::Vector3D rPos = global0 - distance / 2;
       Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
                           beamEnergy * sin(theta) * sin(phi),
