@@ -370,12 +370,10 @@ int main(int argc, char* argv[]) {
                           beamEnergy * sin(theta) * sin(phi),
                           beamEnergy * cos(theta));
 
-      //Acts::Vector3D rPos(-120_mm, 0, 0);
-      //Acts::Vector3D rMom(beamEnergy, 0, 0);
       Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(cov, rPos, rMom, 1., 0);
   
       auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>
-        (Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
+        (Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{0, 0., 1.});
       Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions
         (gctx, mctx, cctx,Acts::VoidOutlierFinder(),  refSurface.get());
         

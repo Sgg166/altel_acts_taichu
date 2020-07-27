@@ -388,12 +388,11 @@ int main(int argc, char* argv[]) {
     }
 
     // Set the KalmanFitter options
-    auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
-                                                                    //Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
-                                                                    Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{0., 0., 1});
-    // Acts::PlaneSurface refSurface(Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
+    //auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{0., 0., 1});
+
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions
-      (gctx, mctx, cctx, Acts::VoidOutlierFinder(), refSurface.get()); //pSurface default nullptr
+      //(gctx, mctx, cctx, Acts::VoidOutlierFinder(), refSurface.get());
+      (gctx, mctx, cctx, Acts::VoidOutlierFinder()); //pSurface default nullptr
 
     // Set the alignment options
     FW::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>> alignOptions
