@@ -248,24 +248,23 @@ int main(int argc, char* argv[]) {
     js_geometry.CopyFrom<rapidjson::CrtAllocator>(doc["alignment_result"],jsa);
   }
   else{
-    std::vector<std::vector<double>> positions{{-95_mm, 0., 0.},
-                                                {-57_mm, 0., 0.},
-                                                {-19_mm, 0., 0.},
-                                                {19_mm, 0., 0.},
-                                                {57_mm, 0., 0.},
-                                                {95_mm, 0., 0.}};
+    std::vector<std::vector<double>> positions{ {0., 0., -95_mm},
+                                                {0., 0., -57_mm},
+                                                {0., 0., -19_mm},
+                                                {0., 0., 19_mm},
+                                                {0., 0., 57_mm},
+                                                {0., 0., 95_mm}};
 
     for(auto &p: positions){
       JsonValue js_ele(rapidjson::kObjectType);
       js_ele.AddMember("centerX",    JsonValue(p[0]), jsa);
-      js_ele.AddMember("centerY",    JsonValue(0), jsa);
-      js_ele.AddMember("centerZ",    JsonValue(0), jsa);
+      js_ele.AddMember("centerY",    JsonValue(p[1]), jsa);
+      js_ele.AddMember("centerZ",    JsonValue(p[2]), jsa);
       js_ele.AddMember("rotX", JsonValue(0), jsa);
-      js_ele.AddMember("rotY", JsonValue(-M_PI/2), jsa);
+      js_ele.AddMember("rotY", JsonValue(0), jsa);
       js_ele.AddMember("rotZ", JsonValue(0), jsa);
       js_geometry.PushBack(std::move(js_ele), jsa);
     }
-
   }
 
   Acts::GeometryContext gctx;
@@ -308,13 +307,13 @@ int main(int argc, char* argv[]) {
   std::map<unsigned int, std::bitset<6>> iterationState;
   for (unsigned int iIter = 0; iIter < maxNumIterations; iIter++) {
     std::bitset<6> mask(std::string("111111"));
-    if (iIter % 3 == 0) {
-      mask = std::bitset<6>(std::string("000110"));
-    } else if (iIter % 3 == 1) {
-      mask = std::bitset<6>(std::string("010000"));
-    } else {
-      mask = std::bitset<6>(std::string("101000"));
-    }
+    if(iIter%2 ==0){
+      // only align offset along x/y 
+      mask = std::bitset<6>(std::string("000011"));
+    }else{
+      // only align rotation around beam 
+      mask = std::bitset<6>(std::string("100000"));
+    } 
     iterationState.emplace(iIter, mask);
   }
 
@@ -379,7 +378,6 @@ int main(int argc, char* argv[]) {
 
       const double phi = Acts::VectorHelpers::phi(distance);
       const double theta = Acts::VectorHelpers::theta(distance);
-      // shift along the beam by 100_mm
       Acts::Vector3D rPos = global0 - distance / 2;
       Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
                           beamEnergy * sin(theta) * sin(phi),
@@ -391,7 +389,8 @@ int main(int argc, char* argv[]) {
 
     // Set the KalmanFitter options
     auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
-                                                                    Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
+                                                                    //Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
+                                                                    Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{0., 0., 1});
     // Acts::PlaneSurface refSurface(Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions
       (gctx, mctx, cctx, Acts::VoidOutlierFinder(), refSurface.get()); //pSurface default nullptr

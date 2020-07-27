@@ -75,12 +75,12 @@ void Telescope::BuildGeometry(
 
   // Boundaries of the surfaces (ALPIDE SIZE: 27.52512 * 13.76256_mm*mm)
   const auto rBounds = std::make_shared<const Acts::RectangleBounds>
-    (Acts::RectangleBounds(1000_mm, 1000_mm));
+    (Acts::RectangleBounds(1000_mm, 1000_mm)); // With misalignment, larger boundary is necessary
   // (Acts::RectangleBounds(27.52512_mm, 13.76256_mm));
 
   // Material of the surfaces
   const auto surfaceMaterial = std::make_shared<Acts::HomogeneousSurfaceMaterial>
-    (Acts::MaterialProperties(95.7, 465.2, 28.03, 14., 2.32e-3, 50_um));
+    (Acts::MaterialProperties(95.7, 465.2, 28.03, 14., 2.32e-3, 80_um));
   
   // Set translation vectors
   for (unsigned int i = 0; i < transforms.size(); i++) {
@@ -107,9 +107,9 @@ void Telescope::BuildGeometry(
                                                                           layer_col,
                                                                           -0.5_m - 1._mm, 0.5_m + 1._mm,
                                                                           Acts::BinningType::arbitrary,
-                                                                          Acts::BinningValue::binX));
+                                                                          Acts::BinningValue::binZ));
   
-  auto boundsVol = std::make_shared<const Acts::CuboidVolumeBounds>(1.2_m, 0.1_m, 0.1_m);
+  auto boundsVol = std::make_shared<const Acts::CuboidVolumeBounds>(0.1_m, 0.1_m,1.2_m);
   auto trafoVol = std::make_shared<Acts::Transform3D>(Acts::Transform3D::Identity());
   trafoVol->translation() = Acts::Vector3D(0., 0., 0.);
   auto trackVolume = Acts::TrackingVolume::create
@@ -119,7 +119,7 @@ void Telescope::BuildGeometry(
   std::vector<std::pair<Acts::TrackingVolumePtr, Acts::Vector3D>> tapVec;
   tapVec.push_back(std::make_pair(trackVolume, Acts::Vector3D(0., 0., 0.)));
 
-  Acts::BinningData binData(Acts::BinningOption::open, Acts::BinningValue::binX,
+  Acts::BinningData binData(Acts::BinningOption::open, Acts::BinningValue::binZ,
                             std::vector<float>{-0.6_m, 0.6_m});
   std::unique_ptr<const Acts::BinUtility> bu(new Acts::BinUtility(binData));
 
@@ -128,7 +128,7 @@ void Telescope::BuildGeometry(
 
   auto trafoWorld = std::make_shared<Acts::Transform3D>(Acts::Transform3D::Identity());
   trafoWorld->translation() = Acts::Vector3D(0., 0., 0.);
-  auto worldVol = std::make_shared<const Acts::CuboidVolumeBounds>(1.2_m, 0.1_m, 0.1_m);
+  auto worldVol = std::make_shared<const Acts::CuboidVolumeBounds>(0.1_m, 0.1_m, 1.2_m);
   Acts::MutableTrackingVolumePtr mtvpWorld(Acts::TrackingVolume::create
                                            (trafoWorld, worldVol, trVolArr, "World"));
   

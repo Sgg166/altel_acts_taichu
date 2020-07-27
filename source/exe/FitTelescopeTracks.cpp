@@ -231,20 +231,20 @@ int main(int argc, char* argv[]) {
     js_geometry.CopyFrom<rapidjson::CrtAllocator>(doc["alignment_result"],jsa);
   }
   else{
-    std::vector<std::vector<double>> positions{{-95_mm, 0., 0.},
-                                                {-57_mm, 0., 0.},
-                                                {-19_mm, 0., 0.},
-                                                {19_mm, 0., 0.},
-                                                {57_mm, 0., 0.},
-                                                {95_mm, 0., 0.}};
-
+   std::vector<std::vector<double>> positions{{0., 0., -95_mm},
+                                              {0., 0., -57_mm},
+                                              {0., 0., -19_mm},
+                                              {0., 0., 19_mm},
+                                              {0., 0., 57_mm},
+                                              {0., 0., 95_mm}};
+	  
     for(auto &p: positions){
       JsonValue js_ele(rapidjson::kObjectType);
       js_ele.AddMember("centerX",    JsonValue(p[0]), jsa);
-      js_ele.AddMember("centerY",    JsonValue(0), jsa);
-      js_ele.AddMember("centerZ",    JsonValue(0), jsa);
+      js_ele.AddMember("centerY",    JsonValue(p[1]), jsa);
+      js_ele.AddMember("centerZ",    JsonValue(p[2]), jsa);
       js_ele.AddMember("rotX", JsonValue(0), jsa);
-      js_ele.AddMember("rotY", JsonValue(-M_PI/2), jsa);
+      js_ele.AddMember("rotY", JsonValue(0), jsa);
       js_ele.AddMember("rotZ", JsonValue(0), jsa);
       js_geometry.PushBack(std::move(js_ele), jsa);
     }
