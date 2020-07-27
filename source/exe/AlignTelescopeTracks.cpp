@@ -94,8 +94,8 @@ int main(int argc, char* argv[]) {
   double resY = 150_um;
   double resLoc1 = 50_um;
   double resLoc2 = 50_um;
-  double resPhi = 0.3;
-  double resTheta = 0.3;
+  double resPhi = 0.5;
+  double resTheta = 0.5;
   size_t maxNumIterations = 400;
   size_t nIterations = 10;
   double deltaChi2ONdf = 1e-5;
