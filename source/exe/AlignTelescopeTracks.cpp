@@ -92,10 +92,12 @@ int main(int argc, char* argv[]) {
   double beamEnergy = 4 * Acts::UnitConstants::GeV;
   double resX = 150_um;
   double resY = 150_um;
+  // Use large starting parameter covariance
   double resLoc1 = 50_um;
   double resLoc2 = 50_um;
-  double resPhi = 0.5;
-  double resTheta = 0.5;
+  double resPhi = 0.7;
+  double resTheta = 0.7;
+  // Iterations converge criteria
   size_t maxNumIterations = 400;
   size_t nIterations = 10;
   double deltaChi2ONdf = 1e-5;

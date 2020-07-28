@@ -92,6 +92,9 @@ int main(int argc, char* argv[]) {
   double beamEnergy = 4 * Acts::UnitConstants::GeV;
   double resX = 5_um;
   double resY = 5_um;
+  // Use large starting parameter covariance
+  double resLoc1 = 10_mm;
+  double resLoc2 = 10_mm;
   double resPhi = 0.7;
   double resTheta = 0.7;
 
@@ -353,8 +356,8 @@ int main(int argc, char* argv[]) {
       }
       Acts::BoundSymMatrix cov;
       cov <<
-        10_mm * 10_mm, 0., 0., 0., 0., 0.,
-        0., 10_mm * 10_mm, 0., 0., 0., 0.,
+        resLoc1 * resLoc1, 0., 0., 0., 0., 0.,
+        0., resLoc2 * resLoc2, 0., 0., 0., 0.,
         0., 0., resPhi*resPhi, 0., 0., 0.,
         0., 0., 0., resTheta*resTheta, 0., 0.,
         0., 0., 0., 0., 0.0001, 0.,
