@@ -48,6 +48,8 @@ target_link_libraries(
   ROOT::Hist
   ROOT::Tree
   rapidjson
+
+  stdc++fs
   )
 
 file(GLOB LIB_ALL_HEADERS "include/*.hpp")
