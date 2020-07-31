@@ -41,13 +41,11 @@
 #include "ObjTelescopeTrackWriter.hpp"
 #include "RootTelescopeTrackWriter.hpp"
 #include "TelescopeTrackReader.hpp"
+#include "JsonGenerator.hpp"
 
 #include <memory>
 #include "getopt.h"
 #include "myrapidjson.h"
-
-using JsonValue = rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
-using JsonDocument = rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
 
 using namespace Acts::UnitLiterals;
 
@@ -169,55 +167,7 @@ int main(int argc, char* argv[]) {
   std::fprintf(stdout, "resTheta:         %f\n", resTheta);
   std::fprintf(stdout, "\n");
 
-
-  ///////select datapacks/////////////////////
-  JsonValue js_selected_datapack_col(rapidjson::kArrayType);
-  size_t n_datapack_select_opt = 20000;
-  {
-    std::FILE* fp = std::fopen(datafile_name.c_str(), "r");
-    if(!fp) {
-      std::fprintf(stderr, "File opening failed: %s \n", datafile_name.c_str());
-      throw std::system_error(EIO, std::generic_category(), "File opening failed");;
-    }
-
-    char readBuffer[UINT16_MAX];
-    rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(&jsa);
-    doc.ParseStream(is);
-    std::fclose(fp);
-
-    if(!doc.IsArray() || !doc.GetArray().Size()){
-      std::fprintf(stderr, "no, it is not data array\n");
-      throw std::system_error(EDOM, std::generic_category(), "File is not valid json array");;
-    }
-
-    uint64_t processed_datapack_count = 0;
-    for(auto ev_it = doc.Begin(); ev_it != doc.End() && js_selected_datapack_col.Size() < n_datapack_select_opt ; ev_it++ ){
-      auto &evpack = *ev_it;
-      processed_datapack_count ++;
-      auto &frames = evpack["layers"];
-      bool is_good_datapack = true;
-      for(auto& layer : evpack["layers"].GetArray()){
-        uint64_t l_hit_n = layer["hit"].GetArray().Size();
-        if(l_hit_n != 1){
-          is_good_datapack = false;
-          continue;
-        }
-      }
-      if(!is_good_datapack){
-        continue;
-      }
-      js_selected_datapack_col.PushBack(evpack, jsa);
-    }
-
-    std::fprintf(stdout,
-                 "Select %lu datapacks out of %lu processed datapackes. The data file contains %lu datapacks.\n",
-                 js_selected_datapack_col.Size(), processed_datapack_count, doc.GetArray().Size() );
-
-  }
-  ///////end of select datapacks/////////////////////
-
-  JsonValue js_geometry(rapidjson::kArrayType);
+  Telescope::JsonValue js_geometry(rapidjson::kArrayType);
   if(!geofile_name.empty())
   {
     std::FILE* fp = std::fopen(geofile_name.c_str(), "r");
@@ -227,7 +177,7 @@ int main(int argc, char* argv[]) {
     }
     char readBuffer[UINT16_MAX];
     rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(&jsa);
+    Telescope::JsonDocument  doc(&jsa);
     doc.ParseStream(is);
     std::fclose(fp);
     js_geometry.CopyFrom<rapidjson::CrtAllocator>(doc["alignment_result"],jsa);
@@ -239,15 +189,15 @@ int main(int argc, char* argv[]) {
                                               {0., 0., 19_mm},
                                               {0., 0., 57_mm},
                                               {0., 0., 95_mm}};
-	  
+
     for(auto &p: positions){
-      JsonValue js_ele(rapidjson::kObjectType);
-      js_ele.AddMember("centerX",    JsonValue(p[0]), jsa);
-      js_ele.AddMember("centerY",    JsonValue(p[1]), jsa);
-      js_ele.AddMember("centerZ",    JsonValue(p[2]), jsa);
-      js_ele.AddMember("rotX", JsonValue(0), jsa);
-      js_ele.AddMember("rotY", JsonValue(0), jsa);
-      js_ele.AddMember("rotZ", JsonValue(0), jsa);
+      Telescope::JsonValue js_ele(rapidjson::kObjectType);
+      js_ele.AddMember("centerX",  Telescope::JsonValue(p[0]), jsa);
+      js_ele.AddMember("centerY",  Telescope::JsonValue(p[1]), jsa);
+      js_ele.AddMember("centerZ",  Telescope::JsonValue(p[2]), jsa);
+      js_ele.AddMember("rotX", Telescope::JsonValue(0), jsa);
+      js_ele.AddMember("rotY", Telescope::JsonValue(0), jsa);
+      js_ele.AddMember("rotZ", Telescope::JsonValue(0), jsa);
       js_geometry.PushBack(std::move(js_ele), jsa);
     }
   }
@@ -280,7 +230,7 @@ int main(int argc, char* argv[]) {
   //
 
   /////////////////////////////////////
-  Acts::Logging::Level logLevel = do_verbose? (Acts::Logging::VERBOSE):(Acts::Logging::INFO); 
+  Acts::Logging::Level logLevel = do_verbose? (Acts::Logging::VERBOSE):(Acts::Logging::INFO);
   auto fitFun = Telescope::TelescopeFittingAlgorithm::makeFitterFunction
     (trackingGeometry, magneticField,  logLevel);
 
@@ -327,10 +277,37 @@ int main(int argc, char* argv[]) {
     cov_hit(0, 0) =resX*resX;
     cov_hit(1, 1) =resY*resY;
 
+    size_t n_datapack_select_opt = 20000;
+    uint64_t processed_datapack_count = 0;
+    Telescope::JsonDocument doc(&jsa);
+    Telescope::JsonGenerator gen(datafile_name);
+    
     std::vector<std::vector<Telescope::PixelSourceLink>> sourcelinkTracks;
-    sourcelinkTracks.reserve(js_selected_datapack_col.Size());
-    for(auto ev_it = js_selected_datapack_col.Begin(); ev_it != js_selected_datapack_col.End() ; ev_it++ ){
-      const auto &evpack = *ev_it;
+    while(1){
+      if(sourcelinkTracks.size()> n_datapack_select_opt){
+        break;
+      }
+
+      doc.Populate(gen);
+      if(!gen.isvalid  ){
+        break;
+      }
+      const auto &evpack = doc.GetObject();
+
+      processed_datapack_count ++;
+      const auto &layers = evpack["layers"];
+      bool is_good_datapack = true;
+      for(auto& layer : layers.GetArray()){
+        uint64_t l_hit_n = layer["hit"].GetArray().Size();
+        if(l_hit_n != 1){
+          is_good_datapack = false;
+          continue;
+        }
+      }
+      if(!is_good_datapack){
+        continue;
+      }
+
       std::vector<Telescope::PixelSourceLink> sourcelinks;
       auto &frames = evpack["layers"];
       for(size_t i= 0; i< 6; i++){
@@ -342,9 +319,12 @@ int main(int argc, char* argv[]) {
       }
       sourcelinkTracks.push_back(sourcelinks);
     }
+    std::fprintf(stdout,
+                 "Select %lu datapacks out of %lu processed datapackes.\n",
+                 sourcelinkTracks.size(), processed_datapack_count);
 
     std::vector<Telescope::PixelMultiTrajectory> trajectories;
-    trajectories.reserve(js_selected_datapack_col.Size());
+
     size_t itrack = 0;
     for(const auto& trackSourcelinks : sourcelinkTracks) {
       itrack++;

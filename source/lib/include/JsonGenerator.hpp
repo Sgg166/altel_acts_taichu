@@ -9,11 +9,13 @@
 
 namespace Telescope{
 
+using JsonAllocator = rapidjson::CrtAllocator;
+using JsonStackAllocator = rapidjson::CrtAllocator;
+using JsonValue = rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
+using JsonDocument = rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator, rapidjson::CrtAllocator>;
+using JsonReader = rapidjson::GenericReader<rapidjson::UTF8<char>, rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
+
 struct JsonGenerator{
-  using JsonAllocator = rapidjson::CrtAllocator;
-  using JsonValue = rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
-  using JsonDoc = rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
-  using JsonReader = rapidjson::GenericReader<rapidjson::UTF8<char>, rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
 
   JsonGenerator(const std::filesystem::path &filepath)
   {
@@ -53,7 +55,7 @@ struct JsonGenerator{
     }
   }
 
-  bool operator()(JsonDoc& doc){
+  bool operator()(JsonDocument& doc){
     reader.Parse<rapidjson::kParseStopWhenDoneFlag>(*is, doc);
     if(reader.HasParseError()) {
       if(is->Tell() + 10 < filesize){
@@ -89,7 +91,7 @@ struct JsonGenerator{
 
   static void example(const std::string& datafile_name){
     JsonAllocator s_jsa;
-    JsonDoc doc(&s_jsa);
+    JsonDocument doc(&s_jsa);
     JsonGenerator gen(datafile_name);
     int n = 0;
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
