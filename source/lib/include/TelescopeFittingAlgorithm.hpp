@@ -45,16 +45,18 @@ namespace Telescope {
       FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl);
 
   struct Config {
-    /// Input data file name.
-    std::string inputFileName;
-    /// Input data reader
-    SourceLinkTrackReader trackReader;
-    /// Number of tracks
-    size_t maxNumTracks = std::numeric_limits<size_t>::max();
+    /// Input data.
+    std::string inputSourcelinks{"sourcelinks_to_fit"};
     /// Output fitted trajectories collection.
-    std::string outputTrajectories;
+    std::string outputTrajectories{"trajectories_from_fit"};
     /// Type erased fitter function.
     FitterFunction fit;
+
+    double seedResX{10 * Acts::UnitConstants::um};
+    double seedResY{10 * Acts::UnitConstants::um};
+    double seedResPhi{0.7};
+    double seedResTheta{0.7};
+    double beamEnergy{5 * Acts::UnitConstants::GeV};
   };
 
   /// Constructor of the fitting algorithm

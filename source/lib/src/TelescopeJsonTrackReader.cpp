@@ -7,11 +7,13 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <ratio>
+#include <chrono>
+#include <filesystem>
 
 #include "ACTFW/EventData/SimParticle.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "ACTFW/Utilities/Paths.hpp"
-
 
 #include "PixelSourceLink.hpp"
 
@@ -19,10 +21,11 @@
 
 using JsonValue = rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
 
+
 Telescope::TelescopeJsonTrackReader::TelescopeJsonTrackReader(
     const Telescope::TelescopeJsonTrackReader::Config& cfg, Acts::Logging::Level lvl)
     : m_cfg(cfg),
-      m_eventsRange(0, 0),
+      m_eventsRange(0, SIZE_MAX),
       m_logger(Acts::getDefaultLogger("TelescopeJsonTrackReader", lvl))
 {
 
@@ -41,7 +44,11 @@ Telescope::TelescopeJsonTrackReader::TelescopeJsonTrackReader(
     char readBuffer[UINT16_MAX];
     rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
     rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(m_jsa.get());
-    doc.ParseStream(is);
+    doc.ParseStream<rapidjson::kParseCommentsFlag
+                    | rapidjson::kParseTrailingCommasFlag
+                    | rapidjson::kParseStopWhenDoneFlag
+                    // | kParseStopWhenDoneFlag
+                    >(is);
     std::fclose(fp);
 
     if(!doc.IsArray() || !doc.GetArray().Size()){
