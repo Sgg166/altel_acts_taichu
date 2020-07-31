@@ -1,6 +1,6 @@
 
-add_executable(AlignTelescopeTracks AlignTelescopeTracks.cpp)
-target_link_libraries(AlignTelescopeTracks PRIVATE
+add_executable(AlignTelescopeGeometry AlignTelescopeGeometry.cpp)
+target_link_libraries(AlignTelescopeGeometry PRIVATE
   altel-acts
 
   ActsExamplesFramework
@@ -55,7 +55,7 @@ target_link_libraries(EstimateTrackParameters PRIVATE
   )
 
 # install-tree
-install(TARGETS AlignTelescopeTracks FitTelescopeTracks EstimateTrackParameters
+install(TARGETS AlignTelescopeGeometry FitTelescopeTracks EstimateTrackParameters
   EXPORT ${PROJECT_NAME}Targets
   RUNTIME       DESTINATION bin      COMPONENT runtime
   LIBRARY       DESTINATION lib      COMPONENT runtime
