@@ -54,8 +54,26 @@ target_link_libraries(EstimateTrackParameters PRIVATE
   ROOT::Tree
   )
 
+add_executable(FindTelescopeSeeds TrackParametersEstimator.cpp)
+target_link_libraries(FindTelescopeSeeds PRIVATE
+  altel-acts
+
+  ActsExamplesFramework
+  ActsExamplesCommon
+  ActsExamplesDetectorsCommon
+  ActsExamplesMagneticField
+  ActsExamplesIoCsv
+  ActsExamplesIoObj
+  ActsExamplesIoPerformance
+  rapidjson
+
+  ROOT::Core
+  ROOT::Hist
+  ROOT::Tree
+  )
+
 # install-tree
-install(TARGETS AlignTelescopeGeometry FitTelescopeTracks EstimateTrackParameters
+install(TARGETS AlignTelescopeGeometry FitTelescopeTracks EstimateTrackParameters FindTelescopeSeeds
   EXPORT ${PROJECT_NAME}Targets
   RUNTIME       DESTINATION bin      COMPONENT runtime
   LIBRARY       DESTINATION lib      COMPONENT runtime
