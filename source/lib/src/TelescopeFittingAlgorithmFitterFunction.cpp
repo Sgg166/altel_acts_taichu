@@ -21,7 +21,7 @@
 #include "Acts/MagneticField/ConstantBField.hpp"
 #include "Acts/MagneticField/InterpolatedBFieldMap.hpp"
 #include "Acts/MagneticField/SharedBField.hpp"
-#include "Acts/Propagator/EigenStepper.hpp"
+#include "Acts/Propagator/StraightLineStepper.hpp"
 #include "Acts/Propagator/Navigator.hpp"
 #include "Acts/Propagator/Propagator.hpp"
 #include "Acts/Surfaces/Surface.hpp"
@@ -59,14 +59,14 @@ Telescope::TelescopeFittingAlgorithm::makeFitterFunction(
         using InputMagneticField =
             typename std::decay_t<decltype(inputField)>::element_type;
         using MagneticField = Acts::SharedBField<InputMagneticField>;
-        using Stepper = Acts::EigenStepper<MagneticField>;
+        using Stepper = Acts::StraightLineStepper;
         using Navigator = Acts::Navigator;
         using Propagator = Acts::Propagator<Stepper, Navigator>;
         using Fitter = Acts::KalmanFitter<Propagator, Updater, Smoother>;
 
         // construct all components for the fitter
         MagneticField field(std::move(inputField));
-        Stepper stepper(std::move(field));
+        Stepper stepper;
         Navigator navigator(trackingGeometry);
         navigator.resolvePassive = false;
         navigator.resolveMaterial = true;

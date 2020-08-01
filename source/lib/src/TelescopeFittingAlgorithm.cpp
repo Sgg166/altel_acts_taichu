@@ -45,6 +45,7 @@ FW::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
   auto pSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
       Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
 
+  // Loop over the tracks
   for (std::size_t itrack = 0; itrack < sourcelinkTracks.size(); ++itrack) {
     // The list of hits and the initial start parameters
     const auto& trackSourcelinks = sourcelinkTracks[itrack];
@@ -57,17 +58,36 @@ FW::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
     }
 
     // Set initial parameters for the particle track
+    // @Below is what is used when the detector aligned along global x in the first beginning. 
+    // But this is not working when it's aligned along global z. Needs investigation of the reason.
+    //Acts::BoundSymMatrix cov;
+    //cov << std::pow(10_mm, 2), 0., 0., 0., 0., 0., 0., std::pow(10_mm, 2), 0.,
+    //    0., 0., 0., 0., 0., 0.0001, 0., 0., 0., 0., 0., 0., 0.0001, 0., 0., 0.,
+    //    0., 0., 0., 0.0001, 0., 0., 0., 0., 0., 0., 1.;
+    //Acts::Vector3D rPos(-120_mm, 0, 0);
+    //Acts::Vector3D rMom(4_GeV, 0, 0);
+   
     Acts::BoundSymMatrix cov;
-    cov << std::pow(10_mm, 2), 0., 0., 0., 0., 0., 0., std::pow(10_mm, 2), 0.,
-        0., 0., 0., 0., 0., 0.0001, 0., 0., 0., 0., 0., 0., 0.0001, 0., 0., 0.,
-        0., 0., 0., 0.0001, 0., 0., 0., 0., 0., 0., 1.;
+     cov <<
+       10_mm*10_mm, 0., 0., 0., 0., 0.,
+       0., 10_mm * 10_mm, 0., 0., 0., 0.,
+       0., 0., 0.5, 0., 0., 0.,
+       0., 0., 0., 0.5, 0., 0.,
+       0., 0., 0., 0., 0.0001, 0.,
+       0., 0., 0., 0.,     0., 1.;
 
-    Acts::Vector3D rPos(-120_mm, 0, 0);
-    Acts::Vector3D rMom(4_GeV, 0, 0);
+     const Acts::Vector3D global0 = trackSourcelinks.at(0).globalPosition(ctx.geoContext);
+     const Acts::Vector3D global1 = trackSourcelinks.at(1).globalPosition(ctx.geoContext);
+     Acts::Vector3D distance = global1 - global0;
+     const double phi = Acts::VectorHelpers::phi(distance);
+     const double theta = Acts::VectorHelpers::theta(distance);
+     Acts::Vector3D rPos = global0 - distance / 2;
+     Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
+                        beamEnergy * sin(theta) * sin(phi),
+                       beamEnergy * cos(theta));
+   
     Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(
         cov, rPos, rMom, 1., 0);
-
-    // const Acts::Surface* rSurface = &rStart.referenceSurface();
 
     // Set the KalmanFitter options
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions(
