@@ -271,7 +271,8 @@ int main(int argc, char* argv[]) {
   std::vector<std::shared_ptr<FW::IWriter>> writer_col;
   writer_col.push_back(std::make_shared<Telescope::RootTelescopeTrackWriter>(conf_trackRootWriter,  Acts::Logging::INFO));
   writer_col.push_back(std::make_shared<Telescope::ObjTelescopeTrackWriter>(conf_trackObjWriter,  Acts::Logging::INFO));
-  writer_col.push_back(std::make_shared<Telescope::TelescopeTrackingPerformanceWriter>(conf_perfFitter,  Acts::Logging::INFO));
+  //@Todo: performance writer is doing nothing for the moment. Need adapting for producing meaningful results for telescope 
+  //writer_col.push_back(std::make_shared<Telescope::TelescopeTrackingPerformanceWriter>(conf_perfFitter,  Acts::Logging::INFO));
 
   ////////////////run/////////////////////////
   {
