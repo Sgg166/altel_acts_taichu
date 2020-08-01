@@ -45,7 +45,6 @@
 
 #include <memory>
 #include "getopt.h"
-#include "myrapidjson.h"
 
 using namespace Acts::UnitLiterals;
 

@@ -41,10 +41,10 @@
 #include "ObjTelescopeTrackWriter.hpp"
 #include "RootTelescopeTrackWriter.hpp"
 #include "TelescopeTrackReader.hpp"
+#include "JsonGenerator.hpp"
 
 #include <memory>
 #include "getopt.h"
-#include "myrapidjson.h"
 
 using JsonValue = rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
 using JsonDocument = rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
@@ -170,52 +170,6 @@ int main(int argc, char* argv[]) {
   std::fprintf(stdout, "\n");
 
 
-  ///////select datapacks/////////////////////
-  JsonValue js_selected_datapack_col(rapidjson::kArrayType);
-  size_t n_datapack_select_opt = 20000;
-  {
-    std::FILE* fp = std::fopen(datafile_name.c_str(), "r");
-    if(!fp) {
-      std::fprintf(stderr, "File opening failed: %s \n", datafile_name.c_str());
-      throw std::system_error(EIO, std::generic_category(), "File opening failed");;
-    }
-
-    char readBuffer[UINT16_MAX];
-    rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(&jsa);
-    doc.ParseStream(is);
-    std::fclose(fp);
-
-    if(!doc.IsArray() || !doc.GetArray().Size()){
-      std::fprintf(stderr, "no, it is not data array\n");
-      throw std::system_error(EDOM, std::generic_category(), "File is not valid json array");;
-    }
-
-    uint64_t processed_datapack_count = 0;
-    for(auto ev_it = doc.Begin(); ev_it != doc.End() && js_selected_datapack_col.Size() < n_datapack_select_opt ; ev_it++ ){
-      auto &evpack = *ev_it;
-      processed_datapack_count ++;
-      auto &frames = evpack["layers"];
-      bool is_good_datapack = true;
-      for(auto& layer : evpack["layers"].GetArray()){
-        uint64_t l_hit_n = layer["hit"].GetArray().Size();
-        if(l_hit_n != 1){
-          is_good_datapack = false;
-          continue;
-        }
-      }
-      if(!is_good_datapack){
-        continue;
-      }
-      js_selected_datapack_col.PushBack(evpack, jsa);
-    }
-
-    std::fprintf(stdout,
-                 "Select %lu datapacks out of %lu processed datapackes. The data file contains %lu datapacks.\n",
-                 js_selected_datapack_col.Size(), processed_datapack_count, doc.GetArray().Size() );
-
-  }
-  ///////end of select datapacks/////////////////////
 
   JsonValue js_geometry(rapidjson::kArrayType);
   if(!geofile_name.empty())
@@ -319,62 +273,70 @@ int main(int argc, char* argv[]) {
   writer_col.push_back(std::make_shared<Telescope::ObjTelescopeTrackWriter>(conf_trackObjWriter,  Acts::Logging::INFO));
   writer_col.push_back(std::make_shared<Telescope::TelescopeTrackingPerformanceWriter>(conf_perfFitter,  Acts::Logging::INFO));
 
-  //run
+  ////////////////run/////////////////////////
   {
-    FW::WhiteBoard eventStore;
-    FW::AlgorithmContext context(0, 0, eventStore);
 
     // Setup local covariance
     Acts::BoundMatrix cov_hit = Acts::BoundMatrix::Zero();
     cov_hit(0, 0) =resX*resX;
     cov_hit(1, 1) =resY*resY;
 
+    uint64_t processed_datapack_count = 0;
+    Telescope::JsonDocument doc(&jsa);
+    Telescope::JsonGenerator gen(datafile_name);
+
     // One entry in the container below is the sorted source links (the layer as the key) in one event
     std::vector<std::vector<Telescope::PixelSourceLink>> sourcelinkTracks;
-    sourcelinkTracks.reserve(js_selected_datapack_col.Size());
-    for(auto ev_it = js_selected_datapack_col.Begin(); ev_it != js_selected_datapack_col.End() ; ev_it++ ){
-      const auto &evpack = *ev_it;
-      std::vector<Telescope::PixelSourceLink> sourcelinks;
-      auto &frames = evpack["layers"];
-      for(size_t i= 0; i< 6; i++){
-        double x = frames[i]["hit"][0]["pos"][0].GetDouble() - 0.02924*1024/2.0;
-        double y = frames[i]["hit"][0]["pos"][1].GetDouble() - 0.02688*512/2.0;
-        Acts::Vector2D loc;
-        loc << x, y;
-        sourcelinks.emplace_back(*surface_col.at(i), loc, cov_hit);
+    for(size_t eventNumber = 0; eventNumber< 20000; eventNumber++){
+      doc.Populate(gen);
+      if(!gen.isvalid  ){
+        break;
       }
-      sourcelinkTracks.push_back(sourcelinks);
-    }
 
-    std::vector<Telescope::PixelMultiTrajectory> trajectories;
-    trajectories.reserve(js_selected_datapack_col.Size());
-    size_t itrack = 0;
-    for(const auto& trackSourcelinks : sourcelinkTracks) {
-      itrack++;
-      if (trackSourcelinks.empty()) {
-        trajectories.push_back(Telescope::PixelMultiTrajectory());
-        std::cout<<"Empty track " << itrack << " found."<<std::endl;
-        continue;
+      const auto &evpack = doc.GetObject();
+      const auto &layers = evpack["layers"];
+      std::vector<Telescope::PixelSourceLink> sourcelinks;
+      for(size_t i= 0; i< 6; i++){
+        const auto &hits = layers[i]["hit"].GetArray();
+        for(const auto &hit : hits){
+          double x = hit["pos"][0].GetDouble() - 0.02924*1024/2.0;
+          double y = hit["pos"][1].GetDouble() - 0.02688*512/2.0;
+          Acts::Vector2D loc;
+          loc << x, y;
+          sourcelinks.emplace_back(*surface_col.at(i), loc, cov_hit);
+        }
       }
-      std::cout<<"There are " << trackSourcelinks.size() << " source links in this event "<<std::endl;
-     
+
+      FW::WhiteBoard eventStore;
+      FW::AlgorithmContext ctx(0, eventNumber, eventStore);
+      ctx.geoContext=gctx;
+      ctx.magFieldContext=mctx;
+      ctx.calibContext=cctx;
+      
+      if (sourcelinks.empty()) {
+          std::cout<<"Empty event <" << eventNumber << "> found."<<std::endl;
+          continue; //
+      }
+
+      std::cout<<"There are " << sourcelinks.size() << " source links in this event "<<std::endl;
+
       // Start to find seeds for this event using the source links on the first two layers
       // @todo: add raw layer id in PixelSourceLink
       std::vector<Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy>> initialParameters; 
-      for(const auto& sl0 : trackSourcelinks){
-	const auto& surface0 = sl0.referenceSurface();
-	const auto& layer0 = surface0.geoID().layer();
-	if(layer0 != 2) {
-	  continue;
-	}
-	const Acts::Vector3D global0 = sl0.globalPosition(gctx); 
-        for(const auto& sl1 : trackSourcelinks){
+      for(const auto& sl0 : sourcelinks){
+        const auto& surface0 = sl0.referenceSurface();
+        const auto& layer0 = surface0.geoID().layer();
+        if(layer0 != 2) {
+          continue;
+        }
+        const Acts::Vector3D global0 = sl0.globalPosition(ctx.geoContext); 
+        for(const auto& sl1 : sourcelinks){
 	  const auto& surface1 = sl1.referenceSurface();
 	  const auto& layer1 = surface1.geoID().layer();
 	  if(layer1 != 4) {
 	    continue;
 	  }
-          const Acts::Vector3D global1 = sl1.globalPosition(gctx);
+          const Acts::Vector3D global1 = sl1.globalPosition(ctx.geoContext);
 	  Acts::Vector3D distVec = global1 - global0; 
           // compare their distance in x-y (r-phi) plane
           const double rDist = std::abs(Acts::VectorHelpers::perp(distVec));
@@ -408,13 +370,14 @@ int main(int argc, char* argv[]) {
       // Set the CombinatorialKalmanFilter options
       // @Todo: add options for CKF
       Telescope::TelescopeTrackFindingAlgorithm::CKFOptions ckfOptions(
-								       gctx, mctx, cctx,
-								       Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{100, 5}}}, refSurface.get());
+                                                                       ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
+								       Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{100, 5}}}, refSurface.get()); // 100 chi2cut,   5 max number of selected sourcelinks in a single surface;
  
       //Loop ever the seeds
       size_t iseed = 0;
+      std::vector<Telescope::PixelMultiTrajectory> trajectories;
       for(const auto& rStart: initialParameters){ 
-	auto result = trackFinderFun(trackSourcelinks, rStart, ckfOptions);
+	auto result = trackFinderFun(sourcelinks, rStart, ckfOptions);
 	if (result.ok()) {
 	  // Get the track finding output object
 	  const auto& trackFindingOutput = result.value();
@@ -423,29 +386,29 @@ int main(int argc, char* argv[]) {
 				    std::move(trackFindingOutput.trackTips),
 				    std::move(trackFindingOutput.fittedParameters));
 	} else {
-	  std::cout<<"Track finding failed for track " << itrack <<" seed "
-		   << iseed << " with error" << result.error()<<std::endl;
-	  // Track finding failed, but still create an empty PixelMultiTrajectory
-	  trajectories.push_back(Telescope::PixelMultiTrajectory());
+          std::printf("Track finding failed in Event<%lu> seed<%lu>, with error \n",
+                      eventNumber, iseed, result.error().message().c_str());
 	}
 	iseed++;
       }// end of the loop for all seeds
-    } // end of the loop for all read-in events
 
-    eventStore.add("trajectories", std::move(trajectories));
+      eventStore.add("trajectories", std::move(trajectories));
 
-    for (auto& wrt : writer_col) {
-      if (wrt->write(++context) != FW::ProcessCode::SUCCESS) {
-        throw std::runtime_error("Failed to write output data");
+      for (auto& wrt : writer_col) {
+        if (wrt->write(++ctx) != FW::ProcessCode::SUCCESS) {
+          throw std::runtime_error("Failed to write output data");
+        }
       }
-    }
 
+    }//end of event
+
+    
     for (auto& wrt : writer_col) {
       if (wrt->endRun() != FW::ProcessCode::SUCCESS) {
         throw std::runtime_error("Failed to write output data");
       }
     }
 
-  }
+  }//end of run
   return 0;
 }
