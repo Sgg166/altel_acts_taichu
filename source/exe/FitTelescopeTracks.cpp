@@ -41,7 +41,6 @@
 #include "ObjTelescopeTrackWriter.hpp"
 #include "RootTelescopeTrackWriter.hpp"
 #include "TelescopeTrackReader.hpp"
-#include "ACTFW/EventData/SimMultiTrajectory.hpp"
 
 #include <memory>
 #include "getopt.h"
@@ -370,9 +369,13 @@ int main(int argc, char* argv[]) {
       const double theta = Acts::VectorHelpers::theta(distance);
       Acts::Vector3D rPos = global0 - distance / 2;
       Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
-                          beamEnergy * sin(theta) * sin(phi),
-                          beamEnergy * cos(theta));
-
+                         beamEnergy * sin(theta) * sin(phi),
+                        beamEnergy * cos(theta));
+     // The following starting parameters somehow does not work when the
+     // telescope is aligned along global z. Need understanding of the reason
+     // Acts::Vector3D rPos(global0.x(), global0.y(), global0.z()-10_mm);
+     // Acts::Vector3D rMom(0.000001, 0.000001, beamEnergy);
+     
       Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(cov, rPos, rMom, 1., 0);
   
       auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>

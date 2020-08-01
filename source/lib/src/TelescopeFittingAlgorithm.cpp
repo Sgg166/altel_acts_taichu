@@ -82,9 +82,9 @@ FW::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
      const double phi = Acts::VectorHelpers::phi(distance);
      const double theta = Acts::VectorHelpers::theta(distance);
      Acts::Vector3D rPos = global0 - distance / 2;
-     Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
-                        beamEnergy * sin(theta) * sin(phi),
-                       beamEnergy * cos(theta));
+     Acts::Vector3D rMom(4_GeV * sin(theta) * cos(phi),
+                         4_GeV * sin(theta) * sin(phi),
+                         4_GeV * cos(theta));
    
     Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(
         cov, rPos, rMom, 1., 0);
