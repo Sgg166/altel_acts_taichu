@@ -409,7 +409,7 @@ int main(int argc, char* argv[]) {
       // @Todo: add options for CKF
       Telescope::TelescopeTrackFindingAlgorithm::CKFOptions ckfOptions(
 								       gctx, mctx, cctx,
-								       Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{30, 5}}}, refSurface.get());
+								       Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{100, 5}}}, refSurface.get());
  
       //Loop ever the seeds
       size_t iseed = 0;
