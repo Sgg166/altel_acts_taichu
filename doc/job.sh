@@ -1,4 +1,4 @@
-# 1) Align to get alignment geometry
+# 1) Align to get alignment geometry (using good tracks)
 ./AlignTelescopeGeometry -f data/data_2GeV.json -e 2 -out geometry/geometry_2GeV_1.json
 ./AlignTelescopeGeometry -f data/data_3GeV.json -e 3 -out geometry/geometry_3GeV_1.json
 ./AlignTelescopeGeometry -f data/data_4GeV.json -e 4 -out geometry/geometry_4GeV_1.json
