@@ -73,8 +73,16 @@ target_link_libraries(RecTelescopeCKFTracks PRIVATE
   ROOT::Tree
   )
 
+
+add_executable(PrintEventJson PrintEventJson.cpp)
+target_link_libraries(PrintEventJson PRIVATE
+  altel-acts
+  rapidjson
+  )
+
+
 # install-tree
-install(TARGETS AlignTelescopeGeometry FitTelescopeTracks EstimateTrackParameters RecTelescopeCKFTracks
+install(TARGETS AlignTelescopeGeometry FitTelescopeTracks EstimateTrackParameters RecTelescopeCKFTracks PrintEventJson
   EXPORT ${PROJECT_NAME}Targets
   RUNTIME       DESTINATION bin      COMPONENT runtime
   LIBRARY       DESTINATION lib      COMPONENT runtime
