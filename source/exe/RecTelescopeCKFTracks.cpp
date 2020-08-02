@@ -319,7 +319,6 @@ int main(int argc, char* argv[]) {
           continue; //
       }
 
-      std::cout<<"There are " << sourcelinks.size() << " source links in this event "<<std::endl;
 
       // Start to find seeds for this event using the source links on the first two layers
       // @todo: add raw layer id in PixelSourceLink
@@ -342,7 +341,7 @@ int main(int argc, char* argv[]) {
           // compare their distance in x-y (r-phi) plane
           const double rDist = std::abs(Acts::VectorHelpers::perp(distVec));
 	  // @todo: add options for the seed cuts
-	  if(rDist<=3_mm) {
+	  if(rDist<=2_mm) {
 	    Acts::BoundSymMatrix cov;
 	    cov <<
 	      resLoc1 * resLoc1, 0., 0., 0., 0., 0.,
@@ -363,7 +362,6 @@ int main(int argc, char* argv[]) {
 	  }
 	}
       }
-      std::cout<<"There are " << initialParameters.size() << " created seeds"<<std::endl; 
 
       auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>
         (Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{0, 0., 1.});
@@ -372,17 +370,19 @@ int main(int argc, char* argv[]) {
       // @Todo: add options for CKF
       Telescope::TelescopeTrackFindingAlgorithm::CKFOptions ckfOptions(
                                                                        ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
-								       Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{100, 5}}}, refSurface.get()); // 100 chi2cut,   5 max number of selected sourcelinks in a single surface;
+								       Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{100, 1}}}, refSurface.get()); // 100 chi2cut,   5 max number of selected sourcelinks in a single surface;
  
       //Loop ever the seeds
       size_t iseed = 0;
       std::vector<Telescope::PixelMultiTrajectory> trajectories;
+      size_t nTracks = 0;
       for(const auto& rStart: initialParameters){ 
 	auto result = trackFinderFun(sourcelinks, rStart, ckfOptions);
 	if (result.ok()) {
 	  // Get the track finding output object
 	  const auto& trackFindingOutput = result.value();
 	  // Create a PixelMultiTrajectory
+          nTracks += trackFindingOutput.trackTips.size();
 	  trajectories.emplace_back(std::move(trackFindingOutput.fittedStates),
 				    std::move(trackFindingOutput.trackTips),
 				    std::move(trackFindingOutput.fittedParameters));
@@ -393,6 +393,8 @@ int main(int argc, char* argv[]) {
 	iseed++;
       }// end of the loop for all seeds
 
+      std::printf("<< eventNumber: %lu    sourcelinks.size(): %lu   initialParameters.size(): %lu   nTracks %lu \n", eventNumber, sourcelinks.size(), initialParameters.size(), nTracks);
+      
       eventStore.add("trajectories", std::move(trajectories));
 
       for (auto& wrt : writer_col) {
@@ -400,7 +402,7 @@ int main(int argc, char* argv[]) {
           throw std::runtime_error("Failed to write output data");
         }
       }
-
+      
     }//end of event
 
     

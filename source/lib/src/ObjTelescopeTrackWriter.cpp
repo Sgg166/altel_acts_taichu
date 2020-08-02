@@ -49,7 +49,7 @@ FW::ProcessCode Telescope::ObjTelescopeTrackWriter::writeT(
     throw std::ios_base::failure("Could not open '" + path + "' to write");
   }
 
-  ACTS_INFO("Write trajectories to 'TelescopeTrack.obj' in '" << path << "'");
+  ACTS_VERBOSE("Write trajectories to 'TelescopeTrack.obj' in '" << path << "'");
 
   // Initialize the vertex counter
   unsigned int vCounter = 0;
