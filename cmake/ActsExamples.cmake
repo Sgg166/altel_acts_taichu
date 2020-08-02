@@ -88,17 +88,17 @@ set_target_properties(ActsExamplesIoPerformance PROPERTIES
 add_library(ActsExamplesIoRoot SHARED IMPORTED)
 set_target_properties(ActsExamplesIoRoot PROPERTIES
   IMPORTED_LOCATION  ${ACTS_INSTALL_LIB_DIR}/libActsExamplesIoRoot.so
-  INTERFACE_INCLUDE_DIRECTORIES ${ACTS_SRC_DIR}/Examples/Io/Root
+  INTERFACE_INCLUDE_DIRECTORIES ${ACTS_SRC_DIR}/Examples/Io/Root/include
   )
 
 add_library(ActsExamplesIoObj SHARED IMPORTED)
 set_target_properties(ActsExamplesIoObj PROPERTIES
   IMPORTED_LOCATION  ${ACTS_INSTALL_LIB_DIR}/libActsExamplesIoObj.so
-  INTERFACE_INCLUDE_DIRECTORIES ${ACTS_SRC_DIR}/Examples/Io/Obj
+  INTERFACE_INCLUDE_DIRECTORIES ${ACTS_SRC_DIR}/Examples/Io/Obj/include
   )
 
 add_library(ActsExamplesIoCsv SHARED IMPORTED)
 set_target_properties(ActsExamplesIoCsv PROPERTIES
   IMPORTED_LOCATION  ${ACTS_INSTALL_LIB_DIR}/libActsExamplesIoCsv.so
-  INTERFACE_INCLUDE_DIRECTORIES ${ACTS_SRC_DIR}/Examples/Io/Csv
+  INTERFACE_INCLUDE_DIRECTORIES ${ACTS_SRC_DIR}/Examples/Io/Csv/include
   )

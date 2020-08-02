@@ -73,10 +73,9 @@ void Telescope::BuildGeometry(
     transforms.push_back(std::move(transform));
   }
 
-  // Boundaries of the surfaces (ALPIDE SIZE: 27.52512 * 13.76256_mm*mm)
+  // Boundaries of the surfaces (ALPIDE real SIZE: 29.941760 * 13.762560_mm*mm)
   const auto rBounds = std::make_shared<const Acts::RectangleBounds>
-    (Acts::RectangleBounds(1000_mm, 1000_mm)); // With misalignment, larger boundary is necessary
-  // (Acts::RectangleBounds(27.52512_mm, 13.76256_mm));
+   (Acts::RectangleBounds(30_mm/2.0, 14_mm/2.0));
 
   // Material of the surfaces
   const auto surfaceMaterial = std::make_shared<Acts::HomogeneousSurfaceMaterial>

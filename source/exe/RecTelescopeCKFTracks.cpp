@@ -32,6 +32,7 @@
 #include "ACTFW/Framework/Sequencer.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "ACTFW/Framework/IWriter.hpp"
+#include "ACTFW/Plugins/Obj/ObjTrackingGeometryWriter.hpp"
 
 #include "TelescopeDetectorElement.hpp"
 #include "TelescopeTrackReader.hpp"
@@ -246,14 +247,22 @@ int main(int argc, char* argv[]) {
   conf_trackRootWriter.outputFilename = "telescope_tracks.root";
   conf_trackRootWriter.outputTreename = "tracks";
 
-  // write the tracks (measurements only for the moment) as Csv
+  // write the tracks (measurements only for the moment) as Obj 
   Telescope::ObjTelescopeTrackWriter::Config conf_trackObjWriter;
   conf_trackObjWriter.inputTrajectories = "trajectories";
   conf_trackObjWriter.outputDir = outputDir;
   // The number of tracks you want to show (in default, all of tracks will be
   // shown)
   conf_trackObjWriter.maxNumTracks = 100;
-  
+ 
+  // write the tracking geometry as Obj
+  FW::Obj::ObjTrackingGeometryWriter::Config conf_tGeometryObjWriter;
+  conf_tGeometryObjWriter.name = "ObjTrackingGeometryWriter";
+  conf_tGeometryObjWriter.containerView.visible = false;
+  conf_tGeometryObjWriter.passiveView.visible = false;
+  conf_tGeometryObjWriter.gridView.visible = false;
+  auto tgObjWriter = std::make_shared<FW::Obj::ObjTrackingGeometryWriter>(conf_tGeometryObjWriter);
+
   // write reconstruction performance data
   // @Todo: adapt the writer to write trajectories produced by CKF
   Telescope::TelescopeTrackingPerformanceWriter::Config conf_perfFitter;
@@ -273,6 +282,7 @@ int main(int argc, char* argv[]) {
   writer_col.push_back(std::make_shared<Telescope::ObjTelescopeTrackWriter>(conf_trackObjWriter,  Acts::Logging::INFO));
   //@Todo: performance writer is doing nothing for the moment. Need adapting for producing meaningful results for telescope 
   //writer_col.push_back(std::make_shared<Telescope::TelescopeTrackingPerformanceWriter>(conf_perfFitter,  Acts::Logging::INFO));
+
 
   ////////////////run/////////////////////////
   {
@@ -341,7 +351,7 @@ int main(int argc, char* argv[]) {
           // compare their distance in x-y (r-phi) plane
           const double rDist = std::abs(Acts::VectorHelpers::perp(distVec));
 	  // @todo: add options for the seed cuts
-	  if(rDist<=2_mm) {
+	  if(rDist<=3_mm) {
 	    Acts::BoundSymMatrix cov;
 	    cov <<
 	      resLoc1 * resLoc1, 0., 0., 0., 0., 0.,
@@ -370,7 +380,7 @@ int main(int argc, char* argv[]) {
       // @Todo: add options for CKF
       Telescope::TelescopeTrackFindingAlgorithm::CKFOptions ckfOptions(
                                                                        ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
-								       Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{100, 1}}}, refSurface.get()); // 100 chi2cut,   5 max number of selected sourcelinks in a single surface;
+								       Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{500, 1}}}, refSurface.get()); // 500 chi2cut,   5 max number of selected sourcelinks in a single surface;
  
       //Loop ever the seeds
       size_t iseed = 0;
@@ -401,6 +411,11 @@ int main(int argc, char* argv[]) {
         if (wrt->write(++ctx) != FW::ProcessCode::SUCCESS) {
           throw std::runtime_error("Failed to write output data");
         }
+      }
+      
+      // Write the tracking geometry object (only once)
+      if(eventNumber==0){
+     	 tgObjWriter->write(ctx, *trackingGeometry);
       }
       
     }//end of event
