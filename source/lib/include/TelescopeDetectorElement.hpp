@@ -12,10 +12,16 @@
 
 #pragma once
 
-#include "Acts/Geometry/DetectorElementBase.hpp"
-#include "Acts/Surfaces/PlanarBounds.hpp"
-#include "Acts/Surfaces/PlaneSurface.hpp"
 #include "Acts/Utilities/Definitions.hpp"
+#include "Acts/Geometry/DetectorElementBase.hpp"
+
+#include "Acts/Surfaces/PlanarBounds.hpp"
+
+#include "Acts/Surfaces/PlaneSurface.hpp"
+#include "Acts/Geometry/SurfaceArrayCreator.hpp"
+
+#include "Acts/Geometry/PlaneLayer.hpp"
+#include "Acts/Geometry/LayerArrayCreator.hpp"
 
 namespace Acts {
 
@@ -33,11 +39,6 @@ namespace Telescope {
 class TelescopeDetectorElement : public Acts::DetectorElementBase {
  public:
 
-  TelescopeDetectorElement() : Acts::DetectorElementBase() {}
-
-  TelescopeDetectorElement(std::shared_ptr<const Acts::Transform3D> transform)
-      : Acts::DetectorElementBase(), m_elementTransform(std::move(transform)) {}
-
   /// Constructor for single sided detector element
   /// - bound to a Plane Surface
   ///
@@ -47,15 +48,22 @@ class TelescopeDetectorElement : public Acts::DetectorElementBase {
   /// @param material is the (optional) Surface material associated to it
   TelescopeDetectorElement(
       std::shared_ptr<const Acts::Transform3D> transform,
-      std::shared_ptr<const Acts::PlanarBounds> pBounds, double thickness,
-      std::shared_ptr<const Acts::ISurfaceMaterial> material = nullptr)
-      : Acts::DetectorElementBase(),
-        m_elementTransform(std::move(transform)),
-        m_elementThickness(thickness) {
-    auto mutableSurface =
-        Acts::Surface::makeShared<Acts::PlaneSurface>(pBounds, *this);
-    mutableSurface->assignSurfaceMaterial(material);
-    m_elementSurface = mutableSurface;
+      double widthX, double heightY, double thickZ)
+    : Acts::DetectorElementBase(),
+      m_elementTransform(std::move(transform)),
+      m_elementThickness(thickZ){
+
+    auto pBounds = std::make_shared<Acts::RectangleBounds>(widthX/2.0, heightY/2.0);
+
+    auto material = std::make_shared<Acts::HomogeneousSurfaceMaterial>
+    (Acts::MaterialProperties(95.7, 465.2, 28.03, 14., 2.32e-3, m_elementThickness));
+
+    m_surface = Acts::Surface::makeShared<Acts::PlaneSurface>(pBounds, *this);
+    m_surface->assignSurfaceMaterial(material);
+
+    std::unique_ptr<Acts::SurfaceArray> surArray(new Acts::SurfaceArray(m_surface));
+    m_layer = Acts::PlaneLayer::create(m_elementTransform, pBounds, std::move(surArray), 5 * Acts::UnitConstants::mm);
+    m_surface->associateLayer(*m_layer);
   }
 
   ///  Destructor
@@ -82,9 +90,10 @@ class TelescopeDetectorElement : public Acts::DetectorElementBase {
   /// @oaram iov is the batch for which it is meant
   void addAlignedTransform(std::unique_ptr<Acts::Transform3D> alignedTransform);
 
-  /// Return the set of alignment transforms in flight
-  const std::unique_ptr<Acts::Transform3D>& alignedTransforms()
-      const;
+
+  std::shared_ptr<const Acts::Layer> layer() const {
+    return m_layer;
+  }
 
   /// Return surface associated with this detector element
   const Acts::Surface& surface() const override;
@@ -98,7 +107,8 @@ class TelescopeDetectorElement : public Acts::DetectorElementBase {
   // the aligned transforms
   std::unique_ptr<Acts::Transform3D> m_alignedTransforms;
   /// the surface represented by it
-  std::shared_ptr<const Acts::Surface> m_elementSurface{nullptr};
+  std::shared_ptr<Acts::Surface> m_surface;
+  std::shared_ptr<Acts::Layer> m_layer;
   /// the element thickness
   double m_elementThickness{0.};
 };
@@ -123,13 +133,8 @@ inline void TelescopeDetectorElement::addAlignedTransform(
   m_alignedTransforms = std::move(alignedTransform);
 }
 
-inline const std::unique_ptr<Acts::Transform3D>&
-TelescopeDetectorElement::alignedTransforms() const {
-  return m_alignedTransforms;
-}
-
 inline const Acts::Surface& TelescopeDetectorElement::surface() const {
-  return *m_elementSurface;
+  return *m_surface;
 }
 
 inline double TelescopeDetectorElement::thickness() const {

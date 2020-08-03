@@ -47,16 +47,7 @@ void Telescope::BuildGeometry(
                               const rapidjson::GenericValue<rapidjson::UTF8<>, rapidjson::CrtAllocator> &js_opt
                               ){
 
-  // Boundaries of the surfaces (ALPIDE real SIZE: 29.941760 * 13.762560_mm*mm)
-  const auto rBounds = std::make_shared<const Acts::RectangleBounds>
-   (Acts::RectangleBounds(30_mm/2.0, 14_mm/2.0));
-
-  // Material of the surfaces
-  const auto surfaceMaterial = std::make_shared<Acts::HomogeneousSurfaceMaterial>
-    (Acts::MaterialProperties(95.7, 465.2, 28.03, 14., 2.32e-3, 80_um));
-
   // Set translation vectors
-
   for(const auto& js_l: js_opt.GetArray()){
 
     // Acts::Vector3D center3d;
@@ -78,34 +69,24 @@ void Telescope::BuildGeometry(
     Acts::Rotation3D rotation = rotZ * rotY * rotX;
 
     //Acts::Transform3D
-    auto trafo = std::make_shared<Acts::Transform3D>
-      (Acts::Translation3D(translation) * rotation);
+    auto trafo = std::make_shared<Acts::Transform3D>(Acts::Translation3D(translation) * rotation);
 
     // Create the detector element
-    auto detElement = std::make_shared<Telescope::TelescopeDetectorElement>
-      (trafo, rBounds, 1_um, surfaceMaterial);
-    auto detSurface = detElement->surface().getSharedPtr();
-    surface_col.push_back(detSurface);
+    // Boundaries of the surfaces (ALPIDE real SIZE: 29.941760 * 13.762560_mm*mm)
+    auto detElement = std::make_shared<Telescope::TelescopeDetectorElement>(trafo, 30_mm, 14_mm, 80_um);
+
+    surface_col.push_back(detElement->surface().getSharedPtr());
+    layer_col.push_back(detElement->layer());
     element_col.push_back(detElement);
-
-    std::unique_ptr<Acts::SurfaceArray> surArray(new Acts::SurfaceArray(detSurface));
-    auto detLayer = Acts::PlaneLayer::create(trafo, rBounds, std::move(surArray), 1.5_cm);
-    layer_col.push_back(detLayer);
-
-    auto mutableSurface = std::const_pointer_cast<Acts::Surface>(detSurface);
-    mutableSurface->associateLayer(*detLayer);
   }
-
-
 
   // Build tracking volume
   float tracker_halfX= 0.1_m;
   float tracker_halfY= 0.1_m;
-  float tracker_halfZ= 1.2_m;
+  float tracker_halfZ= 1.0_m;
   auto tracker_cuboid = std::make_shared<Acts::CuboidVolumeBounds>(tracker_halfX, tracker_halfY, tracker_halfZ);
 
-  auto trafo_no_move = std::make_shared<Acts::Transform3D>(Acts::Transform3D::Identity());
-  trafo_no_move->translation() = Acts::Vector3D(0., 0., 0.);
+  auto trafo_identity = std::make_shared<Acts::Transform3D>(Acts::Transform3D::Identity());
 
   auto layer_array_binned = Acts::LayerArrayCreator({}).
     layerArray(nominal_gctx, layer_col,
@@ -114,16 +95,14 @@ void Telescope::BuildGeometry(
                Acts::BinningValue::binZ);
 
   auto trackVolume = Acts::TrackingVolume::create
-    (trafo_no_move, tracker_cuboid, nullptr, std::move(layer_array_binned), nullptr, {}, "Tracker");
-
-
+    (trafo_identity, tracker_cuboid, nullptr, std::move(layer_array_binned), nullptr, {}, "Tracker");
 
   // Build world volume
   // assumming single tracker in the world
   auto tracker_array_binned = Acts::TrackingVolumeArrayCreator({}).
     trackingVolumeArray( nominal_gctx, { trackVolume }, Acts::BinningValue::binZ );
   auto mtvpWorld = Acts::TrackingVolume::create
-    (trafo_no_move, tracker_cuboid, tracker_array_binned , "World");
+    (trafo_identity, tracker_cuboid, tracker_array_binned , "World");
 
   geo_world.reset(new Acts::TrackingGeometry(mtvpWorld));
 }
