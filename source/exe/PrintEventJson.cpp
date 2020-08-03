@@ -74,12 +74,75 @@ int main(int argc, char* argv[]) {
     exit(0);
   }
 
+
   std::fprintf(stdout, "\n");
   std::fprintf(stdout, "datafile:         %s\n", datafile_name.c_str());
   std::fprintf(stdout, "eventNumber:      %lu\n", eventNumber);
   std::fprintf(stdout, "\n");
 
+
   {
+
+    std::printf("\n------------------------------------\n");
+    uint64_t read_datapack_count = 0;
+    uint64_t read_datapack_max = 20000;
+    Telescope::JsonDocument doc_data(&jsa);
+    Telescope::JsonGenerator gen(datafile_name);
+    while(1){
+      if(read_datapack_count > read_datapack_max ){
+        break;
+      }
+
+      doc_data.Populate(gen);
+      if(!gen.isvalid  ){
+        break;
+      }
+
+      const auto &js_evpack = doc_data;
+      if(js_evpack.HasMember("telescope")){
+        const auto &js_telescope = js_evpack["telescope"];
+        for(const auto& l: js_telescope["locations"].GetObject()){
+          std::string name = l.name.GetString();
+          double loc = l.value.GetDouble();
+          // loc_layer.insert(std::pair<double, std::string>(loc, name));
+          std::printf("layer %s  locationZ %f \n", name.c_str(), loc);
+        }
+        break;
+      }
+    }
+  }
+
+
+  {
+    std::printf("\n------------------------------------\n");
+    uint64_t read_datapack_count = 0;
+    uint64_t read_datapack_max = 20000;
+    Telescope::JsonDocument doc_data(&jsa);
+    Telescope::JsonGenerator gen(datafile_name);
+    while(1){
+      if(read_datapack_count > read_datapack_max ){
+        break;
+      }
+
+      doc_data.Populate(gen);
+      if(!gen.isvalid  ){
+        break;
+      }
+
+      const auto &js_evpack = doc_data;
+      if(js_evpack.HasMember("testbeam")){
+        const auto &js_testbeam = js_evpack["testbeam"];
+        double beamEnergy = js_testbeam["energy"].GetDouble();
+        std::printf("beam energy  %f GeV \n", beamEnergy );
+        break;
+      }
+    }
+  }
+
+
+  {
+
+    std::printf("\n------------------------------------\n");
     uint64_t read_datapack_count = 0;
     uint64_t read_datapack_max = 20000;
     Telescope::JsonDocument doc_data(&jsa);
