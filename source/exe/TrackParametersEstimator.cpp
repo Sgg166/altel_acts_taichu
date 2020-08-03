@@ -21,11 +21,8 @@ struct StraightLinePropagator{
     /// Propagation direction
     Acts::NavigationDirection direction = Acts::NavigationDirection::forward;
 
-    /// The |pdg| code for (eventual) material integration - pion default
-    int absPdgCode = 211;
-
-    /// The mass for the particle for (eventual) material integration
-    double mass = 139.57018_MeV;
+    /// The mass of electron 
+    double mass = 0.5109989461_MeV;
 
     /// Absolute maximum step size
     double maxStepSize = std::numeric_limits<double>::max();
