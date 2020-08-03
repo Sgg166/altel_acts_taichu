@@ -32,15 +32,7 @@ namespace Telescope {
 /// it simply implements the base class.
 class TelescopeDetectorElement : public Acts::DetectorElementBase {
  public:
-  /// @class ContextType
-  /// convention: nested to the Detector element
-  // struct ContextType {
-  //   /// The current intervall of validity
-  //   unsigned int iov = 0;
-  // };
 
-  using ContextType = Acts::GeometryContext;
-  
   TelescopeDetectorElement() : Acts::DetectorElementBase() {}
 
   TelescopeDetectorElement(std::shared_ptr<const Acts::Transform3D> transform)
