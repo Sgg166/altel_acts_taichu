@@ -139,7 +139,7 @@ struct JsonGenerator{
     return beamEnergy;
   }
 
-  static std::map<size_t, std::array<double, 6>>  ReadGeoFromData(const std::string& datafile_name){
+  static std::map<size_t, std::array<double, 6>>  ReadGeoFromDataFile(const std::string& datafile_name){
     std::printf("\n------------------------------------\n");
     std::map<size_t, std::array<double, 6>> id_geo_map;
     uint64_t read_datapack_count = 0;

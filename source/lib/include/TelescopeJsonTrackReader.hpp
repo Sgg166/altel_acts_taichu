@@ -11,6 +11,9 @@
 
 #include "JsonGenerator.hpp"
 
+#include "PixelSourceLink.hpp"
+
+
 namespace Telescope{
 
 class TelescopeJsonTrackReader final : public FW::IReader {
@@ -36,6 +39,11 @@ class TelescopeJsonTrackReader final : public FW::IReader {
 
   /// Read out data from the input stream.
   FW::ProcessCode read(const FW::AlgorithmContext& ctx) final override;
+
+  static bool createSourcelinksFromJSON(const Telescope::JsonValue& js_evpack,
+                                        const std::map<size_t, std::shared_ptr<const Acts::Surface>>& surfaces,
+                                        const Acts::BoundMatrix& cov_hit,
+                                        std::vector<Telescope::PixelSourceLink>& sourcelinks);
 
  private:
   Config m_cfg;

@@ -14,7 +14,6 @@
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "ACTFW/Utilities/Paths.hpp"
 
-#include "PixelSourceLink.hpp"
 
 Telescope::TelescopeJsonTrackReader::TelescopeJsonTrackReader(
     const Telescope::TelescopeJsonTrackReader::Config& cfg, Acts::Logging::Level lvl)
@@ -39,6 +38,7 @@ std::pair<size_t, size_t> Telescope::TelescopeJsonTrackReader::availableEvents()
   return m_eventsRange;
 }
 
+
 FW::ProcessCode Telescope::TelescopeJsonTrackReader::read(const FW::AlgorithmContext& ctx) {
   Telescope::JsonValue evpack;
   {
@@ -51,22 +51,34 @@ FW::ProcessCode Telescope::TelescopeJsonTrackReader::read(const FW::AlgorithmCon
   }
 
   std::vector<Telescope::PixelSourceLink> sourcelinks;
-  const auto &layers = evpack["layers"];
-  for(const auto&layer : layers.GetArray()){
-    size_t id_ext = layer["ext"].GetUint();
-    auto surface_it = m_cfg.surfaces.find(id_ext);
-    if(surface_it == m_cfg.surfaces.end()){
-      continue;
-    }
-    for(const auto&hit : layer["hit"].GetArray()){
-      double x_hit = hit["pos"][0].GetDouble();
-      double y_hit = hit["pos"][1].GetDouble();
-      Acts::Vector2D loc_hit;
-      loc_hit << x_hit, y_hit;
-      sourcelinks.emplace_back(*(surface_it->second), loc_hit, m_cov_hit);
-    }
+  bool re = createSourcelinksFromJSON(evpack, m_cfg.surfaces, m_cov_hit, sourcelinks);
+  if(!re){
+    return FW::ProcessCode::ABORT;
   }
 
   ctx.eventStore.add(m_cfg.outputTracks, std::move(sourcelinks));
   return FW::ProcessCode::SUCCESS;
+}
+
+
+bool Telescope::TelescopeJsonTrackReader::createSourcelinksFromJSON(const Telescope::JsonValue& js_evpack,
+                                                                    const std::map<size_t, std::shared_ptr<const Acts::Surface>>& surfaces,
+                                                                    const Acts::BoundMatrix& cov_hit,
+                                                                    std::vector<Telescope::PixelSourceLink>& sourcelinks){
+  const auto &layers = js_evpack["layers"];
+  for(const auto&layer : layers.GetArray()){
+    size_t id_ext = layer["ext"].GetUint();
+    auto surface_it = surfaces.find(id_ext);
+    if(surface_it == surfaces.end()){
+      continue;
+    }
+    for(const auto&hit : layer["hit"].GetArray()){
+      double x_hit = hit["pos"][0].GetDouble() - 0.02924*1024/2.0;
+      double y_hit = hit["pos"][1].GetDouble() - 0.02688*512/2.0;
+      Acts::Vector2D loc_hit;
+      loc_hit << x_hit, y_hit;
+      sourcelinks.emplace_back(*(surface_it->second), loc_hit, cov_hit);
+    }
+  }
+  return true;
 }

@@ -25,6 +25,8 @@
 #include "ACTFW/Framework/BareAlgorithm.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
 
+#include "TelescopeDetectorElement.hpp"
+
 #include "myrapidjson.h"
 
 namespace Telescope{
@@ -45,10 +47,9 @@ namespace Telescope{
   void BuildGeometry(
                      Acts::GeometryContext& nominal_gctx,
                      std::shared_ptr<const Acts::TrackingGeometry>& geo_world,
-                     std::vector<std::shared_ptr<Acts::DetectorElementBase>>& element_col,
-                     std::vector<std::shared_ptr<const Acts::Surface>>& surface_col,
-                     std::vector<Acts::LayerPtr>& layer_col,
-                     const rapidjson::GenericValue<rapidjson::UTF8<>, rapidjson::CrtAllocator> &js_opt
+                     std::vector<std::shared_ptr<Telescope::TelescopeDetectorElement>>& element_col,
+                     const std::map<size_t, std::array<double, 6>>& opts,
+                     double widthX, double heightY, double thickZ
                      );
 
 }

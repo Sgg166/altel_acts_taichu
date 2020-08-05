@@ -41,25 +41,34 @@ using namespace Acts::UnitLiterals;
 void Telescope::BuildGeometry(
                               Acts::GeometryContext& nominal_gctx,
                               std::shared_ptr<const Acts::TrackingGeometry>& geo_world,
-                              std::vector<std::shared_ptr<Acts::DetectorElementBase>>& element_col,
-                              std::vector<std::shared_ptr<const Acts::Surface>>& surface_col,
-                              std::vector<Acts::LayerPtr>& layer_col,
-                              const rapidjson::GenericValue<rapidjson::UTF8<>, rapidjson::CrtAllocator> &js_opt
+                              std::vector<std::shared_ptr<Telescope::TelescopeDetectorElement>>& element_col,
+                              const std::map<size_t, std::array<double, 6>>& opts,
+                              double widthX, double heightY, double thickZ
                               ){
 
-  // Set translation vectors
-  for(const auto& js_l: js_opt.GetArray()){
+  std::vector<std::shared_ptr<const Acts::Surface>> surface_col;
+  std::vector<Acts::LayerPtr> layer_col;
 
+  // Set translation vectors
+  // for(const auto& js_l: js_opt.GetArray()){
+  for(const auto& l: opts){
+    size_t ln = l.first;
     // Acts::Vector3D center3d;
-    double cx = js_l["centerX"].GetDouble();
-    double cy = js_l["centerY"].GetDouble();
-    double cz = js_l["centerZ"].GetDouble();
+    // double cx = js_l["centerX"].GetDouble();
+    // double cy = js_l["centerY"].GetDouble();
+    // double cz = js_l["centerZ"].GetDouble();
+    double cx = (l.second)[0];
+    double cy = (l.second)[1];
+    double cz = (l.second)[2];
     Acts::Vector3D translation(cx,cy,cz);
 
     //Acts::Rotation3D
-    double rx = js_l["rotX"].GetDouble();
-    double ry = js_l["rotY"].GetDouble();
-    double rz = js_l["rotZ"].GetDouble();
+    // double rx = js_l["rotX"].GetDouble();
+    // double ry = js_l["rotY"].GetDouble();
+    // double rz = js_l["rotZ"].GetDouble();
+    double rx = (l.second)[3];
+    double ry = (l.second)[4];
+    double rz = (l.second)[5];
     // The rotation around global z axis
     Acts::AngleAxis3D rotZ(rz, Acts::Vector3D::UnitZ());
     // The rotation around global y axis
@@ -73,7 +82,7 @@ void Telescope::BuildGeometry(
 
     // Create the detector element
     // Boundaries of the surfaces (ALPIDE real SIZE: 29.941760 * 13.762560_mm*mm)
-    auto detElement = std::make_shared<Telescope::TelescopeDetectorElement>(trafo, 30_mm, 14_mm, 80_um);
+    auto detElement = std::make_shared<Telescope::TelescopeDetectorElement>(ln, trafo, widthX, heightY, thickZ);
 
     surface_col.push_back(detElement->surface().getSharedPtr());
     layer_col.push_back(detElement->layer());

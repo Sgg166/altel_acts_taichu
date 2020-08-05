@@ -48,13 +48,13 @@ namespace {
   };
 }  // namespace
 
+
+
+
 Telescope::AlignmentFunction Telescope::makeAlignmentFunction
 (std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
  FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl){
   
-  using Updater = Acts::GainMatrixUpdater;
-  using Smoother = Acts::GainMatrixSmoother;
-
   // unpack the magnetic field variant and instantiate the corresponding fitter.
   return std::visit(
                     [trackingGeometry, lvl](auto&& inputField) -> AlignmentFunction {
@@ -66,6 +66,8 @@ Telescope::AlignmentFunction Telescope::makeAlignmentFunction
                       using Stepper = Acts::EigenStepper<MagneticField>;
                       using Navigator = Acts::Navigator;
                       using Propagator = Acts::Propagator<Stepper, Navigator>;
+                      using Updater = Acts::GainMatrixUpdater;
+                      using Smoother = Acts::GainMatrixSmoother;
                       using Fitter = Acts::KalmanFitter<Propagator, Updater, Smoother>;
                       using Alignment = FW::Alignment<Fitter>;
 

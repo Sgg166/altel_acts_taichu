@@ -35,13 +35,11 @@
 #include "TelescopeDetectorElement.hpp"
 #include "TelescopeTrackReader.hpp"
 #include "TelescopeTrack.hpp"
+#include "TelescopeJsonTrackReader.hpp"
+#include "JsonGenerator.hpp"
 
 #include <memory>
 #include "getopt.h"
-#include "myrapidjson.h"
-
-using JsonValue = rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
-using JsonDocument = rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
 
 using namespace Acts::UnitLiterals;
 
@@ -186,89 +184,6 @@ int main(int argc, char* argv[]) {
   std::fprintf(stdout, "deltaChi2ONdf:    %f\n", deltaChi2ONdf);
   std::fprintf(stdout, "\n");
 
-  
-  ///////select datapacks/////////////////////
-  JsonValue js_selected_datapack_col(rapidjson::kArrayType);
-  size_t n_datapack_select_opt = 20000;
-  {
-    std::FILE* fp = std::fopen(datafile_name.c_str(), "r");
-    if(!fp) {
-      std::fprintf(stderr, "File opening failed: %s \n", datafile_name.c_str());
-      throw std::system_error(EIO, std::generic_category(), "File opening failed");;
-    }
-
-    char readBuffer[UINT16_MAX];
-    rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(&jsa);
-    doc.ParseStream(is);
-    std::fclose(fp);
-
-    if(!doc.IsArray() || !doc.GetArray().Size()){
-      std::fprintf(stderr, "no, it is not data array\n");
-      throw std::system_error(EDOM, std::generic_category(), "File is not valid json array");;
-    }
-
-    uint64_t processed_datapack_count = 0;
-    for(auto ev_it = doc.Begin(); ev_it != doc.End() && js_selected_datapack_col.Size() < n_datapack_select_opt ; ev_it++ ){
-      auto &evpack = *ev_it;
-      processed_datapack_count ++;
-      auto &frames = evpack["layers"];
-      bool is_good_datapack = true;
-      for(auto& layer : evpack["layers"].GetArray()){
-        uint64_t l_hit_n = layer["hit"].GetArray().Size();
-        if(l_hit_n != 1){
-          is_good_datapack = false;
-          continue;
-        }
-      }
-      if(!is_good_datapack){
-        continue;
-      }
-      js_selected_datapack_col.PushBack(evpack, jsa);
-    }
-
-    std::fprintf(stdout,
-                 "Select %lu datapacks out of %lu processed datapackes. The data file contains %lu datapacks.\n",
-                 js_selected_datapack_col.Size(), processed_datapack_count, doc.GetArray().Size() );
-
-  }
-  ///////end of select datapacks/////////////////////
-
-  JsonValue js_geometry(rapidjson::kArrayType);
-  if(!geofile_name.empty())
-  {
-    std::FILE* fp = std::fopen(geofile_name.c_str(), "r");
-    if(!fp) {
-      std::fprintf(stderr, "File opening failed: %s \n", geofile_name.c_str());
-      throw std::system_error(EIO, std::generic_category(), "File opening failed");;
-    }
-    char readBuffer[UINT16_MAX];
-    rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  doc(&jsa);
-    doc.ParseStream(is);
-    std::fclose(fp);
-    js_geometry.CopyFrom<rapidjson::CrtAllocator>(doc["alignment_result"],jsa);
-  }
-  else{
-    std::vector<std::vector<double>> positions{ {0., 0., -95_mm},
-                                                {0., 0., -57_mm},
-                                                {0., 0., -19_mm},
-                                                {0., 0., 19_mm},
-                                                {0., 0., 57_mm},
-                                                {0., 0., 95_mm}};
-
-    for(auto &p: positions){
-      JsonValue js_ele(rapidjson::kObjectType);
-      js_ele.AddMember("centerX",    JsonValue(p[0]), jsa);
-      js_ele.AddMember("centerY",    JsonValue(p[1]), jsa);
-      js_ele.AddMember("centerZ",    JsonValue(p[2]), jsa);
-      js_ele.AddMember("rotX", JsonValue(0), jsa);
-      js_ele.AddMember("rotY", JsonValue(0), jsa);
-      js_ele.AddMember("rotZ", JsonValue(0), jsa);
-      js_geometry.PushBack(std::move(js_ele), jsa);
-    }
-  }
-
   Acts::GeometryContext gctx;
   Acts::MagneticFieldContext mctx;
   Acts::CalibrationContext cctx;
@@ -277,30 +192,32 @@ int main(int argc, char* argv[]) {
   auto magneticField = std::make_shared<Acts::ConstantBField>(0_T, 0_T, 0_T);
 
   // Setup detector geometry
-  std::vector<std::shared_ptr<Acts::DetectorElementBase>> element_col;
-  std::vector<std::shared_ptr<const Acts::Surface>> surface_col;
-  std::vector<Acts::LayerPtr> layer_col;
+  std::vector<std::shared_ptr<Telescope::TelescopeDetectorElement>> element_col;
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
 
+  std::map<size_t, std::array<double, 6>> geoconf;
+  if(!geofile_name.empty())
+    geoconf = Telescope::JsonGenerator::ReadGeoFromGeoFile(geofile_name);
+  else{
+    geoconf = Telescope::JsonGenerator::ReadGeoFromDataFile(datafile_name);
+  }
 
-  Telescope::BuildGeometry(gctx, trackingGeometry, element_col, surface_col, layer_col, js_geometry);
+  Telescope::BuildGeometry(gctx, trackingGeometry, element_col, geoconf, 30_mm, 14_mm, 80_um);
+  std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces_selected;
+  for(const auto& e: element_col){
+    auto id = e->telDetectorID();
+    surfaces_selected[id] =  e->surface().getSharedPtr();
+  }
+
   // Set up the detector elements to be aligned (fix the first one)
-  std::vector<std::shared_ptr<Acts::DetectorElementBase>> dets;
-  unsigned int idet = 0;
-  for (const auto& det : element_col) {
-    idet++;
-    // Skip the first detector element
-    if (idet == 1) {
-      continue;
-    }
-    dets.push_back(det);
+  std::vector<std::shared_ptr<Acts::DetectorElementBase>> element_col_align;
+  for (auto it = element_col.begin() ; it != element_col.end(); ++it){
+    if(it != element_col.begin())
+      element_col_align.push_back(*it);
   }
   //
 
-
-
   /////////////////////////////////////
-
   // The criteria to determine if the iteration has converged. @Todo: to use
   // delta chi2 instead
   double chi2ONdfCutOff = 0.01;
@@ -310,12 +227,12 @@ int main(int argc, char* argv[]) {
   for (unsigned int iIter = 0; iIter < maxNumIterations; iIter++) {
     std::bitset<6> mask(std::string("111111"));
     if(iIter%2 ==0){
-      // only align offset along x/y 
+      // only align offset along x/y
       mask = std::bitset<6>(std::string("000011"));
     }else{
-      // only align rotation around beam 
+      // only align rotation around beam
       mask = std::bitset<6>(std::string("100000"));
-    } 
+    }
     iterationState.emplace(iIter, mask);
   }
 
@@ -332,46 +249,68 @@ int main(int argc, char* argv[]) {
       }
       return false;
     };
- 
-  Acts::Logging::Level logLevel = do_verbose? (Acts::Logging::VERBOSE):(Acts::Logging::INFO); 
-  auto alignFun = Telescope::makeAlignmentFunction
-    (trackingGeometry, magneticField, logLevel);
 
-  
-  while(1){
+  auto alignFun = Telescope::makeAlignmentFunction
+    (trackingGeometry, magneticField, do_verbose? (Acts::Logging::VERBOSE):(Acts::Logging::INFO));
+
+  {
     // Setup local covariance
     Acts::BoundMatrix cov_hit = Acts::BoundMatrix::Zero();
     cov_hit(0, 0) =resX*resX;
     cov_hit(1, 1) =resY*resY;
 
+    //
+    size_t n_datapack_select_opt = 20000;
+    uint64_t processed_datapack_count = 0;
+    Telescope::JsonDocument doc(&jsa);
+    Telescope::JsonGenerator gen(datafile_name);
     std::vector<std::vector<Telescope::PixelSourceLink>> sourcelinkTracks;
-    sourcelinkTracks.reserve(js_selected_datapack_col.Size());
-    for(auto ev_it = js_selected_datapack_col.Begin(); ev_it != js_selected_datapack_col.End() ; ev_it++ ){
-      const auto &evpack = *ev_it;
+    while(1){
+      if(sourcelinkTracks.size()> n_datapack_select_opt){
+        break;
+      }
+      doc.Populate(gen);
+      if(!gen.isvalid  ){
+        break;
+      }
+
+      Telescope::JsonValue evpack;
+      doc.Swap(evpack);
       std::vector<Telescope::PixelSourceLink> sourcelinks;
-      auto &frames = evpack["layers"];
-      for(size_t i= 0; i< 6; i++){
-        double x = frames[i]["hit"][0]["pos"][0].GetDouble() - 0.02924*1024/2.0;
-        double y = frames[i]["hit"][0]["pos"][1].GetDouble() - 0.02688*512/2.0;
-        Acts::Vector2D loc;
-        loc << x, y;
-        sourcelinks.emplace_back(*surface_col.at(i), loc, cov_hit);
+      Telescope::TelescopeJsonTrackReader::createSourcelinksFromJSON(evpack, surfaces_selected, cov_hit, sourcelinks);
+
+      //drop multiple hits events
+      if(sourcelinks.size() != surfaces_selected.size()){
+        continue;
+      }
+      std::vector<size_t> geo_ids;
+      bool found_same_geo_id = false ;
+      for(const auto &sl: sourcelinks){
+        size_t geo_id = sl.referenceSurface().geoID().value();
+        if(std::find( geo_ids.begin(), geo_ids.end(), geo_id ) != geo_ids.end()){
+          found_same_geo_id = true;
+          break;
+        }
+        geo_ids.push_back(geo_id);
+      }
+      if(found_same_geo_id){
+        continue;
       }
       sourcelinkTracks.push_back(sourcelinks);
     }
-    
-    // Prepare the initial track parameters collection
+
+    //seeding
+    std::vector<Acts::CurvilinearParameters> initialParameters;
+    initialParameters.reserve(sourcelinkTracks.size());
     Acts::BoundSymMatrix cov_seed;
     cov_seed <<
-        resLoc1 * resLoc1,     0.,  0.,   0.,   0.,  0.,
-        0., resLoc2 * resLoc2,      0.,   0.,   0.,  0.,
-        0.,                 0., resPhi*resPhi, 0.,   0.,  0.,
-        0.,                 0., 0.,   resTheta*resTheta, 0.,  0.,
-        0.,                 0., 0.,   0.,   0.0001,  0.,
-        0.,                 0., 0.,   0.,   0.,  1.;
-    
-    std::vector<Acts::CurvilinearParameters> initialParameters;
-    initialParameters.reserve(js_selected_datapack_col.Size());
+      resLoc1 * resLoc1,  0.,  0.,   0.,   0.,  0.,
+      0., resLoc2 * resLoc2, 0.,   0.,   0.,  0.,
+      0.,                 0., resPhi*resPhi, 0.,   0.,  0.,
+      0.,                 0., 0.,   resTheta*resTheta, 0.,  0.,
+      0.,                 0., 0.,   0.,   0.0001,  0.,
+      0.,                 0., 0.,   0.,   0.,  1.;
+
     for( const auto& sourcelinks : sourcelinkTracks) {
       // Create initial parameters
       // The position is taken from the first measurement
@@ -391,17 +330,14 @@ int main(int argc, char* argv[]) {
     }
 
     // Set the KalmanFitter options
-    //auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{0., 0., 1});
-
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions
-      //(gctx, mctx, cctx, Acts::VoidOutlierFinder(), refSurface.get());
       (gctx, mctx, cctx, Acts::VoidOutlierFinder()); //pSurface default nullptr
 
     // Set the alignment options
     FW::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>> alignOptions
       (kfOptions,
        alignedTransformUpdaterFun,
-       dets,
+       element_col_align,
        chi2ONdfCutOff,
        deltaChi2ONdfCutOff,
        maxNumIterations,
@@ -411,51 +347,32 @@ int main(int argc, char* argv[]) {
     std::printf("Invoke alignment");
     auto result = alignFun(sourcelinkTracks, initialParameters, alignOptions);
 
-    if (result.ok()) {
-      std::cout<<"Alignment finished with deltaChi2 = " << result.value().deltaChi2;
-      // Print out the alignment parameters of all detector elements (including those not aligned)
-      idet=0;
-      std::cout<<"iDet, centerX, centerY, centerZ, rotX, rotY, rotZ"<<std::endl;
-
-      JsonValue js_output(rapidjson::kObjectType);
-      JsonValue js_align_result(rapidjson::kArrayType);
-
-      for (const auto& det : element_col) {
-        JsonValue js_ele(rapidjson::kObjectType);
-        const auto& surface = &det->surface();
-        const auto& transform =
-            det->transform(gctx);
-        const auto& translation = transform.translation();
-        const auto& rotation = transform.rotation();
-        const Acts::Vector3D rotAngles = rotation.eulerAngles(2, 1, 0);
-      //std::cout<<"Rotation marix = \n" << rotation<<std::endl;
-        // js_ele.AddMember("idet",       JsonValue(idet), jsa);
-        js_ele.AddMember("centerX",    JsonValue(translation.x()), jsa);
-        js_ele.AddMember("centerY",    JsonValue(translation.y()), jsa);
-        js_ele.AddMember("centerZ",    JsonValue(translation.z()), jsa);
-        js_ele.AddMember("rotX", JsonValue(rotAngles(2)), jsa);
-        js_ele.AddMember("rotY", JsonValue(rotAngles(1)), jsa);
-        js_ele.AddMember("rotZ", JsonValue(rotAngles(0)), jsa);
-        js_align_result.PushBack(std::move(js_ele), jsa);
-
-        std::cout<<idet<<","<<translation.x()<<","<<translation.y()<<","<<translation.z()<<","<<rotAngles(2)<<","<<rotAngles(1)<<","<<rotAngles(0)<<std::endl;
-        idet++;
-      }
-
-      js_output.AddMember("alignment_result", std::move(js_align_result), jsa);
-      std::FILE* fp = std::fopen(outputfile_name.c_str(), "w");
-      char writeBuffer[UINT16_MAX];
-      rapidjson::FileWriteStream os(fp, writeBuffer, sizeof(writeBuffer));
-      rapidjson::PrettyWriter< rapidjson::FileWriteStream> writer(os);
-      js_output.Accept(writer);
-      std::fclose(fp);
-
-    } else {
-      std::cout<<"Alignment failed with " << result.error();
+    if (!result.ok()){
+      std::printf("Alignment failed with %s \n", result.error().message().c_str());
     }
 
-    /////////////////////////////
-    break;
+    std::printf("Alignment finished with deltaChi2 = %f \n", result.value().deltaChi2);
+    std::map<size_t, std::array<double, 6>> geo_result;
+    for(const auto& det : element_col) {
+      const auto& surface = &det->surface();
+      const auto& transform = det->transform(gctx);
+      const auto& translation = transform.translation();
+      const auto& rotation = transform.rotation();
+      const Acts::Vector3D rotAngles = rotation.eulerAngles(2, 1, 0);
+
+      size_t id = det->telDetectorID();
+      double cx = translation.x();
+      double cy = translation.y();
+      double cz = translation.z();
+      double rx = rotAngles(2);
+      double ry = rotAngles(1);
+      double rz = rotAngles(0);
+      geo_result[id]={cx, cy, cz, rx, ry, rz};
+
+      std::printf("layer: %lu   centerX: %f   centerX: %f   centerX: %f  rotationX: %f   rotationY: %f   rotationZ: %f\n",
+                  id, cx, cy, cz, rx, ry, rz);
+    }
+    Telescope::JsonGenerator::WriteGeoToGeoFile(outputfile_name, geo_result);
   }
   return 0;
 }
