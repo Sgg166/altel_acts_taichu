@@ -33,7 +33,6 @@
 #include "ACTFW/Framework/WhiteBoard.hpp"
 
 #include "TelescopeDetectorElement.hpp"
-#include "TelescopeTrackReader.hpp"
 #include "TelescopeTrack.hpp"
 #include "TelescopeJsonTrackReader.hpp"
 #include "JsonGenerator.hpp"

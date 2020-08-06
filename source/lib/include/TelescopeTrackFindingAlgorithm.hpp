@@ -38,7 +38,7 @@ namespace Telescope {
   using TrackFinderFunction = std::function<TrackFinderResult(
       const std::vector<PixelSourceLink>&, const FW::TrackParameters&,
       const CKFOptions&)>;
- 
+
   using SourceLinkTrack = std::vector<PixelSourceLink>;
   using SourceLinkTrackReader =
       std::function<std::vector<SourceLinkTrack>(const std::string&, size_t)>;
@@ -50,20 +50,22 @@ namespace Telescope {
   static TrackFinderFunction makeTrackFinderFunction(
       std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
       FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl);
-  
+
   struct Config {
-    /// Input data file name.
-    std::string inputFileName;
-    /// Input data reader
-    SourceLinkTrackReader trackReader;
-    /// Number of tracks
-    size_t maxNumTracks = std::numeric_limits<size_t>::max();
+    /// Inout soucelinks
+    std::string inputSourcelinks;
     /// Output fitted trajectories collection.
     std::string outputTrajectories;
     /// Type erased track finder function.
     TrackFinderFunction findTracks;
     /// CKF source link selector config
     Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg;
+
+    double seedResX{15 * Acts::UnitConstants::mm};
+    double seedResY{15 * Acts::UnitConstants::mm};
+    double seedResPhi{0.7};
+    double seedResTheta{0.7};
+    double beamEnergy{5 * Acts::UnitConstants::GeV};
   };
 
   /// Constructor of the fitting algorithm
