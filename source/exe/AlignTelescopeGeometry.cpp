@@ -71,7 +71,6 @@ int main(int argc, char* argv[]) {
      { "help",       no_argument,       &do_help,      1  },
      { "verbose",    no_argument,       &do_verbose,   1  },
      { "file",      required_argument, NULL,           'f' },
-     { "energy",       required_argument, NULL,        'e' },
      { "out",       required_argument, NULL,           'o' },
      { "geomerty",       required_argument, NULL,      'g' },
      { "resX",       required_argument, NULL,          'r' },
@@ -87,7 +86,6 @@ int main(int argc, char* argv[]) {
   std::string datafile_name;
   std::string outputfile_name;
   std::string geofile_name;
-  double beamEnergy = 4 * Acts::UnitConstants::GeV;
   double resX = 150_um;
   double resY = 150_um;
   // Use large starting parameter covariance
@@ -111,9 +109,6 @@ int main(int argc, char* argv[]) {
       break;
     case 'f':
       datafile_name = optarg;
-      break;
-    case 'e':
-      beamEnergy = std::stod(optarg) * Acts::UnitConstants::GeV;
       break;
     case 'o':
       outputfile_name = optarg;
@@ -174,7 +169,6 @@ int main(int argc, char* argv[]) {
   std::fprintf(stdout, "datafile:         %s\n", datafile_name.c_str());
   std::fprintf(stdout, "outfile:          %s\n", outputfile_name.c_str());
   std::fprintf(stdout, "geofile:          %s\n", geofile_name.c_str());
-  std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
   std::fprintf(stdout, "resX:             %f\n", resX);
   std::fprintf(stdout, "resY:             %f\n", resY);
   std::fprintf(stdout, "resPhi:           %f\n", resPhi);
@@ -195,14 +189,23 @@ int main(int argc, char* argv[]) {
   std::vector<std::shared_ptr<Telescope::TelescopeDetectorElement>> element_col;
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
 
+
+  std::printf("--------read geo and beam energy\n");
   std::map<size_t, std::array<double, 6>> geoconf;
   if(!geofile_name.empty())
     geoconf = Telescope::JsonGenerator::ReadGeoFromGeoFile(geofile_name);
   else{
     geoconf = Telescope::JsonGenerator::ReadGeoFromDataFile(datafile_name);
   }
+  for(const auto& [id, lgeo] : geoconf){
+  std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  rotationX: %f   rotationY: %f   rotationZ: %f\n",
+              id, lgeo[0], lgeo[1], lgeo[2], lgeo[3], lgeo[4], lgeo[5]);
+  }
+  double beamEnergy = Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) * Acts::UnitConstants::GeV;
+  std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
 
-  Telescope::BuildGeometry(gctx, trackingGeometry, element_col, geoconf, 30_mm, 14_mm, 80_um);
+
+  Telescope::BuildGeometry(gctx, trackingGeometry, element_col, geoconf, 50_mm, 25_mm, 80_um);
   std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces_selected;
   for(const auto& e: element_col){
     auto id = e->telDetectorID();
@@ -261,7 +264,6 @@ int main(int argc, char* argv[]) {
 
     //
     size_t n_datapack_select_opt = 20000;
-    uint64_t processed_datapack_count = 0;
     Telescope::JsonDocument doc(&jsa);
     Telescope::JsonGenerator gen(datafile_name);
     std::vector<std::vector<Telescope::PixelSourceLink>> sourcelinkTracks;
@@ -369,9 +371,10 @@ int main(int argc, char* argv[]) {
       double rz = rotAngles(0);
       geo_result[id]={cx, cy, cz, rx, ry, rz};
 
-      std::printf("layer: %lu   centerX: %f   centerX: %f   centerX: %f  rotationX: %f   rotationY: %f   rotationZ: %f\n",
+      std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  rotationX: %f   rotationY: %f   rotationZ: %f\n",
                   id, cx, cy, cz, rx, ry, rz);
     }
+    std::printf("select %lu datapacks (single track events) \n", sourcelinkTracks.size());
     Telescope::JsonGenerator::WriteGeoToGeoFile(outputfile_name, geo_result);
   }
   return 0;

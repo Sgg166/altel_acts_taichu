@@ -292,15 +292,15 @@ struct Alignment {
     // calculate the covariance of the alignment parameters)
     // @Todo: use more stable method for solving the inverse
     size_t alignDof = alignResult.alignmentDof;
-    Acts::ActsMatrixX<Acts::BoundParametersScalar>
-        sumChi2SecondDerivativeInverse =
-            Acts::ActsMatrixX<Acts::BoundParametersScalar>::Zero(alignDof,
-                                                                 alignDof);
-    sumChi2SecondDerivativeInverse = sumChi2SecondDerivative.inverse();
-    if (sumChi2SecondDerivativeInverse.hasNaN()) {
-      ACTS_WARNING("Chi2 second derivative inverse has NaN");
-      // return AlignmentError::AlignmentParametersUpdateFailure;
-    }
+    // Acts::ActsMatrixX<Acts::BoundParametersScalar>
+    //     sumChi2SecondDerivativeInverse =
+    //         Acts::ActsMatrixX<Acts::BoundParametersScalar>::Zero(alignDof,
+    //                                                              alignDof);
+    // sumChi2SecondDerivativeInverse = sumChi2SecondDerivative.inverse();
+    // if (sumChi2SecondDerivativeInverse.hasNaN()) {
+    //   ACTS_WARNING("Chi2 second derivative inverse has NaN");
+    //   // return AlignmentError::AlignmentParametersUpdateFailure;
+    // }
 
     // Initialize the alignment results
     alignResult.deltaAlignmentParameters =
@@ -314,7 +314,9 @@ struct Alignment {
     ACTS_INFO("The solved delta of alignmentParameters = \n "
               << alignResult.deltaAlignmentParameters);
     // Alignment parameters covariance
-    alignResult.alignmentCovariance = 2 * sumChi2SecondDerivativeInverse;
+    // @todo
+    // alignResult.alignmentCovariance = 2 * sumChi2SecondDerivativeInverse;
+
     // chi2 change
     alignResult.deltaChi2 = 0.5 * sumChi2Derivative.transpose() *
                             alignResult.deltaAlignmentParameters;
@@ -455,24 +457,24 @@ struct Alignment {
     }
 
     // Print out the final aligned parameters
-    unsigned int iDetElement = 0;
-    for (const auto& det : alignOptions.alignedDetElements) {
-      const auto& surface = &det->surface();
-      const auto& transform =
-          det->transform(alignOptions.fitOptions.geoContext);
-      // write it to the result
-      alignRes.alignedParameters.emplace(det, transform);
-      const auto& translation = transform.translation();
-      const auto& rotation = transform.rotation();
-      const Acts::Vector3D rotAngles = rotation.eulerAngles(2, 1, 0);
-      ACTS_INFO("Detector element with surface "
-                << surface->geoID()
-                << " has aligned geometry position as below:");
-      ACTS_INFO("Center (cenX, cenY, cenZ) = " << translation.transpose());
-      ACTS_INFO("Euler angles (rotZ, rotY, rotX) = " << rotAngles.transpose());
-      ACTS_INFO("Rotation marix = \n" << rotation);
-      iDetElement++;
-    }
+    // unsigned int iDetElement = 0;
+    // for (const auto& det : alignOptions.alignedDetElements) {
+    //   const auto& surface = &det->surface();
+    //   const auto& transform =
+    //       det->transform(alignOptions.fitOptions.geoContext);
+    //   // write it to the result
+    //   alignRes.alignedParameters.emplace(det, transform);
+    //   const auto& translation = transform.translation();
+    //   const auto& rotation = transform.rotation();
+    //   const Acts::Vector3D rotAngles = rotation.eulerAngles(2, 1, 0);
+    //   ACTS_INFO("Detector element with surface "
+    //             << surface->geoID()
+    //             << " has aligned geometry position as below:");
+    //   ACTS_INFO("Center (cenX, cenY, cenZ) = " << translation.transpose());
+    //   ACTS_INFO("Euler angles (rotZ, rotY, rotX) = " << rotAngles.transpose());
+    //   ACTS_INFO("Rotation marix = \n" << rotation);
+    //   iDetElement++;
+    // }
 
     return alignRes;
   }

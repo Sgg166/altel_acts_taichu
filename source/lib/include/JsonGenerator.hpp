@@ -110,7 +110,7 @@ struct JsonGenerator{
   }
 
 
-  static double ReadBeamEnergy(const std::string& datafile_name){
+  static double ReadBeamEnergyFromDataFile(const std::string& datafile_name){
     std::printf("\n------------------------------------\n");
     double beamEnergy;
     uint64_t read_datapack_count = 0;
