@@ -29,7 +29,6 @@
 #include "Acts/Utilities/ParameterDefinitions.hpp"
 
 
-
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "ACTFW/Plugins/BField/ScalableBField.hpp"
@@ -57,15 +56,13 @@ FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
     std::vector<Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy>> initialParameters;
     for(const auto& sl0 : sourcelinks){
       const auto& surface0 = sl0.referenceSurface();
-      const auto& layer0 = surface0.geoID().layer();
-      if(layer0 != 2) {
+      if(surface0.geoID().value() != m_cfg.seedSurfaceGeoIDStart) {
         continue;
       }
       const Acts::Vector3D global0 = sl0.globalPosition(ctx.geoContext);
       for(const auto& sl1 : sourcelinks){
         const auto& surface1 = sl1.referenceSurface();
-        const auto& layer1 = surface1.geoID().layer();
-        if(layer1 != 4) {
+        if(surface1.geoID().value() != m_cfg.seedSurfaceGeoIDEnd) {
           continue;
         }
         const Acts::Vector3D global1 = sl1.globalPosition(ctx.geoContext);
@@ -86,9 +83,9 @@ FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
           const double phi = Acts::VectorHelpers::phi(distVec);
           const double theta = Acts::VectorHelpers::theta(distVec);
           Acts::Vector3D rPos = global0 - distVec / 2;
-          Acts::Vector3D rMom(m_cfg.beamEnergy * sin(theta) * cos(phi),
-                              m_cfg.beamEnergy * sin(theta) * sin(phi),
-                              m_cfg.beamEnergy * cos(theta));
+          Acts::Vector3D rMom(m_cfg.seedEnergy * sin(theta) * cos(phi),
+                              m_cfg.seedEnergy * sin(theta) * sin(phi),
+                              m_cfg.seedEnergy * cos(theta));
 
           initialParameters.emplace_back(cov, rPos, rMom, 1., 0);
         }
@@ -102,7 +99,7 @@ FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
     // @Todo: add options for CKF
     Telescope::TelescopeTrackFindingAlgorithm::CKFOptions ckfOptions
       (ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
-       Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{500, 1}}}, refSurface.get());
+       m_cfg.sourcelinkSelectorCfg, refSurface.get());
     // 500 chi2cut,   1 max number of selected sourcelinks in a single surface;
 
     //Loop ever the seeds

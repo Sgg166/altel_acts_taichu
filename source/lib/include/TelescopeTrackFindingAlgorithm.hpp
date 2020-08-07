@@ -60,12 +60,13 @@ namespace Telescope {
     TrackFinderFunction findTracks;
     /// CKF source link selector config
     Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg;
-
+    uint64_t seedSurfaceGeoIDStart;
+    uint64_t seedSurfaceGeoIDEnd;
     double seedResX{15 * Acts::UnitConstants::mm};
     double seedResY{15 * Acts::UnitConstants::mm};
     double seedResPhi{0.7};
     double seedResTheta{0.7};
-    double beamEnergy{5 * Acts::UnitConstants::GeV};
+    double seedEnergy{5 * Acts::UnitConstants::GeV};
   };
 
   /// Constructor of the fitting algorithm

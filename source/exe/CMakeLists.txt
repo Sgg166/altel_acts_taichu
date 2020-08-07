@@ -78,6 +78,27 @@ target_link_libraries(AlignTelescopeGeometry PRIVATE
 #   )
 
 
+
+add_executable(FindTelescopeTracks FindTelescopeTracks.cpp)
+list(APPEND EXE_TARGET_LIST FindTelescopeTracks)
+target_link_libraries(FindTelescopeTracks PRIVATE
+  altel-acts
+
+  ActsExamplesFramework
+  ActsExamplesCommon
+  ActsExamplesDetectorsCommon
+  ActsExamplesMagneticField
+  ActsExamplesIoCsv
+  ActsExamplesIoObj
+  ActsExamplesIoPerformance
+  rapidjson
+
+  ROOT::Core
+  ROOT::Hist
+  ROOT::Tree
+  )
+
+
 add_executable(PrintEventJson PrintEventJson.cpp)
 list(APPEND EXE_TARGET_LIST PrintEventJson)
 target_link_libraries(PrintEventJson PRIVATE

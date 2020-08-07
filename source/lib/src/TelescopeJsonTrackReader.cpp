@@ -56,7 +56,7 @@ FW::ProcessCode Telescope::TelescopeJsonTrackReader::read(const FW::AlgorithmCon
     return FW::ProcessCode::ABORT;
   }
 
-  ctx.eventStore.add(m_cfg.outputTracks, std::move(sourcelinks));
+  ctx.eventStore.add(m_cfg.outputSourcelinks, std::move(sourcelinks));
   return FW::ProcessCode::SUCCESS;
 }
 

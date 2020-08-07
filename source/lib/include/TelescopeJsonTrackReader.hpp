@@ -20,7 +20,7 @@ class TelescopeJsonTrackReader final : public FW::IReader {
  public:
   struct Config {
     std::string inputDataFile;
-    std::string outputTracks;
+    std::string outputSourcelinks;
     double resX;
     double resY;
     std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces;
