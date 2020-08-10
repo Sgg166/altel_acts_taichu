@@ -57,6 +57,8 @@ static const std::string help_usage = R"(
 Usage:
   -help                        help message
   -verbose                     verbose flag
+  -thread         [int]        multiple threads
+  -eventMax       [int]        max number of events
   -data           [jsonfile]   data input file
   -geo            [jsonfile]   geometry input file
   -outputdir      [path]       output dir path
@@ -77,6 +79,8 @@ int main(int argc, char* argv[]) {
     {
      { "help",           no_argument,       &do_help,      1  },
      { "verbose",        no_argument,       &do_verbose,   1  },
+     { "thread",         required_argument, NULL,           'd' },
+     { "eventMax",       required_argument, NULL,           'm' },
      { "data",           required_argument, NULL,           'f' },
      { "outputdir",      required_argument, NULL,      'o' },
      { "geomerty",       required_argument, NULL,      'g' },
@@ -89,6 +93,8 @@ int main(int argc, char* argv[]) {
      { 0, 0, 0, 0 }};
 
 
+  size_t threadNum = 1;
+  size_t eventMaxNum = -1;
   std::string datafile_name;
   std::string geofile_name;
   std::string outputDir;
@@ -109,6 +115,12 @@ int main(int argc, char* argv[]) {
       do_help = 1;
       std::fprintf(stdout, "%s\n", help_usage.c_str());
       exit(0);
+      break;
+    case 'd':
+      threadNum = std::stoul(optarg);
+      break;
+    case 'm':
+      eventMaxNum = std::stoul(optarg);
       break;
     case 'f':
       datafile_name = optarg;
@@ -224,6 +236,8 @@ int main(int argc, char* argv[]) {
   /////////////////////////////////////
   Acts::Logging::Level logLevel = do_verbose? (Acts::Logging::VERBOSE):(Acts::Logging::INFO);
 
+  logLevel = Acts::Logging::WARNING;
+  
   Telescope::TelescopeJsonTrackReader::Config conf_reader;
   conf_reader.inputDataFile = datafile_name;
   conf_reader.outputSourcelinks = "sourcelinks";
@@ -266,8 +280,8 @@ int main(int argc, char* argv[]) {
   FW::Sequencer::Config conf_seq;
   conf_seq.logLevel  = logLevel;
   conf_seq.outputDir = path_dir_output.c_str();
-  conf_seq.numThreads = 1;
-  conf_seq.events = 100;
+  conf_seq.numThreads = threadNum;
+  conf_seq.events = eventMaxNum;
 
   FW::Sequencer seq(conf_seq);
   seq.addReader(std::make_shared<Telescope::TelescopeJsonTrackReader>(conf_reader, logLevel));

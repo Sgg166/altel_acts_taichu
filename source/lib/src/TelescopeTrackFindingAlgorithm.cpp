@@ -122,8 +122,8 @@ FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
       iseed++;
     }// end of the loop for all seeds
 
-    std::printf("<< eventNumber: %lu    sourcelinks.size(): %lu   initialParameters.size(): %lu   nTracks %lu \n",
-                ctx.eventNumber, sourcelinks.size(), initialParameters.size(), nTracks);
+    // std::printf("<< eventNumber: %lu    sourcelinks.size(): %lu   initialParameters.size(): %lu   nTracks %lu \n",
+    //             ctx.eventNumber, sourcelinks.size(), initialParameters.size(), nTracks);
 
   }
   else{
