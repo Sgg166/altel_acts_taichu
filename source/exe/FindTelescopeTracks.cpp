@@ -104,8 +104,8 @@ int main(int argc, char* argv[]) {
 
   double seedResX = 15_mm;
   double seedResY = 15_mm;
-  double seedResPhi  = 0.7;
-  double seedResTheta = 0.7;
+  double seedResPhi  = 0.7_rad;
+  double seedResTheta = 0.7_rad;
 
   int c;
   opterr = 1;
@@ -216,8 +216,8 @@ int main(int argc, char* argv[]) {
               id, lgeo[0], lgeo[1], lgeo[2], lgeo[3], lgeo[4], lgeo[5]);
   }
 
-  double beamEnergy = Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name);
-  std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
+    double beamEnergy = Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) * Acts::UnitConstants::GeV;
+    std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
 
   Acts::GeometryContext gctx;
   auto magneticField = std::make_shared<Acts::ConstantBField>(0_T, 0_T, 0_T);
@@ -253,11 +253,11 @@ int main(int argc, char* argv[]) {
   conf_trackfinding.sourcelinkSelectorCfg = Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{500, 1}}};
   conf_trackfinding.seedSurfaceGeoIDStart = surfaces_selected[0]->geoID().value();
   conf_trackfinding.seedSurfaceGeoIDEnd = surfaces_selected[1]->geoID().value();
-  conf_trackfinding.seedResX = 15_mm;
-  conf_trackfinding.seedResY = 15_mm;
-  conf_trackfinding.seedResPhi = 0.7;
-  conf_trackfinding.seedResTheta = 0.7;
-  conf_trackfinding.seedEnergy = 5_GeV;
+  conf_trackfinding.seedResX = seedResX;
+  conf_trackfinding.seedResY = seedResY;
+  conf_trackfinding.seedResPhi = seedResPhi;
+  conf_trackfinding.seedResTheta = seedResTheta;
+  conf_trackfinding.seedEnergy = beamEnergy;
 
 
   // write tracks as root tree
