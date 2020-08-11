@@ -9,6 +9,8 @@
 #pragma once
 
 #include <fstream>
+#include <mutex>
+
 #include "ACTFW/Framework/WriterT.hpp"
 #include "Acts/EventData/Measurement.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
@@ -53,6 +55,7 @@ class TelescopeJsonTrackWriter
   std::FILE* m_jsfp;
   std::unique_ptr<rapidjson::FileWriteStream> m_jsos;
   std::unique_ptr<rapidjson::Writer< rapidjson::FileWriteStream>> m_jsw;
+  std::mutex m_mtx;
 
  protected:
   /// This implementation holds the actual writing method

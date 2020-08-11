@@ -41,6 +41,7 @@
 #include "ObjTelescopeTrackWriter.hpp"
 #include "RootTelescopeTrackWriter.hpp"
 #include "TelescopeJsonTrackReader.hpp"
+#include "TelescopeJsonTrackWriter.hpp"
 #include "JsonGenerator.hpp"
 
 
@@ -286,7 +287,14 @@ int main(int argc, char* argv[]) {
   FW::Sequencer seq(conf_seq);
   seq.addReader(std::make_shared<Telescope::TelescopeJsonTrackReader>(conf_reader, logLevel));
   seq.addAlgorithm(std::make_shared<Telescope::TelescopeTrackFindingAlgorithm>(conf_trackfinding, logLevel) );
-  seq.addWriter(std::make_shared<Telescope::RootTelescopeTrackWriter>(conf_trackRootWriter,  logLevel));
+  // seq.addWriter(std::make_shared<Telescope::RootTelescopeTrackWriter>(conf_trackRootWriter,  logLevel));
+
+  Telescope::TelescopeJsonTrackWriter::Config conf_trackJsonWriter;
+  conf_trackJsonWriter.inputTrajectories = "trajectories";
+  conf_trackJsonWriter.outputDir = path_dir_output.c_str();
+  conf_trackJsonWriter.outputParaSurface = surfaces_selected[5];
+
+  seq.addWriter(std::make_shared<Telescope::TelescopeJsonTrackWriter>(conf_trackJsonWriter,  logLevel));
 
   seq.run();
 
