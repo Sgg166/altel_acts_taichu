@@ -1,0 +1,64 @@
+// This file is part of the Acts project.
+//
+// Copyright (C) 2020 CERN for the benefit of the Acts project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#pragma once
+
+#include <fstream>
+#include "ACTFW/Framework/WriterT.hpp"
+#include "Acts/EventData/Measurement.hpp"
+#include "Acts/Utilities/ParameterDefinitions.hpp"
+#include "PixelMultiTrajectory.hpp"
+
+#include "JsonGenerator.hpp"
+
+namespace Telescope{
+
+
+/// @class ObjTelescopeTrackWriter
+///
+/// Write out the tracks reconstructed using Combinatorial Kalman Filter
+/// Writes one file per event with form:
+/// One Thread per write call and hence thread safe
+class TelescopeJsonTrackWriter
+  : public FW::WriterT<std::vector<PixelMultiTrajectory>> {
+ public:
+  struct Config {
+    std::string inputTrajectories;  ///< input (fitted) trajectories collection
+    std::string outputDir;          ///< where to place output files
+    std::shared_ptr<const Acts::Surface> outputParaSurface;
+  };
+
+  /// Constructor with arguments
+  ///
+  /// @param cfg configuration struct
+  /// @param level Output logging level
+  TelescopeJsonTrackWriter(const Config& cfg,
+                          Acts::Logging::Level level = Acts::Logging::INFO);
+
+  /// Virtual destructor
+  ~TelescopeJsonTrackWriter() override = default;
+
+  /// End-of-run hook
+  FW::ProcessCode endRun() final override;
+
+ private:
+  Config m_cfg;  ///!< Internal configuration represenation
+  std::unique_ptr<Telescope::JsonAllocator> m_jsa;
+  char m_jsbuffer[UINT16_MAX];
+  std::FILE* m_jsfp;
+  std::unique_ptr<rapidjson::FileWriteStream> m_jsos;
+  std::unique_ptr<rapidjson::Writer< rapidjson::FileWriteStream>> m_jsw;
+
+ protected:
+  /// This implementation holds the actual writing method
+  /// and is called by the WriterT<>::write interface
+  FW::ProcessCode writeT(
+                         const FW::AlgorithmContext& context,
+                         const std::vector<PixelMultiTrajectory>& trackCollection) final override;
+};
+}
