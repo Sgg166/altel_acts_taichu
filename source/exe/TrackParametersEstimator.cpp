@@ -45,6 +45,7 @@ int main(int argc, char* argv[]){
      { "help",           no_argument,       &do_help,      1  },
      { "verbose",        no_argument,       &do_verbose,   1  },
      { "eventMax",       required_argument, NULL,           'm' },
+     { "targetLayerID",  required_argument, NULL,           't' },
      { "fitData",        required_argument, NULL,           'f' },
      { "oriData",        required_argument, NULL,           'r' },
      { "geomerty",       required_argument, NULL,      'g' },
@@ -65,6 +66,9 @@ int main(int argc, char* argv[]){
     switch (c) {
     case 'm':
       eventMaxNum = std::stoul(optarg);
+      break;
+    case 't':
+      target_layer_id = std::stoul(optarg);
       break;
     case 'f':
       fitdatafile_name = optarg;
@@ -121,8 +125,6 @@ int main(int argc, char* argv[]){
   std::map<size_t, std::array<double, 6>> geoconf;
   geoconf = Telescope::JsonGenerator::ReadGeoFromGeoFile(geofile_name);
   std::array<double, 6> target_layer_geoconf = geoconf.at(target_layer_id);
-  Acts::Translation3D tTranslation{0, 0, 490_mm};
-  auto tTransform = std::make_shared<const Acts::Transform3D>(tTranslation);
   double cx = target_layer_geoconf[0];
   double cy = target_layer_geoconf[1];
   double cz = target_layer_geoconf[2];
@@ -142,7 +144,6 @@ int main(int argc, char* argv[]){
   auto trafo = std::make_shared<Acts::Transform3D>(Acts::Translation3D(translation) * rotation);
   auto target_surface = Acts::Surface::makeShared<Acts::PlaneSurface>(trafo,
                                                                       std::make_shared<const Acts::RectangleBounds>(30_mm, 15_mm));
-
 
   for(size_t n = 0; n<eventMaxNum; n++){
     std::cout<<"\n\n"<<std::endl;
@@ -164,28 +165,36 @@ int main(int argc, char* argv[]){
       double charge;
       double time;
       const auto& js_tracks = js_pack["tracks"];
-      for(const auto& js_state: js_tracks.GetArray()){
-        double x = js_state["x"].GetDouble();
-        double y = js_state["y"].GetDouble();
-        double z = js_state["z"].GetDouble();
-        pos = Acts::Vector3D(x, y, z);
+      for(const auto& js_track: js_tracks.GetArray()){
+        const auto& js_states = js_track["states"];
+        for(const auto& js_state: js_states.GetArray()){
+          size_t id = js_state["id"].GetUint();
+          if(id != target_layer_id -1 ){
+            continue;
+          }
 
-        double px = js_state["px"].GetDouble();
-        double py = js_state["py"].GetDouble();
-        double pz = js_state["pz"].GetDouble();
-        mom = Acts::Vector3D(px, py, pz);
+          double x = js_state["x"].GetDouble();
+          double y = js_state["y"].GetDouble();
+          double z = js_state["z"].GetDouble();
+          pos = Acts::Vector3D(x, y, z);
 
-        time = js_state["t"].GetDouble();
-        charge = js_state["q"].GetDouble();
+          double px = js_state["px"].GetDouble();
+          double py = js_state["py"].GetDouble();
+          double pz = js_state["pz"].GetDouble();
+          mom = Acts::Vector3D(px, py, pz);
 
-        const auto& js_cov = js_state["cov"];
-        std::vector<double> cov_data;
-        for(const auto& js_e : js_cov.GetArray()){
-          double e = js_e.GetDouble();
-          cov_data.push_back(e);
+          time = js_state["t"].GetDouble();
+          charge = js_state["q"].GetDouble();
+
+          const auto& js_cov = js_state["cov"];
+          std::vector<double> cov_data;
+          for(const auto& js_e : js_cov.GetArray()){
+            double e = js_e.GetDouble();
+            cov_data.push_back(e);
+          }
+          cov = Acts::BoundSymMatrix(cov_data.data());
+          track_curPara_v.emplace_back(cov, pos, mom, charge, time);
         }
-        cov = Acts::BoundSymMatrix(cov_data.data());
-        track_curPara_v.emplace_back(cov, pos, mom, charge, time);
       }
     }
 
@@ -231,7 +240,7 @@ int main(int argc, char* argv[]){
     }
 
     // std::cout<<"=======starting parameter info:====="<<std::endl;
-    // std::cout<<curPara<<std::endl;  
+    // std::cout<<curPara<<std::endl;
     // std::cout<<"position(): \n"<< curPara.position()<<std::endl;
     // std::cout<<"momentum(): \n"<< curPara.momentum()<<std::endl;
     // std::cout<<"covariance: \n"<< *curPara.covariance()<<std::endl;

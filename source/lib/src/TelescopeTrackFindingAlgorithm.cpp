@@ -115,6 +115,9 @@ FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
         trajectories.emplace_back(std::move(trackFindingOutput.fittedStates),
                                   std::move(trackFindingOutput.trackTips),
                                   std::move(trackFindingOutput.fittedParameters));
+
+        
+
       } else {
         std::printf("Track finding failed in Event<%lu> seed<%lu>, with error \n",
                     ctx.eventNumber, iseed, result.error().message().c_str());

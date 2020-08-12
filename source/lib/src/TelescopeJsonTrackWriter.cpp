@@ -79,11 +79,14 @@ Telescope::TelescopeJsonTrackWriter::TelescopeJsonTrackWriter(
     : WriterT(cfg.inputTrajectories, "TelescopeJsonTrackWriter", level),
       m_cfg(cfg) {
 
-  std::string jsfile_name= m_cfg.outputDir+"/jswrite.json";
-  std::cout<< "write jsfile_name "<<jsfile_name<<std::endl;
-  m_jsfp = std::fopen((m_cfg.outputDir+"/jswrite.json").c_str(), "w");
+  for(auto &[id, surface]: m_cfg.trackSurfaces){
+    m_surface_id_map[surface] = id;
+  }
+
+  std::cout<< "write jsfile_name "<<m_cfg.outputFileName<<std::endl;
+  m_jsfp = std::fopen((m_cfg.outputDir+ "/"+ m_cfg.outputFileName).c_str(), "w");
   if(!m_jsfp) {
-    std::fprintf(stderr, "File opening failed: %s \n", jsfile_name.c_str());
+    std::fprintf(stderr, "File opening failed: %s \n", m_cfg.outputFileName.c_str());
     throw;
   }
 
@@ -112,10 +115,16 @@ FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
   for (const auto& traj : trajectories) {
     const auto& [trackTips, mj] = traj.trajectory();
     // Loop over all trajectories in a multiTrajectory
+    // size of trackTips should <= 1
     for (const size_t& trackTip : trackTips) {
       // Collect the trajectory summary info
       auto trajState = Acts::MultiTrajectoryHelpers::trajectoryState(mj, trackTip);
-
+      if(trajState.nMeasurements != m_cfg.trackSurfaces.size()){
+        continue;
+      }
+      Telescope::JsonValue js_track(rapidjson::kObjectType);
+      Telescope::JsonValue js_states(rapidjson::kArrayType);
+      Telescope::JsonValue js_states_reverse(rapidjson::kArrayType);
       mj.visitBackwards(trackTip,
                         [&](const auto& state) {
                           // only fill the track states with non-outlier measurement
@@ -126,41 +135,45 @@ FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
                           if(!state.hasSmoothed()) {
                             return true;
                           }
-                          auto psurface = state.referenceSurface().getSharedPtr();
-                          if(psurface != m_cfg.outputParaSurface){
+
+                          auto state_surface = state.referenceSurface().getSharedPtr();
+                          auto surface_it = m_surface_id_map.find(state_surface);
+                          if(surface_it == m_surface_id_map.end() ){
                             return true;
                           }
+                          size_t layerid = surface_it->second;
 
-			  // 1) The bound parameters info
+                          // 1) The bound parameters info
                           Acts::BoundParameters boundpara(context.geoContext,
                                                           state.smoothedCovariance(),
                                                           state.smoothed(),
-                                                          psurface);
+                                                          state_surface);
                           Acts::Vector3D pos = boundpara.position();
                           Acts::Vector3D mom = boundpara.momentum();
                           Acts::Vector3D dir = mom.normalized();
                           double q = boundpara.charge();
                           double t = boundpara.time();
-			  const auto& boundCovariance = *boundpara.covariance(); 
+                          const auto& boundCovariance = *boundpara.covariance(); 
 
-			  // 2) Transform bound parameter to free parameter
-			  //Acts::FreeVector freepara;
+                          // 2) Transform bound parameter to free parameter
+                          //Acts::FreeVector freepara;
                           //freepara << pos[0], pos[1], pos[2], t, dir[0],
                           //dir[1], dir[2], q / mom.norm();
 
-			  /// Initialize the jacobian from local to the global frame
-			  Acts::BoundToFreeMatrix jacToGlobal = Acts::BoundToFreeMatrix::Zero();
+                          /// Initialize the jacobian from local to the global frame
+                          Acts::BoundToFreeMatrix jacToGlobal = Acts::BoundToFreeMatrix::Zero();
                           // Calculate the jacobian 
-			  psurface->initJacobianToGlobal(context.geoContext, jacToGlobal, pos, dir,
-                                     state.smoothed());
+                          state_surface->initJacobianToGlobal(context.geoContext, jacToGlobal, pos, dir,
+                                                              state.smoothed());
                           Acts::FreeSymMatrix freeCovariance = jacToGlobal * boundCovariance * jacToGlobal.transpose();
 
                           // 3) Transform free parameter to curvilinear parameter
                           Acts::FreeToBoundMatrix jacToCurv = freeToCurvilinearJacobian(dir);
                           Acts::BoundSymMatrix curvCovariance = jacToCurv * freeCovariance * jacToCurv.transpose();
 
-			  // Write out the curvilinear parameters and its covariance
+                          // Write out the curvilinear parameters and its covariance
                           Telescope::JsonValue js_track_state(rapidjson::kObjectType); //
+                          js_track_state.AddMember("id", JsonValue(layerid), jsa);
                           js_track_state.AddMember("x", JsonValue(pos.x()), jsa);
                           js_track_state.AddMember("y", JsonValue(pos.y()), jsa);
                           js_track_state.AddMember("z", JsonValue(pos.z()), jsa);
@@ -177,9 +190,15 @@ FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
                             js_state_cov.PushBack(JsonValue(*(cov_data+n)), jsa);
                           }
                           js_track_state.AddMember("cov", std::move(js_state_cov), jsa);
-                          js_tracks.PushBack(std::move(js_track_state), jsa);
+                          js_states_reverse.PushBack(std::move(js_track_state), jsa);
                           return true;
                         });
+
+      for(size_t i = js_states_reverse.Size(); i>0; i-- ){
+        js_states.PushBack(std::move(js_states_reverse[i-1]), jsa);
+      }
+      js_track.AddMember("states", std::move(js_states), jsa);
+      js_tracks.PushBack(std::move(js_track), jsa);
     }
   }
   js_output.AddMember("tracks", std::move(js_tracks), jsa);
@@ -187,7 +206,7 @@ FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
   {
     const std::lock_guard<std::mutex> lock(m_mtx);
     js_output.Accept(*m_jsw);
-    rapidjson::PutN(*m_jsos, '\n', 1);
+    rapidjson::PutN(*m_jsos, '\n', 2);
   }
 
   return FW::ProcessCode::SUCCESS;

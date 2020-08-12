@@ -31,8 +31,9 @@ class TelescopeJsonTrackWriter
  public:
   struct Config {
     std::string inputTrajectories;  ///< input (fitted) trajectories collection
-    std::string outputDir;          ///< where to place output files
-    std::shared_ptr<const Acts::Surface> outputParaSurface;
+    std::map<size_t, std::shared_ptr<const Acts::Surface>> trackSurfaces;
+    std::string outputDir;
+    std::string outputFileName;
   };
 
   /// Constructor with arguments
@@ -50,6 +51,8 @@ class TelescopeJsonTrackWriter
 
  private:
   Config m_cfg;  ///!< Internal configuration represenation
+  std::map<std::shared_ptr<const Acts::Surface>, size_t> m_surface_id_map;
+
   std::unique_ptr<Telescope::JsonAllocator> m_jsa;
   char m_jsbuffer[UINT16_MAX];
   std::FILE* m_jsfp;
