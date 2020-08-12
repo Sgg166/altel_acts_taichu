@@ -12,10 +12,60 @@
 #include "Acts/EventData/Measurement.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/MultiTrajectoryHelpers.hpp"
+#include "Acts/Utilities/Definitions.hpp"
 
 #include <ios>
 #include <iostream>
 #include <stdexcept>
+
+/// @brief Evaluate the projection Jacobian from free to curvilinear parameters
+///
+/// @param [in] direction Normalised direction vector
+///
+/// @return Projection Jacobian
+Acts::FreeToBoundMatrix freeToCurvilinearJacobian(const Acts::Vector3D& direction) {
+  // Optimized trigonometry on the propagation direction
+  const double x = direction(0);  // == cos(phi) * sin(theta)
+  const double y = direction(1);  // == sin(phi) * sin(theta)
+  const double z = direction(2);  // == cos(theta)
+  // can be turned into cosine/sine
+  const double cosTheta = z;
+  const double sinTheta = sqrt(x * x + y * y);
+  const double invSinTheta = 1. / sinTheta;
+  const double cosPhi = x * invSinTheta;
+  const double sinPhi = y * invSinTheta;
+  // prepare the jacobian to curvilinear
+  Acts::FreeToBoundMatrix jacToCurv = Acts::FreeToBoundMatrix::Zero();
+  if (std::abs(cosTheta) < Acts::s_curvilinearProjTolerance) {
+    // We normally operate in curvilinear coordinates defined as follows
+    jacToCurv(0, 0) = -sinPhi;
+    jacToCurv(0, 1) = cosPhi;
+    jacToCurv(1, 0) = -cosPhi * cosTheta;
+    jacToCurv(1, 1) = -sinPhi * cosTheta;
+    jacToCurv(1, 2) = sinTheta;
+  } else {
+    // Under grazing incidence to z, the above coordinate system definition
+    // becomes numerically unstable, and we need to switch to another one
+    const double c = sqrt(y * y + z * z);
+    const double invC = 1. / c;
+    jacToCurv(0, 1) = -z * invC;
+    jacToCurv(0, 2) = y * invC;
+    jacToCurv(1, 0) = c;
+    jacToCurv(1, 1) = -x * y * invC;
+    jacToCurv(1, 2) = -x * z * invC;
+  }
+  // Time parameter
+  jacToCurv(5, 3) = 1.;
+  // Directional and momentum parameters for curvilinear
+  jacToCurv(2, 4) = -sinPhi * invSinTheta;
+  jacToCurv(2, 5) = cosPhi * invSinTheta;
+  jacToCurv(3, 4) = cosPhi * cosTheta;
+  jacToCurv(3, 5) = sinPhi * cosTheta;
+  jacToCurv(3, 6) = -sinTheta;
+  jacToCurv(4, 7) = 1.;
+
+  return jacToCurv;
+}
 
 namespace Telescope{
   using Measurement = Acts::Measurement<Telescope::PixelSourceLink,
@@ -81,42 +131,49 @@ FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
                             return true;
                           }
 
-			  // The bound parameters info
+			  // 1) The bound parameters info
                           Acts::BoundParameters boundpara(context.geoContext,
                                                           state.smoothedCovariance(),
                                                           state.smoothed(),
                                                           psurface);
-                          Acts::Vector3D gpos = boundpara.position();
-                          Acts::Vector3D dir = boundpara.momentum().normalized();
-                          const auto& boundCovariance = *boundpara.covariance(); 
+                          Acts::Vector3D pos = boundpara.position();
+                          Acts::Vector3D mom = boundpara.momentum();
+                          Acts::Vector3D dir = mom.normalized();
+                          double q = boundpara.charge();
+                          double t = boundpara.time();
+			  const auto& boundCovariance = *boundpara.covariance(); 
 
-			  // Transform to free parameter
-			  Acts::FreeVector freepara;
-                          freepara << gpos[0], gpos[1], gpos[2], boundpara.time(), dir[0],
-                          dir[1], dir[2], boundpara.charge() / boundpara.momentum().norm();
+			  // 2) Transform bound parameter to free parameter
+			  //Acts::FreeVector freepara;
+                          //freepara << pos[0], pos[1], pos[2], t, dir[0],
+                          //dir[1], dir[2], q / mom.norm();
 
 			  /// Initialize the jacobian from local to the global frame
 			  Acts::BoundToFreeMatrix jacToGlobal = Acts::BoundToFreeMatrix::Zero();
                           // Calculate the jacobian 
-			  psurface->initJacobianToGlobal(context.geoContext, jacToGlobal, gpos, dir,
+			  psurface->initJacobianToGlobal(context.geoContext, jacToGlobal, pos, dir,
                                      state.smoothed());
                           Acts::FreeSymMatrix freeCovariance = jacToGlobal * boundCovariance * jacToGlobal.transpose();
 
-			  // Write out the free parameters and its covariance
-                          Telescope::JsonValue js_track_state(rapidjson::kObjectType); //
-                          js_track_state.AddMember("x", JsonValue(freepara(Acts::eFreePos0)), jsa);
-                          js_track_state.AddMember("y", JsonValue(freepara(Acts::eFreePos1)), jsa);
-                          js_track_state.AddMember("z", JsonValue(freepara(Acts::eFreePos2)), jsa);
-                          js_track_state.AddMember("t", JsonValue(freepara(Acts::eFreeTime)), jsa);
-                          js_track_state.AddMember("dirx", JsonValue(freepara(Acts::eFreeDir0)), jsa);
-                          js_track_state.AddMember("diry", JsonValue(freepara(Acts::eFreeDir1)), jsa);
-                          js_track_state.AddMember("dirz", JsonValue(freepara(Acts::eFreeDir2)), jsa);
-                          js_track_state.AddMember("q/p", JsonValue(freepara(Acts::eFreeQOverP)), jsa);
+                          // 3) Transform free parameter to curvilinear parameter
+                          Acts::FreeToBoundMatrix jacToCurv = freeToCurvilinearJacobian(dir);
+                          Acts::BoundSymMatrix curvCovariance = jacToCurv * freeCovariance * jacToCurv.transpose();
 
-                          const double *cov_data = freeCovariance.data();
+			  // Write out the curvilinear parameters and its covariance
+                          Telescope::JsonValue js_track_state(rapidjson::kObjectType); //
+                          js_track_state.AddMember("x", JsonValue(pos.x()), jsa);
+                          js_track_state.AddMember("y", JsonValue(pos.y()), jsa);
+                          js_track_state.AddMember("z", JsonValue(pos.z()), jsa);
+                          js_track_state.AddMember("px", JsonValue(mom.x()), jsa);
+                          js_track_state.AddMember("py", JsonValue(mom.y()), jsa);
+                          js_track_state.AddMember("pz", JsonValue(mom.z()), jsa);
+                          js_track_state.AddMember("q", JsonValue(q), jsa);
+                          js_track_state.AddMember("t", JsonValue(t), jsa);
+
+                          const double *cov_data = curvCovariance.data();
                           Telescope::JsonValue js_state_cov(rapidjson::kArrayType); //
-                          js_state_cov.Reserve(Acts::eFreeParametersSize*Acts::eFreeParametersSize, jsa);
-                          for(size_t n=0; n<Acts::eFreeParametersSize*Acts::eFreeParametersSize; n++){
+                          js_state_cov.Reserve(Acts::eBoundParametersSize*Acts::eBoundParametersSize, jsa);
+                          for(size_t n=0; n<Acts::eBoundParametersSize*Acts::eBoundParametersSize; n++){
                             js_state_cov.PushBack(JsonValue(*(cov_data+n)), jsa);
                           }
                           js_track_state.AddMember("cov", std::move(js_state_cov), jsa);

@@ -38,25 +38,25 @@ target_link_libraries(AlignTelescopeGeometry PRIVATE
 #   ROOT::Tree
 #   )
 
-# add_executable(EstimateTrackParameters TrackParametersEstimator.cpp)
-# list(APPEND EXE_TARGET_LIST EstimateTrackParameters)
-# target_link_libraries(EstimateTrackParameters PRIVATE
-#   altel-acts
+add_executable(EstimateTrackParameters TrackParametersEstimator.cpp)
+list(APPEND EXE_TARGET_LIST EstimateTrackParameters)
+target_link_libraries(EstimateTrackParameters PRIVATE
+  altel-acts
 
-#   ActsExamplesFramework
-#   ActsExamplesCommon
-#   ActsExamplesDetectorsCommon
-#   ActsExamplesMagneticField
-#   ActsExamplesIoCsv
-#   ActsExamplesIoObj
-#   ActsExamplesIoPerformance
-#   rapidjson
+  ActsExamplesFramework
+  ActsExamplesCommon
+  ActsExamplesDetectorsCommon
+  ActsExamplesMagneticField
+  ActsExamplesIoCsv
+  ActsExamplesIoObj
+  ActsExamplesIoPerformance
+  rapidjson
 
-#   ROOT::Core
-#   ROOT::Hist
-#   ROOT::Tree
-#   Boost::boost
-#   )
+  ROOT::Core
+  ROOT::Hist
+  ROOT::Tree
+  Boost::boost
+  )
 
 # add_executable(RecTelescopeCKFTracks RecTelescopeCKFTracks.cpp)
 # list(APPEND EXE_TARGET_LIST RecTelescopeCKFTracks)
