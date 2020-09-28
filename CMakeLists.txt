@@ -62,11 +62,17 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 
+option(ALTEL_BUILD_EXTERNAL "" OFF)
+if(ALTEL_BUILD_EXTERNAL)
+  add_subdirectory(external)
+  return()
+endif
+
+
 include(cmake/ActsExamples.cmake)
 
 #include_directories(/opt/root/root-6.18.04/building/include)
 add_subdirectory(source)
-
 
 # install-tree
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../include")

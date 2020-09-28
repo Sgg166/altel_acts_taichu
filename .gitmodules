@@ -1,0 +1,5 @@
+[submodule "external/acts-core"]
+	path = external/acts-core
+	url = https://github.com/eyiliu/acts-core
+        branch = add_alignment_algorithm
+        
