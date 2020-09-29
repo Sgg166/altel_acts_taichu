@@ -62,14 +62,16 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 
-option(ALTEL_BUILD_EXTERNAL "" OFF)
-if(ALTEL_BUILD_EXTERNAL)
-  add_subdirectory(external)
-  return()
-endif
+add_subdirectory(external)
 
 
 include(cmake/ActsExamples.cmake)
+if(NOT Acts_FOUND_CACHE)
+  message("ACTS package is not found.")
+  message("To build ACTS package, use command:  make external_acts")
+  return()
+endif()  
+
 
 #include_directories(/opt/root/root-6.18.04/building/include)
 add_subdirectory(source)
