@@ -47,7 +47,7 @@ Usage:
   -help              help message
   -verbose           verbose flag
   -file       [jsonfile]   name of data json file
-  -energy     [float]      beam energy
+  -energy     [float]      beam energy, GeV
   -out        [jsonfile]   alignment result
   -geo        [jsonfile]   geometry input file
   -resX       [float]      preset detector hit resolution X
@@ -70,6 +70,7 @@ int main(int argc, char* argv[]) {
      { "help",       no_argument,       &do_help,      1  },
      { "verbose",    no_argument,       &do_verbose,   1  },
      { "file",      required_argument, NULL,           'f' },
+     { "energy",       required_argument, NULL,        'e' },
      { "out",       required_argument, NULL,           'o' },
      { "geomerty",       required_argument, NULL,      'g' },
      { "resX",       required_argument, NULL,          'r' },
@@ -96,6 +97,7 @@ int main(int argc, char* argv[]) {
   size_t maxNumIterations = 400;
   size_t nIterations = 10;
   double deltaChi2ONdf = 1e-5;
+  double beamEnergy = -1;
 
   int c;
   opterr = 1;
@@ -111,6 +113,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'o':
       outputfile_name = optarg;
+      break;
+    case 'e':
+      beamEnergy = std::stod(optarg) * Acts::UnitConstants::GeV;
       break;
     case 'g':
       geofile_name = optarg;
@@ -200,9 +205,11 @@ int main(int argc, char* argv[]) {
   std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  rotationX: %f   rotationY: %f   rotationZ: %f\n",
               id, lgeo[0], lgeo[1], lgeo[2], lgeo[3], lgeo[4], lgeo[5]);
   }
-  double beamEnergy = Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) * Acts::UnitConstants::GeV;
-  std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
+  if(beamEnergy<0){
+    beamEnergy = Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) * Acts::UnitConstants::GeV;
+  }
 
+  std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
 
   Telescope::BuildGeometry(gctx, trackingGeometry, element_col, geoconf, 50_mm, 25_mm, 80_um);
   std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces_selected;
