@@ -62,6 +62,7 @@ Usage:
   -eventMax       [int]        max number of events
   -data           [jsonfile]   data input file
   -geo            [jsonfile]   geometry input file
+  -energy         [float]      beam energy, GeV
   -outputdir      [path]       output dir path
   -resX           [float]      preset detector hit resolution X
   -resY           [float]      preset detector hit resolution Y
@@ -85,6 +86,7 @@ int main(int argc, char* argv[]) {
      { "data",           required_argument, NULL,           'f' },
      { "outputdir",      required_argument, NULL,      'o' },
      { "geomerty",       required_argument, NULL,      'g' },
+     { "energy",       required_argument, NULL,        'e' },
      { "resX",           required_argument, NULL,          'r' },
      { "resY",           required_argument, NULL,          's' },
      { "seedResX",       required_argument, NULL,        'j' },
@@ -99,6 +101,7 @@ int main(int argc, char* argv[]) {
   std::string datafile_name;
   std::string geofile_name;
   std::string outputDir;
+  double beamEnergy = -1;
   double resX = 5_um;
   double resY = 5_um;
   // Use large starting parameter covariance
@@ -128,6 +131,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'g':
       geofile_name = optarg;
+      break;
+    case 'e':
+      beamEnergy = std::stod(optarg) * Acts::UnitConstants::GeV;
       break;
     case 'o':
       outputDir = optarg;
@@ -212,13 +218,16 @@ int main(int argc, char* argv[]) {
 
   std::map<size_t, std::array<double, 6>> geoconf;
   geoconf = Telescope::JsonGenerator::ReadGeoFromGeoFile(geofile_name);
-    for(const auto& [id, lgeo] : geoconf){
-  std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  rotationX: %f   rotationY: %f   rotationZ: %f\n",
-              id, lgeo[0], lgeo[1], lgeo[2], lgeo[3], lgeo[4], lgeo[5]);
+  for(const auto& [id, lgeo] : geoconf){
+    std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  rotationX: %f   rotationY: %f   rotationZ: %f\n",
+                id, lgeo[0], lgeo[1], lgeo[2], lgeo[3], lgeo[4], lgeo[5]);
   }
 
-    double beamEnergy = Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) * Acts::UnitConstants::GeV;
-    std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
+  if(beamEnergy<0){
+    beamEnergy = Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) * Acts::UnitConstants::GeV;
+  }
+
+  std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
 
   Acts::GeometryContext gctx;
   auto magneticField = std::make_shared<Acts::ConstantBField>(0_T, 0_T, 0_T);

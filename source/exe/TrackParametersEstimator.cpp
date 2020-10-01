@@ -250,12 +250,19 @@ int main(int argc, char* argv[]){
     // std::cout<<"covariance: \n"<< *targetParams.covariance()<<std::endl;
     for(auto &boundPara : target_boundPara_v){
       std::cout<< boundPara<<std::endl;
+      std::cout<<boundPara.position()<<std::endl;
     }
 
     std::cout<<"======ori hit info:====="<<std::endl;
     for(auto &gpos : hit_global_v){
       std::cout<<"global hit postion\n "<< gpos<<std::endl;
     }
+
+    std::cout<<"======delta info:====="<<std::endl;
+    if(hit_global_v.size() == 1 && target_boundPara_v.size() == 1){
+      std::cout<<target_boundPara_v.front().position()-hit_global_v.front()<<std::endl;
+    }
+
   }
   return 0;
 }
