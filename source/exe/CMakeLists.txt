@@ -19,26 +19,7 @@ target_link_libraries(AlignTelescopeGeometry PRIVATE
   )
 
 
-# add_executable(FitTelescopeTracks FitTelescopeTracks.cpp)
-# list(APPEND EXE_TARGET_LIST FitTelescopeTracks)
-# target_link_libraries(FitTelescopeTracks PRIVATE
-#   altel-acts
-
-#   ActsExamplesFramework
-#   ActsExamplesCommon
-#   ActsExamplesDetectorsCommon
-#   ActsExamplesMagneticField
-#   ActsExamplesIoCsv
-#   ActsExamplesIoObj
-#   ActsExamplesIoPerformance
-#   rapidjson
-
-#   ROOT::Core
-#   ROOT::Hist
-#   ROOT::Tree
-#   )
-
-add_executable(EstimateTrackParameters TrackParametersEstimator.cpp)
+add_executable(EstimateTrackParameters EstimateTrackParameters.cpp)
 list(APPEND EXE_TARGET_LIST EstimateTrackParameters)
 target_link_libraries(EstimateTrackParameters PRIVATE
   altel-acts
@@ -57,25 +38,6 @@ target_link_libraries(EstimateTrackParameters PRIVATE
   ROOT::Tree
   Boost::boost
   )
-
-# add_executable(RecTelescopeCKFTracks RecTelescopeCKFTracks.cpp)
-# list(APPEND EXE_TARGET_LIST RecTelescopeCKFTracks)
-# target_link_libraries(RecTelescopeCKFTracks PRIVATE
-#   altel-acts
-
-#   ActsExamplesFramework
-#   ActsExamplesCommon
-#   ActsExamplesDetectorsCommon
-#   ActsExamplesMagneticField
-#   ActsExamplesIoCsv
-#   ActsExamplesIoObj
-#   ActsExamplesIoPerformance
-#   rapidjson
-
-#   ROOT::Core
-#   ROOT::Hist
-#   ROOT::Tree
-#   )
 
 
 
