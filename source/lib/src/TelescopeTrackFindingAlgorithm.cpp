@@ -15,9 +15,9 @@
 #include <map>
 #include <random>
 
-#include "Acts/Fitter/GainMatrixSmoother.hpp"
-#include "Acts/Fitter/GainMatrixUpdater.hpp"
-#include "Acts/Geometry/GeometryID.hpp"
+#include "Acts/TrackFitting/GainMatrixSmoother.hpp"
+#include "Acts/TrackFitting/GainMatrixUpdater.hpp"
+#include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/MagneticField/ConstantBField.hpp"
 #include "Acts/MagneticField/InterpolatedBFieldMap.hpp"
 #include "Acts/MagneticField/SharedBField.hpp"
@@ -29,22 +29,22 @@
 #include "Acts/Utilities/ParameterDefinitions.hpp"
 
 
-#include "ACTFW/EventData/Track.hpp"
-#include "ACTFW/Framework/WhiteBoard.hpp"
-#include "ACTFW/Plugins/BField/ScalableBField.hpp"
+#include "ActsExamples/EventData/Track.hpp"
+#include "ActsExamples/Framework/WhiteBoard.hpp"
+#include "ActsExamples/Plugins/BField/ScalableBField.hpp"
 
 using namespace Acts::UnitLiterals;
 
 
 Telescope::TelescopeTrackFindingAlgorithm::TelescopeTrackFindingAlgorithm(
     Config cfg, Acts::Logging::Level level)
-    : FW::BareAlgorithm("TelescopeTrackFindingAlgorithm", level),
+    : ActsExamples::BareAlgorithm("TelescopeTrackFindingAlgorithm", level),
       m_cfg(std::move(cfg)) {
 
 }
 
-FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
-    const FW::AlgorithmContext& ctx) const {
+ActsExamples::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
+    const ActsExamples::AlgorithmContext& ctx) const {
 
   const auto& sourcelinks
     = ctx.eventStore.get<std::vector<Telescope::PixelSourceLink>>(m_cfg.inputSourcelinks);
@@ -53,16 +53,16 @@ FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
   if (!sourcelinks.empty()) {
     // Start to find seeds for this event using the source links on the first two layers
     // @todo: add raw layer id in PixelSourceLink
-    std::vector<Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy>> initialParameters;
+    std::vector<Acts::CurvilinearTrackParameters> initialParameters;
     for(const auto& sl0 : sourcelinks){
       const auto& surface0 = sl0.referenceSurface();
-      if(surface0.geoID().value() != m_cfg.seedSurfaceGeoIDStart) {
+      if(surface0.geometryId().value() != m_cfg.seedSurfaceGeoIDStart) {
         continue;
       }
       const Acts::Vector3D global0 = sl0.globalPosition(ctx.geoContext);
       for(const auto& sl1 : sourcelinks){
         const auto& surface1 = sl1.referenceSurface();
-        if(surface1.geoID().value() != m_cfg.seedSurfaceGeoIDEnd) {
+        if(surface1.geometryId().value() != m_cfg.seedSurfaceGeoIDEnd) {
           continue;
         }
         const Acts::Vector3D global1 = sl1.globalPosition(ctx.geoContext);
@@ -83,11 +83,13 @@ FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
           const double phi = Acts::VectorHelpers::phi(distVec);
           const double theta = Acts::VectorHelpers::theta(distVec);
           Acts::Vector3D rPos = global0 - distVec / 2;
-          Acts::Vector3D rMom(m_cfg.seedEnergy * sin(theta) * cos(phi),
+          Acts::Vector4D rPos4(rPos.x(), rPos.y(), rPos.z(), 0); 
+	  Acts::Vector3D rMom(m_cfg.seedEnergy * sin(theta) * cos(phi),
                               m_cfg.seedEnergy * sin(theta) * sin(phi),
                               m_cfg.seedEnergy * cos(theta));
 
-          initialParameters.emplace_back(cov, rPos, rMom, 1., 0);
+	  double q = 1;
+          initialParameters.emplace_back(rPos4, phi, theta, m_cfg.seedEnergy, q);
         }
       }
     }
@@ -95,11 +97,15 @@ FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
     auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>
       (Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{0, 0., 1.});
 
+
+    Acts::PropagatorPlainOptions pOptions;
+    pOptions.maxSteps = 10000;
+
     // Set the CombinatorialKalmanFilter options
     // @Todo: add options for CKF
     Telescope::TelescopeTrackFindingAlgorithm::CKFOptions ckfOptions
       (ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
-       m_cfg.sourcelinkSelectorCfg, refSurface.get());
+       m_cfg.sourcelinkSelectorCfg, Acts::LoggerWrapper{logger()}, pOptions, refSurface.get());
     // 500 chi2cut,   1 max number of selected sourcelinks in a single surface;
 
     //Loop ever the seeds
@@ -135,7 +141,7 @@ FW::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
 
 
   ctx.eventStore.add(m_cfg.outputTrajectories, std::move(trajectories));
-  return FW::ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }
 
 
@@ -149,7 +155,7 @@ namespace {
     Telescope::TelescopeTrackFindingAlgorithm::TrackFinderResult operator()
     (
      const std::vector<Telescope::PixelSourceLink>& sourceLinks,
-     const FW::TrackParameters& initialParameters,
+     const ActsExamples::TrackParameters& initialParameters,
      const Acts::CombinatorialKalmanFilterOptions<Acts::CKFSourceLinkSelector>&
      options) const {
       return trackFinder.findTracks(sourceLinks, initialParameters, options);
@@ -160,14 +166,14 @@ namespace {
 Telescope::TelescopeTrackFindingAlgorithm::TrackFinderFunction
 Telescope::TelescopeTrackFindingAlgorithm::makeTrackFinderFunction(
                                                                    std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
-                                                                   FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl) {
+                                                                   ActsExamples::Options::BFieldVariant magneticField) {
   using Updater = Acts::GainMatrixUpdater;
   using Smoother = Acts::GainMatrixSmoother;
 
   // unpack the magnetic field variant and instantiate the corresponding track
   // finder.
   return std::visit(
-                    [trackingGeometry, lvl](auto&& inputField) -> TrackFinderFunction {
+                    [trackingGeometry](auto&& inputField) -> TrackFinderFunction {
                       // each entry in the variant is already a shared_ptr
                       // need ::element_type to get the real magnetic field type
                       using InputMagneticField =
@@ -189,8 +195,7 @@ Telescope::TelescopeTrackFindingAlgorithm::makeTrackFinderFunction(
                       navigator.resolveSensitive = true;
                       Propagator propagator(std::move(stepper), std::move(navigator));
                       CKF trackFinder(
-                                      std::move(propagator),
-                                      Acts::getDefaultLogger("CombinatorialKalmanFilter", lvl));
+                                      std::move(propagator));
 
                       // build the track finder functions. owns the track finder object.
                       return TrackFinderFunctionImpl<CKF>(std::move(trackFinder));

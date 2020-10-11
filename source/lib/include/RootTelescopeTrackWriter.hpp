@@ -11,7 +11,7 @@
 #include <mutex>
 #include <vector>
 
-#include "ACTFW/Framework/WriterT.hpp"
+#include "ActsExamples/Framework/WriterT.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
 #include "PixelMultiTrajectory.hpp"
 
@@ -36,7 +36,7 @@ namespace Telescope{
 ///
 /// Safe to use from multiple writer threads - uses a std::mutex lock.
 class RootTelescopeTrackWriter final
-  : public FW::WriterT<std::vector<PixelMultiTrajectory>> {
+  : public ActsExamples::WriterT<std::vector<PixelMultiTrajectory>> {
  public:
   /// @brief The nested configuration struct
   struct Config {
@@ -58,14 +58,14 @@ class RootTelescopeTrackWriter final
   ~RootTelescopeTrackWriter() final override;
 
   /// End-of-run hook
-  FW::ProcessCode endRun() final override;
+  ActsExamples::ProcessCode endRun() final override;
 
  protected:
   /// @brief Write method called by the base class
   /// @param [in] ctx is the algorithm context for event information
   /// @param [in] trajectories are what to be written out
-  FW::ProcessCode writeT(
-                         const FW::AlgorithmContext& ctx,
+  ActsExamples::ProcessCode writeT(
+                         const ActsExamples::AlgorithmContext& ctx,
       const std::vector<PixelMultiTrajectory>& trajectories) final override;
 
  private:

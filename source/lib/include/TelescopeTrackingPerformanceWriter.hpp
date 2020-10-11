@@ -10,10 +10,10 @@
 
 #include <mutex>
 
-#include "ACTFW/Framework/WriterT.hpp"
-#include "ACTFW/Validation/EffPlotTool.hpp"
-#include "ACTFW/Validation/ResPlotTool.hpp"
-#include "ACTFW/Validation/TrackSummaryPlotTool.hpp"
+#include "ActsExamples/Framework/WriterT.hpp"
+#include "ActsExamples/Validation/EffPlotTool.hpp"
+#include "ActsExamples/Validation/ResPlotTool.hpp"
+#include "ActsExamples/Validation/TrackSummaryPlotTool.hpp"
 #include "PixelMultiTrajectory.hpp"
 
 class TFile;
@@ -30,7 +30,7 @@ namespace Telescope{
 ///
 /// Safe to use from multiple writer threads - uses a std::mutex lock.
 class TelescopeTrackingPerformanceWriter final
-  : public FW::WriterT<std::vector<PixelMultiTrajectory>> {
+  : public ActsExamples::WriterT<std::vector<PixelMultiTrajectory>> {
  public:
   struct Config {
     /// Input (fitted) trajectories collection.
@@ -40,9 +40,9 @@ class TelescopeTrackingPerformanceWriter final
     /// Output filename.
     std::string outputFilename = "performance_telescope_tracking.root";
     /// Plot tool configurations.
-    FW::ResPlotTool::Config resPlotToolConfig;
-    FW::EffPlotTool::Config effPlotToolConfig;
-    FW::TrackSummaryPlotTool::Config trackSummaryPlotToolConfig;
+    ActsExamples::ResPlotTool::Config resPlotToolConfig;
+    ActsExamples::EffPlotTool::Config effPlotToolConfig;
+    ActsExamples::TrackSummaryPlotTool::Config trackSummaryPlotToolConfig;
   };
 
   /// Construct from configuration and log level.
@@ -50,11 +50,11 @@ class TelescopeTrackingPerformanceWriter final
   ~TelescopeTrackingPerformanceWriter() override;
 
   /// Finalize plots.
-  FW::ProcessCode endRun() final override;
+  ActsExamples::ProcessCode endRun() final override;
 
  private:
-  FW::ProcessCode writeT(
-                     const FW::AlgorithmContext& ctx,
+  ActsExamples::ProcessCode writeT(
+                     const ActsExamples::AlgorithmContext& ctx,
       const std::vector<PixelMultiTrajectory>& trajectories) final override;
 
   Config m_cfg;
@@ -62,14 +62,14 @@ class TelescopeTrackingPerformanceWriter final
   std::mutex m_writeMutex;
   TFile* m_outputFile{nullptr};
   /// Plot tool for residuals and pulls.
-  FW::ResPlotTool m_resPlotTool;
-  FW::ResPlotTool::ResPlotCache m_resPlotCache;
+  ActsExamples::ResPlotTool m_resPlotTool;
+  ActsExamples::ResPlotTool::ResPlotCache m_resPlotCache;
   /// Plot tool for efficiency
-  FW::EffPlotTool m_effPlotTool;
-  FW::EffPlotTool::EffPlotCache m_effPlotCache;
+  ActsExamples::EffPlotTool m_effPlotTool;
+  ActsExamples::EffPlotTool::EffPlotCache m_effPlotCache;
   /// Plot tool for track hit info
-  FW::TrackSummaryPlotTool m_trackSummaryPlotTool;
-  FW::TrackSummaryPlotTool::TrackSummaryPlotCache m_trackSummaryPlotCache;
+  ActsExamples::TrackSummaryPlotTool m_trackSummaryPlotTool;
+  ActsExamples::TrackSummaryPlotTool::TrackSummaryPlotCache m_trackSummaryPlotCache;
 };
 
 }  // namespace FW

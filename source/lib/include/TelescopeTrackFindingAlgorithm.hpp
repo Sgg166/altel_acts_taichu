@@ -13,21 +13,21 @@
 #include <memory>
 #include <vector>
 
-#include "ACTFW/EventData/Track.hpp"
-#include "ACTFW/Framework/BareAlgorithm.hpp"
-#include "ACTFW/Framework/RandomNumbers.hpp"
-#include "ACTFW/Plugins/BField/BFieldOptions.hpp"
-#include "Acts/Fitter/KalmanFitter.hpp"
+#include "ActsExamples/EventData/Track.hpp"
+#include "ActsExamples/Framework/BareAlgorithm.hpp"
+#include "ActsExamples/Framework/RandomNumbers.hpp"
+#include "ActsExamples/Plugins/BField/BFieldOptions.hpp"
+#include "Acts/TrackFitting/KalmanFitter.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
 #include "Acts/Utilities/Units.hpp"
-#include "Acts/TrackFinder/CKFSourceLinkSelector.hpp"
-#include "Acts/TrackFinder/CombinatorialKalmanFilter.hpp"
+#include "Acts/TrackFinding/CKFSourceLinkSelector.hpp"
+#include "Acts/TrackFinding/CombinatorialKalmanFilter.hpp"
 #include "PixelMultiTrajectory.hpp"
 #include "PixelSourceLink.hpp"
 
 namespace Telescope {
 
-  class TelescopeTrackFindingAlgorithm final : public FW::BareAlgorithm {
+  class TelescopeTrackFindingAlgorithm final : public ActsExamples::BareAlgorithm {
  public:
     using TrackFinderResult =
       Acts::Result<Acts::CombinatorialKalmanFilterResult<PixelSourceLink>>;
@@ -36,7 +36,7 @@ namespace Telescope {
   using CKFOptions =
       Acts::CombinatorialKalmanFilterOptions<Acts::CKFSourceLinkSelector>;
   using TrackFinderFunction = std::function<TrackFinderResult(
-      const std::vector<PixelSourceLink>&, const FW::TrackParameters&,
+      const std::vector<PixelSourceLink>&, const ActsExamples::TrackParameters&,
       const CKFOptions&)>;
 
   using SourceLinkTrack = std::vector<PixelSourceLink>;
@@ -49,7 +49,7 @@ namespace Telescope {
   /// contains shared_ptr anyways.
   static TrackFinderFunction makeTrackFinderFunction(
       std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
-      FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl);
+      ActsExamples::Options::BFieldVariant magneticField);
 
   struct Config {
     /// Inout soucelinks
@@ -79,7 +79,7 @@ namespace Telescope {
   ///
   /// @param ctx is the algorithm context that holds event-wise information
   /// @return a process code to steer the algporithm flow
-  FW::ProcessCode execute(const FW::AlgorithmContext& ctx) const final override;
+  ActsExamples::ProcessCode execute(const ActsExamples::AlgorithmContext& ctx) const final override;
 
  private:
   Config m_cfg;

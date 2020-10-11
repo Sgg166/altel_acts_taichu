@@ -30,7 +30,8 @@ endif()
 
 message(STATUS "acts source folder <ACTS_SRC_DIR>:  ${ACTS_SRC_DIR}")
 
-find_package(Acts COMPONENTS Core Fatras DigitizationPlugin IdentificationPlugin TGeoPlugin  # JsonPlugin
+find_package(Acts COMPONENTS Core Fatras PluginDigitization PluginIdentification PluginTGeo Alignment
+# find_package(Acts
   HINTS
   ${CMAKE_INSTALL_PREFIX}/share/cmake/Acts
   ${ACTS_SRC_DIR}/INSTALL/share/cmake/Acts

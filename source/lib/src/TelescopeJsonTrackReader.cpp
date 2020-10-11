@@ -10,9 +10,9 @@
 
 #include <Acts/Utilities/Units.hpp>
 
-#include "ACTFW/EventData/SimParticle.hpp"
-#include "ACTFW/Framework/WhiteBoard.hpp"
-#include "ACTFW/Utilities/Paths.hpp"
+#include "ActsExamples/EventData/SimParticle.hpp"
+#include "ActsExamples/Framework/WhiteBoard.hpp"
+#include "ActsExamples/Utilities/Paths.hpp"
 
 
 Telescope::TelescopeJsonTrackReader::TelescopeJsonTrackReader(
@@ -39,13 +39,13 @@ std::pair<size_t, size_t> Telescope::TelescopeJsonTrackReader::availableEvents()
 }
 
 
-FW::ProcessCode Telescope::TelescopeJsonTrackReader::read(const FW::AlgorithmContext& ctx) {
+ActsExamples::ProcessCode Telescope::TelescopeJsonTrackReader::read(const ActsExamples::AlgorithmContext& ctx) {
   Telescope::JsonValue evpack;
   {
     const std::lock_guard<std::mutex> lock(m_mtx_read);
     m_jsdoc->Populate(*m_jsgen);
     if(!m_jsgen->isvalid){
-      return FW::ProcessCode::ABORT;
+      return ActsExamples::ProcessCode::ABORT;
     }
     m_jsdoc->Swap(evpack);
   }
@@ -53,11 +53,11 @@ FW::ProcessCode Telescope::TelescopeJsonTrackReader::read(const FW::AlgorithmCon
   std::vector<Telescope::PixelSourceLink> sourcelinks;
   bool re = createSourcelinksFromJSON(evpack, m_cfg.surfaces, m_cov_hit, sourcelinks);
   if(!re){
-    return FW::ProcessCode::ABORT;
+    return ActsExamples::ProcessCode::ABORT;
   }
 
   ctx.eventStore.add(m_cfg.outputSourcelinks, std::move(sourcelinks));
-  return FW::ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }
 
 
@@ -73,7 +73,7 @@ bool Telescope::TelescopeJsonTrackReader::createSourcelinksFromJSON(const Telesc
       continue;
     }
     for(const auto&hit : layer["hit"].GetArray()){
-      double x_hit = hit["pos"][0].GetDouble() - 0.02924*1024/2.0;
+      double x_hit = hit["pos"][0].GetDouble()- 0.02924*1024/2.0;
       double y_hit = hit["pos"][1].GetDouble() - 0.02688*512/2.0;
       Acts::Vector2D loc_hit;
       loc_hit << x_hit, y_hit;

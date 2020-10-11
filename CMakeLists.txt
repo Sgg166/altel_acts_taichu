@@ -66,11 +66,11 @@ add_subdirectory(external)
 
 
 include(cmake/ActsExamples.cmake)
-if(NOT Acts_FOUND_CACHE)
-  message("ACTS package is not found.")
-  message("To build ACTS package, use command:  make external_acts")
-  return()
-endif()  
+# if(NOT Acts_FOUND_CACHE)
+#   message("ACTS package is not found.")
+#   message("To build ACTS package, use command:  make external_acts")
+#   return()
+# endif()  
 
 
 #include_directories(/opt/root/root-6.18.04/building/include)

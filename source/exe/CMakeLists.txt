@@ -4,6 +4,8 @@ list(APPEND EXE_TARGET_LIST AlignTelescopeGeometry)
 target_link_libraries(AlignTelescopeGeometry PRIVATE
   altel-acts
 
+  ActsAlignment
+
   ActsExamplesFramework
   ActsExamplesCommon
   ActsExamplesDetectorsCommon
@@ -23,6 +25,8 @@ add_executable(EstimateTrackParameters EstimateTrackParameters.cpp)
 list(APPEND EXE_TARGET_LIST EstimateTrackParameters)
 target_link_libraries(EstimateTrackParameters PRIVATE
   altel-acts
+
+  ActsAlignment
 
   ActsExamplesFramework
   ActsExamplesCommon
@@ -46,6 +50,8 @@ list(APPEND EXE_TARGET_LIST FindTelescopeTracks)
 target_link_libraries(FindTelescopeTracks PRIVATE
   altel-acts
 
+  ActsAlignment
+
   ActsExamplesFramework
   ActsExamplesCommon
   ActsExamplesDetectorsCommon
@@ -67,6 +73,8 @@ target_link_libraries(PrintEventJson PRIVATE
   altel-acts
   rapidjson
   )
+
+
 
 
 # install-tree

@@ -8,7 +8,7 @@
 
 #include "ObjTelescopeTrackWriter.hpp"
 
-#include "ACTFW/Utilities/Paths.hpp"
+#include "ActsExamples/Utilities/Paths.hpp"
 #include "Acts/EventData/Measurement.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/MultiTrajectoryHelpers.hpp"
@@ -19,9 +19,9 @@
 
 
 namespace Telescope{
-  using Measurement = Acts::Measurement<Telescope::PixelSourceLink,
-                                        Acts::ParDef::eLOC_0,
-                                        Acts::ParDef::eLOC_1>;
+  using Measurement = Acts::Measurement<Telescope::PixelSourceLink, Acts::BoundIndices,
+                                        Acts::eBoundLoc0,
+                                        Acts::eBoundLoc1>;
 }
 
 Telescope::ObjTelescopeTrackWriter::ObjTelescopeTrackWriter(
@@ -34,15 +34,15 @@ Telescope::ObjTelescopeTrackWriter::ObjTelescopeTrackWriter(
   }
 }
 
-FW::ProcessCode Telescope::ObjTelescopeTrackWriter::endRun() {
-  return FW::ProcessCode::SUCCESS;
+ActsExamples::ProcessCode Telescope::ObjTelescopeTrackWriter::endRun() {
+  return ActsExamples::ProcessCode::SUCCESS;
 }
 
-FW::ProcessCode Telescope::ObjTelescopeTrackWriter::writeT(
-                                                           const FW::AlgorithmContext& context,
+ActsExamples::ProcessCode Telescope::ObjTelescopeTrackWriter::writeT(
+                                                           const ActsExamples::AlgorithmContext& context,
     const std::vector<PixelMultiTrajectory>& trajectories) {
   // open per-event file
-  std::string path = FW::perEventFilepath(m_cfg.outputDir, "TelescopeTrack.obj",
+  std::string path = ActsExamples::perEventFilepath(m_cfg.outputDir, "TelescopeTrack.obj",
                                           context.eventNumber);
   std::ofstream os(path, std::ofstream::out | std::ofstream::trunc);
   if (!os) {
@@ -91,13 +91,11 @@ FW::ProcessCode Telescope::ObjTelescopeTrackWriter::writeT(
           auto meas = std::get<Telescope::Measurement>(*state.uncalibrated());
 
           // get local position
-          Acts::Vector2D local(meas.parameters()[Acts::ParDef::eLOC_0],
-                               meas.parameters()[Acts::ParDef::eLOC_1]);
+          Acts::Vector2D local(meas.parameters()[Acts::eBoundLoc0],
+                               meas.parameters()[Acts::eBoundLoc1]);
           // get global position
-          Acts::Vector3D global(0, 0, 0);
           Acts::Vector3D mom(1, 1, 1);
-          meas.referenceSurface().localToGlobal(context.geoContext, local, mom,
-                                                global);
+          Acts::Vector3D global = meas.referenceObject().localToGlobal(context.geoContext, local, mom);
 
           // Write the space point
           os << "v " << m_cfg.outputScalor * global.x() << " "
@@ -115,5 +113,5 @@ FW::ProcessCode Telescope::ObjTelescopeTrackWriter::writeT(
   }  // end of multi-trajectory
 
   // return success
-  return FW::ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }

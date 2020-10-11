@@ -5,6 +5,7 @@
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Utilities/CalibrationContext.hpp"
 #include "Acts/EventData/TrackParameters.hpp"
+#include "Acts/EventData/detail/TransformationBoundToFree.hpp"
 
 #include "Acts/Utilities/Definitions.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
@@ -141,13 +142,13 @@ int main(int argc, char* argv[]){
   Acts::AngleAxis3D rotX(rx, Acts::Vector3D::UnitX());
   Acts::Rotation3D rotation = rotZ * rotY * rotX;
 
-  auto trafo = std::make_shared<Acts::Transform3D>(Acts::Translation3D(translation) * rotation);
+  Acts::Transform3D trafo = Acts::Translation3D(translation) * rotation;
   auto target_surface = Acts::Surface::makeShared<Acts::PlaneSurface>(trafo,
                                                                       std::make_shared<const Acts::RectangleBounds>(30_mm, 15_mm));
 
   for(size_t n = 0; n<eventMaxNum; n++){
     std::cout<<"\n\n"<<std::endl;
-    std::vector<Acts::CurvilinearParameters> track_curPara_v;
+    std::vector<Acts::CurvilinearTrackParameters> track_curPara_v;
     {
       Telescope::JsonAllocator jsa;
       Telescope::JsonDocument jsdoc(&jsa);
@@ -160,8 +161,9 @@ int main(int argc, char* argv[]){
       jsdoc.Swap(js_pack);
 
       Acts::BoundSymMatrix cov;
-      Acts::Vector3D pos;
+      Acts::Vector4D pos4;
       Acts::Vector3D mom;
+      double p;
       double charge;
       double time;
       const auto& js_tracks = js_pack["tracks"];
@@ -176,14 +178,15 @@ int main(int argc, char* argv[]){
           double x = js_state["x"].GetDouble();
           double y = js_state["y"].GetDouble();
           double z = js_state["z"].GetDouble();
-          pos = Acts::Vector3D(x, y, z);
+          time = js_state["t"].GetDouble();
+          pos4 = Acts::Vector4D(x, y, z, time);
 
           double px = js_state["px"].GetDouble();
           double py = js_state["py"].GetDouble();
           double pz = js_state["pz"].GetDouble();
           mom = Acts::Vector3D(px, py, pz);
+          p = std::sqrt(mom.x()*mom.x() + mom.y()*mom.y() + mom.z()*mom.z());
 
-          time = js_state["t"].GetDouble();
           charge = js_state["q"].GetDouble();
 
           const auto& js_cov = js_state["cov"];
@@ -193,13 +196,13 @@ int main(int argc, char* argv[]){
             cov_data.push_back(e);
           }
           cov = Acts::BoundSymMatrix(cov_data.data());
-          track_curPara_v.emplace_back(cov, pos, mom, charge, time);
+          track_curPara_v.emplace_back(pos4, mom.normalized(), charge/p, cov);
         }
       }
     }
 
     // get the bound parameters at the target surface
-    std::vector<Acts::BoundParameters>  target_boundPara_v;
+    std::vector<Acts::BoundTrackParameters>  target_boundPara_v;
     for(auto & curPara : track_curPara_v){
       auto targetParams = propagator.transport(geoContext, magContext, options, curPara, *target_surface);
       target_boundPara_v.push_back( std::move(targetParams) );
@@ -230,9 +233,8 @@ int main(int argc, char* argv[]){
           double y_hit = hit["pos"][1].GetDouble() - 0.02688*512/2.0;
           Acts::Vector2D lpos;
           Acts::Vector3D mom;
-          Acts::Vector3D gpos;
           lpos<< x_hit, y_hit;
-          target_surface->localToGlobal(geoContext, lpos, mom, gpos);
+          Acts::Vector3D gpos = target_surface->localToGlobal(geoContext, lpos, mom);
           hit_local_v.push_back(lpos);
           hit_global_v.push_back(gpos);
         }
@@ -250,7 +252,7 @@ int main(int argc, char* argv[]){
     // std::cout<<"covariance: \n"<< *targetParams.covariance()<<std::endl;
     for(auto &boundPara : target_boundPara_v){
       std::cout<< boundPara<<std::endl;
-      std::cout<<boundPara.position()<<std::endl;
+      std::cout<<boundPara.parameters()<<std::endl;
     }
 
     std::cout<<"======ori hit info:====="<<std::endl;
@@ -260,7 +262,10 @@ int main(int argc, char* argv[]){
 
     std::cout<<"======delta info:====="<<std::endl;
     if(hit_global_v.size() == 1 && target_boundPara_v.size() == 1){
-      std::cout<<target_boundPara_v.front().position()-hit_global_v.front()<<std::endl;
+      auto target_freeVector = Acts::detail::transformBoundToFreeParameters(*target_surface, geoContext,
+                                                target_boundPara_v.front().parameters()); 
+      Acts::Vector3D target_pos(target_freeVector[Acts::eFreePos0], target_freeVector[Acts::eFreePos1], target_freeVector[Acts::eFreePos2]);      
+      std::cout<<target_pos-hit_global_v.front()<<std::endl;
     }
 
   }

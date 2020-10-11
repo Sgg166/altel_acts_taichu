@@ -4,10 +4,10 @@
 #include <memory>
 #include <vector>
 
-#include "Alignment.hpp"
+#include "ActsAlignment/Kernel/Alignment.hpp"
 #include "PixelSourceLink.hpp"
 
-#include "Acts/Fitter/KalmanFitter.hpp"
+#include "Acts/TrackFitting/KalmanFitter.hpp"
 
 
 #include "Acts/Geometry/CuboidVolumeBounds.hpp"
@@ -21,25 +21,25 @@
 #include "Acts/Geometry/TrackingVolume.hpp"
 #include "Acts/Geometry/TrackingVolumeArrayCreator.hpp"
 
-#include "ACTFW/EventData/Track.hpp"
-#include "ACTFW/Framework/BareAlgorithm.hpp"
-#include "ACTFW/Plugins/BField/BFieldOptions.hpp"
+#include "ActsExamples/EventData/Track.hpp"
+#include "ActsExamples/Framework/BareAlgorithm.hpp"
+#include "ActsExamples/Plugins/BField/BFieldOptions.hpp"
 
 #include "TelescopeDetectorElement.hpp"
 
 #include "myrapidjson.h"
 
 namespace Telescope{
-  using AlignResult = Acts::Result<FW::AlignmentResult>;
+  using AlignResult = Acts::Result<ActsAlignment::AlignmentResult>;
 
   using AlignmentFunction = std::function<
     AlignResult(const std::vector<std::vector<PixelSourceLink>>&,
-                const std::vector<Acts::CurvilinearParameters>&,
-                const FW::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>&)
+                const std::vector<Acts::CurvilinearTrackParameters>&,
+                const ActsAlignment::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>&)
     >;
 
   AlignmentFunction makeAlignmentFunction (std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
-                                           FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl);
+                                           ActsExamples::Options::BFieldVariant magneticField, Acts::Logging::Level lvl);
 
 
 

@@ -12,14 +12,14 @@
 #include <random>
 #include <stdexcept>
 
-#include "Alignment.hpp"
+#include "ActsAlignment/Kernel/Alignment.hpp"
 #include "TelescopeTrack.hpp"
 
 
-#include "ACTFW/Plugins/BField/ScalableBField.hpp"
-#include "Acts/Fitter/GainMatrixSmoother.hpp"
-#include "Acts/Fitter/GainMatrixUpdater.hpp"
-#include "Acts/Geometry/GeometryID.hpp"
+#include "ActsExamples/Plugins/BField/ScalableBField.hpp"
+#include "Acts/TrackFitting/GainMatrixSmoother.hpp"
+#include "Acts/TrackFitting/GainMatrixUpdater.hpp"
+#include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/MagneticField/ConstantBField.hpp"
 #include "Acts/MagneticField/InterpolatedBFieldMap.hpp"
 #include "Acts/MagneticField/SharedBField.hpp"
@@ -40,8 +40,8 @@ namespace {
     Telescope::AlignResult operator()
     (
      const std::vector<std::vector<Telescope::PixelSourceLink>>& sourceLinks,
-     const std::vector<Acts::CurvilinearParameters>& initialParameters,
-     const FW::AlignmentOptions< Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>& options) const
+     const std::vector<Acts::CurvilinearTrackParameters>& initialParameters,
+     const ActsAlignment::AlignmentOptions< Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>>& options) const
     {
       return align.align(sourceLinks, initialParameters, options);
     };
@@ -53,7 +53,7 @@ namespace {
 
 Telescope::AlignmentFunction Telescope::makeAlignmentFunction
 (std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
- FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl){
+ ActsExamples::Options::BFieldVariant magneticField, Acts::Logging::Level lvl){
   
   // unpack the magnetic field variant and instantiate the corresponding fitter.
   return std::visit(
@@ -69,7 +69,7 @@ Telescope::AlignmentFunction Telescope::makeAlignmentFunction
                       using Updater = Acts::GainMatrixUpdater;
                       using Smoother = Acts::GainMatrixSmoother;
                       using Fitter = Acts::KalmanFitter<Propagator, Updater, Smoother>;
-                      using Alignment = FW::Alignment<Fitter>;
+                      using Alignment = ActsAlignment::Alignment<Fitter>;
 
                       // construct all components for the fitter
                       MagneticField field(std::move(inputField));
@@ -79,13 +79,12 @@ Telescope::AlignmentFunction Telescope::makeAlignmentFunction
                       navigator.resolveMaterial = true;
                       navigator.resolveSensitive = true;
                       Propagator propagator(std::move(stepper), std::move(navigator));
-                      Fitter fitter(std::move(propagator),
-                                    Acts::getDefaultLogger("KalmanFitter", lvl));
-                      FW::Alignment<Fitter> alignment(std::move(fitter),
+                      Fitter fitter(std::move(propagator));
+                      Alignment alignment(std::move(fitter),
                                                       Acts::getDefaultLogger("Alignment", lvl));
                       
                       // build the alignment functions. owns the alignment object.
-                      return AlignmentFunctionImpl<FW::Alignment<Fitter>>(std::move(alignment));
+                      return AlignmentFunctionImpl<ActsAlignment::Alignment<Fitter>>(std::move(alignment));
                     },
                     
                     std::move(magneticField)

@@ -20,11 +20,12 @@
 #include "Acts/Surfaces/PlaneSurface.hpp"
 #include "Acts/Geometry/SurfaceArrayCreator.hpp"
 
-
-
+#include "Acts/Utilities/Units.hpp"
 #include "Acts/Geometry/PlaneLayer.hpp"
 #include "Acts/Geometry/PassiveLayerBuilder.hpp"
 #include "Acts/Geometry/LayerArrayCreator.hpp"
+#include "Acts/Material/Material.hpp"
+#include "Acts/Material/MaterialSlab.hpp"
 #include "Acts/Material/HomogeneousSurfaceMaterial.hpp"
 
 namespace Acts {
@@ -34,6 +35,8 @@ class PlanarBounds;
 class ISurfaceMaterial;
 }  // namespace Acts
 
+using namespace Acts::UnitLiterals;
+
 namespace Telescope {
 
 /// @class TelescopeDetectorElement
@@ -42,7 +45,6 @@ namespace Telescope {
 /// it simply implements the base class.
 class TelescopeDetectorElement : public Acts::DetectorElementBase {
  public:
-
   /// Constructor for single sided detector element
   /// - bound to a Plane Surface
   ///
@@ -58,15 +60,18 @@ class TelescopeDetectorElement : public Acts::DetectorElementBase {
       m_elementTransform(std::move(transform)),
       m_elementThickness(thickZ){
 
+    Acts::Material silicon = Acts::Material::fromMolarDensity(9.370_cm, 46.52_cm, 28.0855, 14,
+                                    (2.329 / 28.0855) * 1_mol / 1_cm3);
+
     auto material = std::make_shared<Acts::HomogeneousSurfaceMaterial>
-    (Acts::MaterialProperties(95.7, 465.2, 28.03, 14., 2.32e-3, m_elementThickness));
+    (Acts::MaterialSlab(silicon, m_elementThickness));
 
     auto rBounds = std::make_shared<Acts::RectangleBounds>(widthX/2.0, heightY/2.0);
     auto pBounds = std::dynamic_pointer_cast<Acts::PlanarBounds>(rBounds);
     m_surface = Acts::Surface::makeShared<Acts::PlaneSurface>(pBounds, *this);
     m_surface->assignSurfaceMaterial(material);
     std::unique_ptr<Acts::SurfaceArray> surArray(new Acts::SurfaceArray(m_surface));
-    m_layer = Acts::PlaneLayer::create(m_elementTransform, pBounds, std::move(surArray), 5 * Acts::UnitConstants::mm);
+    m_layer = Acts::PlaneLayer::create(*m_elementTransform, pBounds, std::move(surArray), 5 * Acts::UnitConstants::mm);
     m_surface->associateLayer(*m_layer);
   }
 

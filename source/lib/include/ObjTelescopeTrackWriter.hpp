@@ -9,7 +9,7 @@
 #pragma once
 
 #include <fstream>
-#include "ACTFW/Framework/WriterT.hpp"
+#include "ActsExamples/Framework/WriterT.hpp"
 #include "Acts/EventData/Measurement.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
 #include "PixelMultiTrajectory.hpp"
@@ -27,7 +27,7 @@ namespace Telescope{
 ///
 /// One Thread per write call and hence thread safe
 class ObjTelescopeTrackWriter
-  : public FW::WriterT<std::vector<PixelMultiTrajectory>> {
+  : public ActsExamples::WriterT<std::vector<PixelMultiTrajectory>> {
  public:
   struct Config {
     std::string inputTrajectories;  ///< input (fitted) trajectories collection
@@ -50,7 +50,7 @@ class ObjTelescopeTrackWriter
   ~ObjTelescopeTrackWriter() override = default;
 
   /// End-of-run hook
-  FW::ProcessCode endRun() final override;
+  ActsExamples::ProcessCode endRun() final override;
 
  private:
   Config m_cfg;  ///!< Internal configuration represenation
@@ -58,8 +58,8 @@ class ObjTelescopeTrackWriter
  protected:
   /// This implementation holds the actual writing method
   /// and is called by the WriterT<>::write interface
-  FW::ProcessCode writeT(
-                         const FW::AlgorithmContext& context,
+  ActsExamples::ProcessCode writeT(
+                         const ActsExamples::AlgorithmContext& context,
                          const std::vector<PixelMultiTrajectory>& trackCollection) final override;
 };
 }

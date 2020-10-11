@@ -4,10 +4,10 @@
 #include <memory>
 #include <vector>
 
-#include "ACTFW/EventData/Track.hpp"
-#include "ACTFW/Framework/BareAlgorithm.hpp"
-#include "ACTFW/Framework/RandomNumbers.hpp"
-#include "ACTFW/Plugins/BField/BFieldOptions.hpp"
+#include "ActsExamples/EventData/Track.hpp"
+#include "ActsExamples/Framework/BareAlgorithm.hpp"
+#include "ActsExamples/Framework/RandomNumbers.hpp"
+#include "ActsExamples/Plugins/BField/BFieldOptions.hpp"
 #include "Acts/Fitter/KalmanFitter.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
 #include "Acts/Utilities/Units.hpp"
@@ -16,7 +16,7 @@
 
 namespace Telescope {
 
-class TelescopeSeeddingAlgorithm final : public FW::BareAlgorithm {
+class TelescopeSeeddingAlgorithm final : public ActsExamples::BareAlgorithm {
 public:
 
   struct Config {
@@ -42,7 +42,7 @@ public:
   ///
   /// @param ctx is the algorithm context that holds event-wise information
   /// @return a process code to steer the algporithm flow
-  FW::ProcessCode execute(const FW::AlgorithmContext& ctx) const final override;
+  ActsExamples::ProcessCode execute(const ActsExamples::AlgorithmContext& ctx) const final override;
 
  private:
   Config m_cfg;

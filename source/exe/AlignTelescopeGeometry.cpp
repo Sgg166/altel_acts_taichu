@@ -29,8 +29,8 @@
 #include "Acts/Utilities/Logger.hpp"
 #include "Acts/Utilities/Units.hpp"
 
-#include "ACTFW/Framework/Sequencer.hpp"
-#include "ACTFW/Framework/WhiteBoard.hpp"
+#include "ActsExamples/Framework/Sequencer.hpp"
+#include "ActsExamples/Framework/WhiteBoard.hpp"
 
 #include "TelescopeDetectorElement.hpp"
 #include "TelescopeTrack.hpp"
@@ -211,6 +211,8 @@ int main(int argc, char* argv[]) {
 
   std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
 
+
+  
   Telescope::BuildGeometry(gctx, trackingGeometry, element_col, geoconf, 50_mm, 25_mm, 80_um);
   std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces_selected;
   for(const auto& e: element_col){
@@ -219,10 +221,10 @@ int main(int argc, char* argv[]) {
   }
 
   // Set up the detector elements to be aligned (fix the first one)
-  std::vector<std::shared_ptr<Acts::DetectorElementBase>> element_col_align;
+  std::vector<Acts::DetectorElementBase*> element_col_align;
   for (auto it = element_col.begin() ; it != element_col.end(); ++it){
     if(it != element_col.begin())
-      element_col_align.push_back(*it);
+      element_col_align.push_back((*it).get());
   }
   //
 
@@ -245,12 +247,12 @@ int main(int argc, char* argv[]) {
     iterationState.emplace(iIter, mask);
   }
 
-  FW::AlignedTransformUpdater alignedTransformUpdaterFun =
-    [](Acts::DetectorElementBase& detElement,
+  ActsAlignment::AlignedTransformUpdater alignedTransformUpdaterFun =
+    [](Acts::DetectorElementBase* detElement,
        const Acts::GeometryContext& gctx,
        const Acts::Transform3D& aTransform) {
       Telescope::TelescopeDetectorElement* telescopeDetElement =
-        dynamic_cast<Telescope::TelescopeDetectorElement*>(&detElement);
+        dynamic_cast<Telescope::TelescopeDetectorElement*>(detElement);
       if (telescopeDetElement) {
         telescopeDetElement->addAlignedTransform
           (std::make_unique<Acts::Transform3D>(aTransform));
@@ -294,7 +296,7 @@ int main(int argc, char* argv[]) {
       std::vector<size_t> geo_ids;
       bool found_same_geo_id = false ;
       for(const auto &sl: sourcelinks){
-        size_t geo_id = sl.referenceSurface().geoID().value();
+        size_t geo_id = sl.referenceSurface().geometryId().value();
         if(std::find( geo_ids.begin(), geo_ids.end(), geo_id ) != geo_ids.end()){
           found_same_geo_id = true;
           break;
@@ -308,7 +310,7 @@ int main(int argc, char* argv[]) {
     }
 
     //seeding
-    std::vector<Acts::CurvilinearParameters> initialParameters;
+    std::vector<Acts::CurvilinearTrackParameters> initialParameters;
     initialParameters.reserve(sourcelinkTracks.size());
     Acts::BoundSymMatrix cov_seed;
     cov_seed <<
@@ -329,20 +331,24 @@ int main(int argc, char* argv[]) {
       const double phi = Acts::VectorHelpers::phi(distance);
       const double theta = Acts::VectorHelpers::theta(distance);
       Acts::Vector3D rPos = global0 - distance / 2;
-      Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
-                          beamEnergy * sin(theta) * sin(phi),
-                          beamEnergy * cos(theta));
+      Acts::Vector4D rPos4(rPos.x(), rPos.y(), rPos.z(), 0);
+      //Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
+      //                    beamEnergy * sin(theta) * sin(phi),
+      //                    beamEnergy * cos(theta));
 
-      Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(cov_seed, rPos, rMom, 1., 0);
+      Acts::CurvilinearTrackParameters rStart(rPos4, phi, theta, 1., beamEnergy, cov_seed);
       initialParameters.push_back(rStart);
     }
 
+    auto kfLogger = Acts::getDefaultLogger("KalmanFilter", Acts::Logging::VERBOSE);
+
     // Set the KalmanFitter options
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions
-      (gctx, mctx, cctx, Acts::VoidOutlierFinder()); //pSurface default nullptr
+      (gctx, mctx, cctx, Acts::VoidOutlierFinder(), Acts::LoggerWrapper{*kfLogger},
+      Acts::PropagatorPlainOptions()); //pSurface default nullptr
 
     // Set the alignment options
-    FW::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>> alignOptions
+    ActsAlignment::AlignmentOptions<Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>> alignOptions
       (kfOptions,
        alignedTransformUpdaterFun,
        element_col_align,

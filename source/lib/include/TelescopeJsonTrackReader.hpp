@@ -6,7 +6,7 @@
 #include <map>
 #include <mutex>
 
-#include "ACTFW/Framework/IReader.hpp"
+#include "ActsExamples/Framework/IReader.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
 
 #include "JsonGenerator.hpp"
@@ -16,7 +16,7 @@
 
 namespace Telescope{
 
-class TelescopeJsonTrackReader final : public FW::IReader {
+class TelescopeJsonTrackReader final : public ActsExamples::IReader {
  public:
   struct Config {
     std::string inputDataFile;
@@ -38,7 +38,7 @@ class TelescopeJsonTrackReader final : public FW::IReader {
   std::pair<size_t, size_t> availableEvents() const final override;
 
   /// Read out data from the input stream.
-  FW::ProcessCode read(const FW::AlgorithmContext& ctx) final override;
+  ActsExamples::ProcessCode read(const ActsExamples::AlgorithmContext& ctx) final override;
 
   static bool createSourcelinksFromJSON(const Telescope::JsonValue& js_evpack,
                                         const std::map<size_t, std::shared_ptr<const Acts::Surface>>& surfaces,

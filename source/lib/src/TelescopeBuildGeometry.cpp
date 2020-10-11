@@ -95,8 +95,6 @@ void Telescope::BuildGeometry(
   float tracker_halfZ= 1.0_m;
   auto tracker_cuboid = std::make_shared<Acts::CuboidVolumeBounds>(tracker_halfX, tracker_halfY, tracker_halfZ);
 
-  auto trafo_identity = std::make_shared<Acts::Transform3D>(Acts::Transform3D::Identity());
-
   auto layer_array_binned = Acts::LayerArrayCreator({}).
     layerArray(nominal_gctx, layer_col,
                - tracker_halfZ, tracker_halfZ,
@@ -104,14 +102,14 @@ void Telescope::BuildGeometry(
                Acts::BinningValue::binZ);
 
   auto trackVolume = Acts::TrackingVolume::create
-    (trafo_identity, tracker_cuboid, nullptr, std::move(layer_array_binned), nullptr, {}, "Tracker");
+    (Acts::Transform3D::Identity(), tracker_cuboid, nullptr, std::move(layer_array_binned), nullptr, {}, "Tracker");
 
   // Build world volume
   // assumming single tracker in the world
   auto tracker_array_binned = Acts::TrackingVolumeArrayCreator({}).
     trackingVolumeArray( nominal_gctx, { trackVolume }, Acts::BinningValue::binZ );
   auto mtvpWorld = Acts::TrackingVolume::create
-    (trafo_identity, tracker_cuboid, tracker_array_binned , "World");
+    (Acts::Transform3D::Identity(), tracker_cuboid, tracker_array_binned , "World");
 
   geo_world.reset(new Acts::TrackingGeometry(mtvpWorld));
 }

@@ -11,14 +11,14 @@
 #include <unordered_map>
 #include <utility>
 
-#include "ACTFW/Validation/ProtoTrackClassification.hpp"
+#include "ActsExamples/Validation/ProtoTrackClassification.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/TrackParameters.hpp"
 #include "PixelSourceLink.hpp"
 
 
 namespace Telescope{
-using IndexedParams = std::unordered_map<size_t, Acts::BoundParameters>;
+using IndexedParams = std::unordered_map<size_t, Acts::BoundTrackParameters>;
 
 /// @brief Struct for truth track fitting/finding result with
 /// Acts::KalmanFitter/Acts::CombinatorialKalmanFilter
@@ -122,7 +122,7 @@ struct PixelMultiTrajectory {
   /// @param entryIndex The trajectory entry index
   ///
   /// @return The fitted track parameters of the trajectory
-  const Acts::BoundParameters& trackParameters(const size_t& entryIndex) const {
+  const Acts::BoundTrackParameters& trackParameters(const size_t& entryIndex) const {
     auto it = m_trackParameters.find(entryIndex);
     if (it != m_trackParameters.end()) {
       return it->second;

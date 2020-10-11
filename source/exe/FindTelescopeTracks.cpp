@@ -29,10 +29,10 @@
 #include "Acts/Utilities/Logger.hpp"
 #include "Acts/Utilities/Units.hpp"
 
-#include "ACTFW/Framework/Sequencer.hpp"
-#include "ACTFW/Framework/WhiteBoard.hpp"
-#include "ACTFW/Framework/IWriter.hpp"
-#include "ACTFW/Plugins/Obj/ObjTrackingGeometryWriter.hpp"
+#include "ActsExamples/Framework/Sequencer.hpp"
+#include "ActsExamples/Framework/WhiteBoard.hpp"
+#include "ActsExamples/Framework/IWriter.hpp"
+#include "ActsExamples/Plugins/Obj/ObjTrackingGeometryWriter.hpp"
 
 #include "TelescopeDetectorElement.hpp"
 #include "TelescopeTrack.hpp"
@@ -61,6 +61,7 @@ Usage:
   -thread         [int]        multiple threads
   -eventMax       [int]        max number of events
   -data           [jsonfile]   data input file
+  -fittedFile     [jsonfile]   path to fitted data file (output)
   -geo            [jsonfile]   geometry input file
   -energy         [float]      beam energy, GeV
   -outputdir      [path]       output dir path
@@ -84,6 +85,7 @@ int main(int argc, char* argv[]) {
      { "thread",         required_argument, NULL,           'd' },
      { "eventMax",       required_argument, NULL,           'm' },
      { "data",           required_argument, NULL,           'f' },
+     { "fittedFile",     required_argument, NULL,           'b' },
      { "outputdir",      required_argument, NULL,      'o' },
      { "geomerty",       required_argument, NULL,      'g' },
      { "energy",       required_argument, NULL,        'e' },
@@ -99,6 +101,7 @@ int main(int argc, char* argv[]) {
   size_t threadNum = 1;
   size_t eventMaxNum = -1;
   std::string datafile_name;
+  std::string fitted_datafile_name;
   std::string geofile_name;
   std::string outputDir;
   double beamEnergy = -1;
@@ -128,6 +131,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'f':
       datafile_name = optarg;
+      break;
+    case 'b':
+      fitted_datafile_name = optarg;
       break;
     case 'g':
       geofile_name = optarg;
@@ -184,6 +190,7 @@ int main(int argc, char* argv[]) {
   std::fprintf(stdout, "datafile:         %s\n", datafile_name.c_str());
   std::fprintf(stdout, "geofile:          %s\n", geofile_name.c_str());
   std::fprintf(stdout, "outputDir:        %s\n", outputDir.c_str());
+  std::fprintf(stdout, "fittedFile:       %s\n", fitted_datafile_name.c_str());
   std::fprintf(stdout, "resX:             %f\n", resX);
   std::fprintf(stdout, "resY:             %f\n", resY);
   std::fprintf(stdout, "seedResX:         %f\n", seedResX);
@@ -193,7 +200,7 @@ int main(int argc, char* argv[]) {
   std::fprintf(stdout, "\n");
 
 
-  if(datafile_name.empty() || outputDir.empty() || geofile_name.empty() ){
+  if(datafile_name.empty() || fitted_datafile_name.empty() || outputDir.empty() || geofile_name.empty() ){
     std::fprintf(stderr, "%s\n", help_usage.c_str());
     exit(0);
   }
@@ -236,7 +243,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::shared_ptr<Telescope::TelescopeDetectorElement>> element_col;
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
 
-  Telescope::BuildGeometry(gctx, trackingGeometry, element_col, geoconf, 30_mm, 15_mm, 80_um);
+  Telescope::BuildGeometry(gctx, trackingGeometry, element_col, geoconf, 40_mm, 20_mm, 80_um);
   std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces_selected;
   for(const auto& e: element_col){
     auto id = e->telDetectorID();
@@ -246,8 +253,8 @@ int main(int argc, char* argv[]) {
   /////////////////////////////////////
   Acts::Logging::Level logLevel = do_verbose? (Acts::Logging::VERBOSE):(Acts::Logging::INFO);
 
-  logLevel = Acts::Logging::WARNING;
-  
+  // logLevel = Acts::Logging::WARNING;
+
   Telescope::TelescopeJsonTrackReader::Config conf_reader;
   conf_reader.inputDataFile = datafile_name;
   conf_reader.outputSourcelinks = "sourcelinks";
@@ -259,24 +266,16 @@ int main(int argc, char* argv[]) {
   conf_trackfinding.inputSourcelinks="sourcelinks";
   conf_trackfinding.outputTrajectories="trajectories";
   conf_trackfinding.findTracks=Telescope::TelescopeTrackFindingAlgorithm::makeTrackFinderFunction
-    (trackingGeometry, magneticField,  logLevel);
-  conf_trackfinding.sourcelinkSelectorCfg = Acts::CKFSourceLinkSelector::Config{{Acts::GeometryID(),{500, 1}}};
-  conf_trackfinding.seedSurfaceGeoIDStart = surfaces_selected[0]->geoID().value();
-  conf_trackfinding.seedSurfaceGeoIDEnd = surfaces_selected[1]->geoID().value();
+    (trackingGeometry, magneticField);
+  conf_trackfinding.sourcelinkSelectorCfg = Acts::CKFSourceLinkSelector::Config{{Acts::GeometryIdentifier(),{500, 1}}};
+  conf_trackfinding.seedSurfaceGeoIDStart = surfaces_selected[0]->geometryId().value();
+  conf_trackfinding.seedSurfaceGeoIDEnd = surfaces_selected[1]->geometryId().value();
   conf_trackfinding.seedResX = seedResX;
   conf_trackfinding.seedResY = seedResY;
   conf_trackfinding.seedResPhi = seedResPhi;
   conf_trackfinding.seedResTheta = seedResTheta;
   conf_trackfinding.seedEnergy = beamEnergy;
 
-
-  // write tracks as root tree
-  // @Todo: adapt the writer to write trajectories produced by CKF
-  Telescope::RootTelescopeTrackWriter::Config conf_trackRootWriter;
-  conf_trackRootWriter.inputTrajectories = "trajectories";
-  conf_trackRootWriter.outputDir = path_dir_output.c_str();
-  conf_trackRootWriter.outputFilename = "telescope_tracks.root";
-  conf_trackRootWriter.outputTreename = "tracks";
 
   // write the tracks (measurements only for the moment) as Obj
   Telescope::ObjTelescopeTrackWriter::Config conf_trackObjWriter;
@@ -287,23 +286,32 @@ int main(int argc, char* argv[]) {
   conf_trackObjWriter.maxNumTracks = 100;
 
   ////////////////seq////////////////////////
-  FW::Sequencer::Config conf_seq;
+  ActsExamples::Sequencer::Config conf_seq;
   conf_seq.logLevel  = logLevel;
   conf_seq.outputDir = path_dir_output.c_str();
   conf_seq.numThreads = threadNum;
   conf_seq.events = eventMaxNum;
+  ActsExamples::Sequencer seq(conf_seq);
 
-  FW::Sequencer seq(conf_seq);
   seq.addReader(std::make_shared<Telescope::TelescopeJsonTrackReader>(conf_reader, logLevel));
   seq.addAlgorithm(std::make_shared<Telescope::TelescopeTrackFindingAlgorithm>(conf_trackfinding, logLevel) );
+
+
+  // write tracks as root tree
+  // @Todo: adapt the writer to write trajectories produced by CKF
+  Telescope::RootTelescopeTrackWriter::Config conf_trackRootWriter;
+  conf_trackRootWriter.inputTrajectories = "trajectories";
+  conf_trackRootWriter.outputDir = path_dir_output.c_str();
+  conf_trackRootWriter.outputFilename = "telescope_tracks.root";
+  conf_trackRootWriter.outputTreename = "tracks";
   seq.addWriter(std::make_shared<Telescope::RootTelescopeTrackWriter>(conf_trackRootWriter,  logLevel));
+
 
   Telescope::TelescopeJsonTrackWriter::Config conf_trackJsonWriter;
   conf_trackJsonWriter.inputTrajectories = "trajectories";
   conf_trackJsonWriter.outputDir = path_dir_output.c_str();
-  conf_trackJsonWriter.outputFileName = "jsonwriter.json";
+  conf_trackJsonWriter.outputFileName = fitted_datafile_name;
   conf_trackJsonWriter.trackSurfaces = surfaces_selected;
-
   seq.addWriter(std::make_shared<Telescope::TelescopeJsonTrackWriter>(conf_trackJsonWriter,  logLevel));
 
   seq.run();

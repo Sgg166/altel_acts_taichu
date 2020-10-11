@@ -34,8 +34,8 @@ class PixelSourceLink {
   constexpr const Acts::Surface& referenceSurface() const { return *m_surface; }
 
   Acts::FittableMeasurement<PixelSourceLink> operator*() const {
-    return Acts::Measurement<PixelSourceLink, Acts::ParDef::eLOC_0,
-                             Acts::ParDef::eLOC_1>{
+    return Acts::Measurement<PixelSourceLink, Acts::BoundIndices, Acts::eBoundLoc0,
+                             Acts::eBoundLoc1>{
         m_surface->getSharedPtr(), *this, m_cov.topLeftCorner<2, 2>(),
         m_values[0], m_values[1]};
   }
@@ -46,9 +46,8 @@ class PixelSourceLink {
 
   // get the global position
   Acts::Vector3D globalPosition(const Acts::GeometryContext& gctx) const {
-    Acts::Vector3D global(0, 0, 0);
     Acts::Vector3D mom(1, 1, 1);
-    m_surface->localToGlobal(gctx, m_values, mom, global);
+    Acts::Vector3D global = m_surface->localToGlobal(gctx, m_values, mom);
     return global;
   }
 

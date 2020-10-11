@@ -12,12 +12,12 @@
 #include <TTree.h>
 #include <stdexcept>
 
-#include "ACTFW/Utilities/Paths.hpp"
+#include "ActsExamples/Utilities/Paths.hpp"
 #include "Acts/EventData/MultiTrajectoryHelpers.hpp"
 #include "Acts/Utilities/Helpers.hpp"
 
-#include "Acts/Visualization/IVisualization.hpp"
-#include "Acts/Visualization/ObjVisualization.hpp"
+#include "Acts/Visualization/IVisualization3D.hpp"
+#include "Acts/Visualization/ObjVisualization3D.hpp"
 
 using Acts::VectorHelpers::eta;
 
@@ -42,7 +42,7 @@ Telescope::TelescopeTrackingPerformanceWriter::TelescopeTrackingPerformanceWrite
   // the output file can not be given externally since TFile accesses to the
   // same file from multiple threads are unsafe.
   // must always be opened internally
-  auto path = FW::joinPaths(m_cfg.outputDir, m_cfg.outputFilename);
+  auto path = ActsExamples::joinPaths(m_cfg.outputDir, m_cfg.outputFilename);
   m_outputFile = TFile::Open(path.c_str(), "RECREATE");
   if (not m_outputFile) {
     throw std::invalid_argument("Could not open '" + path + "'");
@@ -64,7 +64,7 @@ Telescope::TelescopeTrackingPerformanceWriter::~TelescopeTrackingPerformanceWrit
   }
 }
 
-FW::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::endRun() {
+ActsExamples::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::endRun() {
   // fill residual and pull details into additional hists
   m_resPlotTool.refinement(m_resPlotCache);
 
@@ -76,11 +76,11 @@ FW::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::endRun() {
 
     ACTS_INFO("Wrote performance plots to '" << m_outputFile->GetPath() << "'");
   }
-  return FW::ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }
 
-FW::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::writeT(
-                                                                      const FW::AlgorithmContext& ctx,
+ActsExamples::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::writeT(
+                                                                      const ActsExamples::AlgorithmContext& ctx,
     const std::vector<PixelMultiTrajectory>& trajectories) {
   // Exclusive access to the tree while writing
   std::lock_guard<std::mutex> lock(m_writeMutex);
@@ -99,7 +99,7 @@ FW::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::writeT(
     // should be at most one trajectory
     if (trackTips.size() > 1) {
       ACTS_ERROR("Track fitting should not result in multiple trajectories.");
-      return FW::ProcessCode::ABORT;
+      return ActsExamples::ProcessCode::ABORT;
     }
     // Get the entry index for the single trajectory
     auto& trackTip = trackTips.front();
@@ -149,5 +149,5 @@ FW::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::writeT(
 
   // Fill the efficiency, how to define
 
-  return FW::ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }

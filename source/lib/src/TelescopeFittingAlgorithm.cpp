@@ -10,13 +10,13 @@
 
 #include <stdexcept>
 
-#include "ACTFW/EventData/Track.hpp"
-#include "ACTFW/Framework/WhiteBoard.hpp"
+#include "ActsExamples/EventData/Track.hpp"
+#include "ActsExamples/Framework/WhiteBoard.hpp"
 
-#include "ACTFW/Plugins/BField/ScalableBField.hpp"
-#include "Acts/Fitter/GainMatrixSmoother.hpp"
-#include "Acts/Fitter/GainMatrixUpdater.hpp"
-#include "Acts/Geometry/GeometryID.hpp"
+#include "ActsExamples/Plugins/BField/ScalableBField.hpp"
+#include "Acts/TrackFitting/GainMatrixSmoother.hpp"
+#include "Acts/TrackFitting/GainMatrixUpdater.hpp"
+#include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/MagneticField/ConstantBField.hpp"
 #include "Acts/MagneticField/InterpolatedBFieldMap.hpp"
 #include "Acts/MagneticField/SharedBField.hpp"
@@ -30,13 +30,13 @@
 
 Telescope::TelescopeFittingAlgorithm::TelescopeFittingAlgorithm(
     Config cfg, Acts::Logging::Level level)
-    : FW::BareAlgorithm("TelescopeFittingAlgorithm", level),
+    : ActsExamples::BareAlgorithm("TelescopeFittingAlgorithm", level),
       m_cfg(std::move(cfg)) {
 
 }
 
-FW::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
-    const FW::AlgorithmContext& ctx) const {
+ActsExamples::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
+    const ActsExamples::AlgorithmContext& ctx) const {
   using namespace Acts::UnitLiterals;
 
   // Read input data
@@ -78,11 +78,13 @@ FW::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
     const double phi = Acts::VectorHelpers::phi(distance);
     const double theta = Acts::VectorHelpers::theta(distance);
     Acts::Vector3D rPos = global0 - distance / 2;
-    Acts::Vector3D rMom(m_cfg.beamEnergy * sin(theta) * cos(phi),
-                        m_cfg.beamEnergy * sin(theta) * sin(phi),
-                        m_cfg.beamEnergy * cos(theta));
+    Acts::Vector4D rPos4(rPos.x(), rPos.y(), rPos.z(), 0);
+    Acts::Vector3D rDir(sin(theta) * cos(phi),
+                        sin(theta) * sin(phi),
+                        cos(theta));
+    double q = 1;
 
-    Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(cov, rPos, rMom, 1., 0);
+    Acts::CurvilinearTrackParameters rStart(rPos4, rDir, q/m_cfg.beamEnergy, cov);
 
     // Set the KalmanFitter options
     // TODO, remove target surface, note the vector3d
@@ -90,7 +92,8 @@ FW::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
       (Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions
       (ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
-       Acts::VoidOutlierFinder(), &(*pSurface));
+       Acts::VoidOutlierFinder(), Acts::LoggerWrapper{logger()},
+      Acts::PropagatorPlainOptions(), &(*pSurface));
 
     ACTS_DEBUG("Invoke fitter");
     auto result = m_cfg.fit(trackSourcelinks, rStart, kfOptions);
@@ -106,8 +109,7 @@ FW::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
       if (fitOutput.fittedParameters) {
         const auto& params = fitOutput.fittedParameters.value();
         ACTS_VERBOSE("Fitted paramemeters for track " << ctx.eventNumber);
-        ACTS_VERBOSE("  position: " << params.position().transpose());
-        ACTS_VERBOSE("  momentum: " << params.momentum().transpose());
+        ACTS_VERBOSE("  " << params.parameters().transpose());
         // Push the fitted parameters to the container
         indexedParams.emplace(fitOutput.trackTip, std::move(params));
       } else {
@@ -128,7 +130,7 @@ FW::ProcessCode Telescope::TelescopeFittingAlgorithm::execute(
   }
 
   ctx.eventStore.add(m_cfg.outputTrajectories, std::move(trajectories));
-  return FW::ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }
 
 
@@ -142,7 +144,7 @@ struct FitterFunctionImpl {
   Telescope::TelescopeFittingAlgorithm::FitterResult operator()
   (
    const std::vector<Telescope::PixelSourceLink>& sourceLinks,
-   const FW::TrackParameters& initialParameters,
+   const ActsExamples::TrackParameters& initialParameters,
    const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>& options) const {
     return fitter.fit(sourceLinks, initialParameters, options);
   };
@@ -152,13 +154,13 @@ struct FitterFunctionImpl {
 Telescope::TelescopeFittingAlgorithm::FitterFunction
 Telescope::TelescopeFittingAlgorithm::makeFitterFunction(
     std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
-    FW::Options::BFieldVariant magneticField, Acts::Logging::Level lvl) {
+    ActsExamples::Options::BFieldVariant magneticField) {
   using Updater = Acts::GainMatrixUpdater;
   using Smoother = Acts::GainMatrixSmoother;
 
   // unpack the magnetic field variant and instantiate the corresponding fitter.
   return std::visit(
-      [trackingGeometry, lvl](auto&& inputField) -> FitterFunction {
+      [trackingGeometry](auto&& inputField) -> FitterFunction {
         // each entry in the variant is already a shared_ptr
         // need ::element_type to get the real magnetic field type
         using InputMagneticField =
@@ -177,8 +179,7 @@ Telescope::TelescopeFittingAlgorithm::makeFitterFunction(
         navigator.resolveMaterial = true;
         navigator.resolveSensitive = true;
         Propagator propagator(std::move(stepper), std::move(navigator));
-        Fitter fitter(std::move(propagator),
-                      Acts::getDefaultLogger("KalmanFitter", lvl));
+        Fitter fitter(std::move(propagator));
 
         // build the fitter functions. owns the fitter object.
         return FitterFunctionImpl<Fitter>(std::move(fitter));

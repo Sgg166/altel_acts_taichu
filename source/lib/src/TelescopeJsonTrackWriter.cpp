@@ -8,7 +8,7 @@
 
 #include "TelescopeJsonTrackWriter.hpp"
 
-#include "ACTFW/Utilities/Paths.hpp"
+#include "ActsExamples/Utilities/Paths.hpp"
 #include "Acts/EventData/Measurement.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/MultiTrajectoryHelpers.hpp"
@@ -69,8 +69,9 @@ Acts::FreeToBoundMatrix freeToCurvilinearJacobian(const Acts::Vector3D& directio
 
 namespace Telescope{
   using Measurement = Acts::Measurement<Telescope::PixelSourceLink,
-                                        Acts::ParDef::eLOC_0,
-                                        Acts::ParDef::eLOC_1>;
+        Acts::BoundIndices,                                 
+	Acts::eBoundLoc0,
+                                        Acts::eBoundLoc1>;
 }
 
 Telescope::TelescopeJsonTrackWriter::TelescopeJsonTrackWriter(
@@ -96,15 +97,15 @@ Telescope::TelescopeJsonTrackWriter::TelescopeJsonTrackWriter(
   m_jsw->StartArray();
 }
 
-FW::ProcessCode Telescope::TelescopeJsonTrackWriter::endRun() {
+ActsExamples::ProcessCode Telescope::TelescopeJsonTrackWriter::endRun() {
   m_jsw->EndArray();
   m_jsw->Flush();
   std::fclose(m_jsfp);
-  return FW::ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }
 
-FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
-(const FW::AlgorithmContext& context,
+ActsExamples::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
+(const ActsExamples::AlgorithmContext& context,
  const std::vector<Telescope::PixelMultiTrajectory>& trajectories) {
 
   JsonAllocator jsa;
@@ -143,26 +144,43 @@ FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
                           }
                           size_t layerid = surface_it->second;
 
+
+                          // Get the source link info
+                          auto meas = std::get<Acts::Measurement
+                                               <Telescope::PixelSourceLink, Acts::BoundIndices, Acts::eBoundLoc0,Acts::eBoundLoc1>
+                                               >(*state.uncalibrated());
+
+                          // Get local position
+                          Acts::Vector2D pos_local(meas.parameters()[Acts::eBoundLoc0],
+                                                   meas.parameters()[Acts::eBoundLoc1]);
+
+                          // std::cout<<"local position of hit on layer " << layerid<<" : " << local.x()<<", "<<local.y()<<std::endl;
+
                           // 1) The bound parameters info
-                          Acts::BoundParameters boundpara(context.geoContext,
-                                                          state.smoothedCovariance(),
+                          Acts::BoundTrackParameters boundpara(state_surface,
                                                           state.smoothed(),
-                                                          state_surface);
-                          Acts::Vector3D pos = boundpara.position();
-                          Acts::Vector3D mom = boundpara.momentum();
-                          Acts::Vector3D dir = mom.normalized();
+                                                          state.smoothedCovariance()
+							  );
                           double q = boundpara.charge();
                           double t = boundpara.time();
-                          const auto& boundCovariance = *boundpara.covariance(); 
+                          const auto& boundCovariance = *boundpara.covariance();
 
-                          // 2) Transform bound parameter to free parameter
+                          // Transform the smoothed bound parameters to free parameters to get the position and momentum 
+			  Acts::FreeVector freeParams =
+                          Acts::detail::transformBoundToFreeParameters(*state_surface, context.geoContext,
+                                                         state.smoothed());
+			  Acts::Vector3D pos(freeParams[Acts::eFreePos0], freeParams[Acts::eFreePos1], freeParams[Acts::eFreePos2]);
+                          Acts::Vector3D dir(freeParams[Acts::eFreeDir0], freeParams[Acts::eFreeDir1], freeParams[Acts::eFreeDir2]);
+                          Acts::Vector3D mom = dir*std::abs(1 / freeParams[Acts::eFreeQOverP]);;
+                          
+			  // 2) Transform bound parameter to free parameter
                           //Acts::FreeVector freepara;
                           //freepara << pos[0], pos[1], pos[2], t, dir[0],
                           //dir[1], dir[2], q / mom.norm();
 
                           /// Initialize the jacobian from local to the global frame
                           Acts::BoundToFreeMatrix jacToGlobal = Acts::BoundToFreeMatrix::Zero();
-                          // Calculate the jacobian 
+                          // Calculate the jacobian
                           state_surface->initJacobianToGlobal(context.geoContext, jacToGlobal, pos, dir,
                                                               state.smoothed());
                           Acts::FreeSymMatrix freeCovariance = jacToGlobal * boundCovariance * jacToGlobal.transpose();
@@ -177,6 +195,8 @@ FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
                           js_track_state.AddMember("x", JsonValue(pos.x()), jsa);
                           js_track_state.AddMember("y", JsonValue(pos.y()), jsa);
                           js_track_state.AddMember("z", JsonValue(pos.z()), jsa);
+                          js_track_state.AddMember("lx", JsonValue(pos_local.x()), jsa);
+                          js_track_state.AddMember("ly", JsonValue(pos_local.y()), jsa);
                           js_track_state.AddMember("px", JsonValue(mom.x()), jsa);
                           js_track_state.AddMember("py", JsonValue(mom.y()), jsa);
                           js_track_state.AddMember("pz", JsonValue(mom.z()), jsa);
@@ -185,8 +205,8 @@ FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
 
                           const double *cov_data = curvCovariance.data();
                           Telescope::JsonValue js_state_cov(rapidjson::kArrayType); //
-                          js_state_cov.Reserve(Acts::eBoundParametersSize*Acts::eBoundParametersSize, jsa);
-                          for(size_t n=0; n<Acts::eBoundParametersSize*Acts::eBoundParametersSize; n++){
+                          js_state_cov.Reserve(Acts::eBoundSize*Acts::eBoundSize, jsa);
+                          for(size_t n=0; n<Acts::eBoundSize*Acts::eBoundSize; n++){
                             js_state_cov.PushBack(JsonValue(*(cov_data+n)), jsa);
                           }
                           js_track_state.AddMember("cov", std::move(js_state_cov), jsa);
@@ -209,5 +229,5 @@ FW::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
     rapidjson::PutN(*m_jsos, '\n', 2);
   }
 
-  return FW::ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }

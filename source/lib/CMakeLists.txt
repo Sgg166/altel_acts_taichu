@@ -22,10 +22,13 @@ target_link_libraries(
   Threads::Threads
 
   ActsCore
+  ActsAlignment
+
   ActsFatras
-  ActsDigitizationPlugin
-  ActsIdentificationPlugin
-  
+
+  ActsPluginDigitization
+  ActsPluginIdentification
+
   ActsExamplesFramework
 
   ActsExamplesMagneticField

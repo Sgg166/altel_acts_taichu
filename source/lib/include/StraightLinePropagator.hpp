@@ -49,7 +49,7 @@ struct StraightLinePropagator{
   ///@brief transport (bound) track parameters to target surface
   ///
   template<typename parameters_t>
-  Acts::BoundParameters transport(const Acts::GeometryContext& gctx, const Acts::MagneticFieldContext& mctx, const PropagatorOptions& options, const parameters_t& par, const Acts::Surface& targetSurface) const {
+  Acts::BoundTrackParameters transport(const Acts::GeometryContext& gctx, const Acts::MagneticFieldContext& mctx, const PropagatorOptions& options, const parameters_t& par, const Acts::Surface& targetSurface) const {
     // Construct a stepping state with bound/curvilinear track parameter
     State stepping(gctx, mctx, par, options.direction, options.maxStepSize, options.targetTolerance);
     // Try to target the surface by a few trials
@@ -65,7 +65,7 @@ struct StraightLinePropagator{
     }
     // get the bound parameters at target surface
     auto targetState = m_stepper.boundState(stepping, targetSurface);
-    auto targetBoundParams = std::get<Acts::BoundParameters>(targetState);
+    auto targetBoundParams = std::get<Acts::BoundTrackParameters>(targetState);
     return targetBoundParams;
   }
 
@@ -78,7 +78,7 @@ struct StraightLinePropagator{
                                                        stepping.navDir * m_stepper.direction(stepping), true);
     // The target is reached or not
     bool targetReached =
-      (sIntersection.intersection.status == Acts::Intersection::Status::onSurface);
+      (sIntersection.intersection.status == Acts::Intersection3D::Status::onSurface);
     double distance = sIntersection.intersection.pathLength;
 
     if(not targetReached){
