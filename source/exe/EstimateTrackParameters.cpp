@@ -162,7 +162,7 @@ int main(int argc, char* argv[]){
 
       Acts::BoundSymMatrix cov;
       Acts::Vector4D pos4;
-      Acts::Vector3D mom;
+      Acts::Vector3D dir;
       double p;
       double charge;
       double time;
@@ -181,12 +181,12 @@ int main(int argc, char* argv[]){
           time = js_state["t"].GetDouble();
           pos4 = Acts::Vector4D(x, y, z, time);
 
-          double px = js_state["px"].GetDouble();
-          double py = js_state["py"].GetDouble();
-          double pz = js_state["pz"].GetDouble();
-          mom = Acts::Vector3D(px, py, pz);
-          p = std::sqrt(mom.x()*mom.x() + mom.y()*mom.y() + mom.z()*mom.z());
+          double dx = js_state["dx"].GetDouble();
+          double dy = js_state["dy"].GetDouble();
+          double dz = js_state["dz"].GetDouble();
+          dir = Acts::Vector3D(dx, dy, dz);
 
+	  p = js_state["p"].GetDouble();
           charge = js_state["q"].GetDouble();
 
           const auto& js_cov = js_state["cov"];
@@ -196,7 +196,7 @@ int main(int argc, char* argv[]){
             cov_data.push_back(e);
           }
           cov = Acts::BoundSymMatrix(cov_data.data());
-          track_curPara_v.emplace_back(pos4, mom.normalized(), charge/p, cov);
+          track_curPara_v.emplace_back(pos4, dir, p, charge, cov);
         }
       }
     }

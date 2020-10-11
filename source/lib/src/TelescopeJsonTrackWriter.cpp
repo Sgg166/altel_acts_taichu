@@ -156,36 +156,32 @@ ActsExamples::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
 
                           // std::cout<<"local position of hit on layer " << layerid<<" : " << local.x()<<", "<<local.y()<<std::endl;
 
-                          // 1) The bound parameters info
-                          Acts::BoundTrackParameters boundpara(state_surface,
-                                                          state.smoothed(),
-                                                          state.smoothedCovariance()
-							  );
-                          double q = boundpara.charge();
-                          double t = boundpara.time();
-                          const auto& boundCovariance = *boundpara.covariance();
+                          //The bound parameters info
+                          //Acts::BoundTrackParameters boundpara(state_surface,
+                          //                                state.smoothed(),
+                          //                                state.smoothedCovariance()
+	                  //						  );
 
-                          // Transform the smoothed bound parameters to free parameters to get the position and momentum 
+			  // 1) Transform bound parameter to free parameter
+                          // 1.1)Fist transform the smoothed bound parameters to free parameters to get the position and momentum 
 			  Acts::FreeVector freeParams =
                           Acts::detail::transformBoundToFreeParameters(*state_surface, context.geoContext,
                                                          state.smoothed());
+			  // 1.2)Get the global position, direction, q/p, t etc. 
 			  Acts::Vector3D pos(freeParams[Acts::eFreePos0], freeParams[Acts::eFreePos1], freeParams[Acts::eFreePos2]);
                           Acts::Vector3D dir(freeParams[Acts::eFreeDir0], freeParams[Acts::eFreeDir1], freeParams[Acts::eFreeDir2]);
-                          Acts::Vector3D mom = dir*std::abs(1 / freeParams[Acts::eFreeQOverP]);;
-                          
-			  // 2) Transform bound parameter to free parameter
-                          //Acts::FreeVector freepara;
-                          //freepara << pos[0], pos[1], pos[2], t, dir[0],
-                          //dir[1], dir[2], q / mom.norm();
+			  double p = std::abs(1 / freeParams[Acts::eFreeQOverP]);;
+                          double q = p*freeParams[Acts::eFreeQOverP];
+                          double t = freeParams[Acts::eFreeTime];
 
-                          /// Initialize the jacobian from local to the global frame
+                          /// 1.3) Initialize the jacobian from local to the global frame
                           Acts::BoundToFreeMatrix jacToGlobal = Acts::BoundToFreeMatrix::Zero();
                           // Calculate the jacobian
                           state_surface->initJacobianToGlobal(context.geoContext, jacToGlobal, pos, dir,
                                                               state.smoothed());
-                          Acts::FreeSymMatrix freeCovariance = jacToGlobal * boundCovariance * jacToGlobal.transpose();
+                          Acts::FreeSymMatrix freeCovariance = jacToGlobal * state.smoothedCovariance()* jacToGlobal.transpose();
 
-                          // 3) Transform free parameter to curvilinear parameter
+                          // 2) Transform free parameter to curvilinear parameter
                           Acts::FreeToBoundMatrix jacToCurv = freeToCurvilinearJacobian(dir);
                           Acts::BoundSymMatrix curvCovariance = jacToCurv * freeCovariance * jacToCurv.transpose();
 
@@ -197,9 +193,10 @@ ActsExamples::ProcessCode Telescope::TelescopeJsonTrackWriter::writeT
                           js_track_state.AddMember("z", JsonValue(pos.z()), jsa);
                           js_track_state.AddMember("lx", JsonValue(pos_local.x()), jsa);
                           js_track_state.AddMember("ly", JsonValue(pos_local.y()), jsa);
-                          js_track_state.AddMember("px", JsonValue(mom.x()), jsa);
-                          js_track_state.AddMember("py", JsonValue(mom.y()), jsa);
-                          js_track_state.AddMember("pz", JsonValue(mom.z()), jsa);
+                          js_track_state.AddMember("dx", JsonValue(dir.x()), jsa);
+                          js_track_state.AddMember("dy", JsonValue(dir.y()), jsa);
+                          js_track_state.AddMember("dz", JsonValue(dir.z()), jsa);
+                          js_track_state.AddMember("p", JsonValue(p), jsa);
                           js_track_state.AddMember("q", JsonValue(q), jsa);
                           js_track_state.AddMember("t", JsonValue(t), jsa);
 
