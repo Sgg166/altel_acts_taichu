@@ -12,29 +12,30 @@
 #include <memory>
 #include <vector>
 
+#include "Acts/Geometry/TrackingGeometry.hpp"
+#include "Acts/TrackFitting/KalmanFitter.hpp"
+#include "Acts/Utilities/Units.hpp"
 #include "ActsExamples/EventData/Track.hpp"
 #include "ActsExamples/Framework/BareAlgorithm.hpp"
 #include "ActsExamples/Framework/RandomNumbers.hpp"
 #include "ActsExamples/Plugins/BField/BFieldOptions.hpp"
-#include "Acts/TrackFitting/KalmanFitter.hpp"
-#include "Acts/Geometry/TrackingGeometry.hpp"
-#include "Acts/Utilities/Units.hpp"
 #include "PixelMultiTrajectory.hpp"
 #include "PixelSourceLink.hpp"
 
 namespace Telescope {
 
-  class TelescopeFittingAlgorithm final : public ActsExamples::BareAlgorithm {
- public:
+class TelescopeFittingAlgorithm final : public ActsExamples::BareAlgorithm {
+public:
   using FitterResult = Acts::Result<Acts::KalmanFitterResult<PixelSourceLink>>;
   /// Fit function that takes input measurements, initial trackstate and fitter
   /// options and returns some fit-specific result.
   using FitterFunction = std::function<FitterResult(
-                                                    const std::vector<PixelSourceLink>&, const ActsExamples::TrackParameters&,
-      const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>&)>;
+      const std::vector<PixelSourceLink> &,
+      const ActsExamples::TrackParameters &,
+      const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> &)>;
   using SourceLinkTrack = std::vector<PixelSourceLink>;
   using SourceLinkTrackReader =
-      std::function<std::vector<SourceLinkTrack>(const std::string&, size_t)>;
+      std::function<std::vector<SourceLinkTrack>(const std::string &, size_t)>;
 
   /// Create the fitter function implementation.
   ///
@@ -69,10 +70,11 @@ namespace Telescope {
   ///
   /// @param ctx is the algorithm context that holds event-wise information
   /// @return a process code to steer the algporithm flow
-  ActsExamples::ProcessCode execute(const ActsExamples::AlgorithmContext& ctx) const final override;
+  ActsExamples::ProcessCode
+  execute(const ActsExamples::AlgorithmContext &ctx) const final override;
 
- private:
+private:
   Config m_cfg;
 };
 
-}  // namespace FW
+} // namespace Telescope

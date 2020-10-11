@@ -1,4 +1,4 @@
- 
+
 // This file is part of the Acts project.
 //
 // Copyright (C) 2019 CERN for the benefit of the Acts project
@@ -13,35 +13,36 @@
 #include <memory>
 #include <vector>
 
+#include "Acts/Geometry/TrackingGeometry.hpp"
+#include "Acts/TrackFinding/CKFSourceLinkSelector.hpp"
+#include "Acts/TrackFinding/CombinatorialKalmanFilter.hpp"
+#include "Acts/TrackFitting/KalmanFitter.hpp"
+#include "Acts/Utilities/Units.hpp"
 #include "ActsExamples/EventData/Track.hpp"
 #include "ActsExamples/Framework/BareAlgorithm.hpp"
 #include "ActsExamples/Framework/RandomNumbers.hpp"
 #include "ActsExamples/Plugins/BField/BFieldOptions.hpp"
-#include "Acts/TrackFitting/KalmanFitter.hpp"
-#include "Acts/Geometry/TrackingGeometry.hpp"
-#include "Acts/Utilities/Units.hpp"
-#include "Acts/TrackFinding/CKFSourceLinkSelector.hpp"
-#include "Acts/TrackFinding/CombinatorialKalmanFilter.hpp"
 #include "PixelMultiTrajectory.hpp"
 #include "PixelSourceLink.hpp"
 
 namespace Telescope {
 
-  class TelescopeTrackFindingAlgorithm final : public ActsExamples::BareAlgorithm {
- public:
-    using TrackFinderResult =
+class TelescopeTrackFindingAlgorithm final
+    : public ActsExamples::BareAlgorithm {
+public:
+  using TrackFinderResult =
       Acts::Result<Acts::CombinatorialKalmanFilterResult<PixelSourceLink>>;
   /// Track finding function that takes input measurements, initial trackstate
   /// and track finder options and returns some track-finding-specific result.
   using CKFOptions =
       Acts::CombinatorialKalmanFilterOptions<Acts::CKFSourceLinkSelector>;
   using TrackFinderFunction = std::function<TrackFinderResult(
-      const std::vector<PixelSourceLink>&, const ActsExamples::TrackParameters&,
-      const CKFOptions&)>;
+      const std::vector<PixelSourceLink> &,
+      const ActsExamples::TrackParameters &, const CKFOptions &)>;
 
   using SourceLinkTrack = std::vector<PixelSourceLink>;
   using SourceLinkTrackReader =
-      std::function<std::vector<SourceLinkTrack>(const std::string&, size_t)>;
+      std::function<std::vector<SourceLinkTrack>(const std::string &, size_t)>;
 
   /// Create the track finder function implementation.
   ///
@@ -79,10 +80,11 @@ namespace Telescope {
   ///
   /// @param ctx is the algorithm context that holds event-wise information
   /// @return a process code to steer the algporithm flow
-  ActsExamples::ProcessCode execute(const ActsExamples::AlgorithmContext& ctx) const final override;
+  ActsExamples::ProcessCode
+  execute(const ActsExamples::AlgorithmContext &ctx) const final override;
 
- private:
+private:
   Config m_cfg;
 };
 
-}  // namespace FW
+} // namespace Telescope

@@ -12,21 +12,21 @@
 #include <TTree.h>
 #include <stdexcept>
 
-#include "ActsExamples/Utilities/Paths.hpp"
 #include "Acts/EventData/MultiTrajectoryHelpers.hpp"
 #include "Acts/Utilities/Helpers.hpp"
+#include "ActsExamples/Utilities/Paths.hpp"
 
 #include "Acts/Visualization/IVisualization3D.hpp"
 #include "Acts/Visualization/ObjVisualization3D.hpp"
 
 using Acts::VectorHelpers::eta;
 
-Telescope::TelescopeTrackingPerformanceWriter::TelescopeTrackingPerformanceWriter(
-    Telescope::TelescopeTrackingPerformanceWriter::Config cfg,
-    Acts::Logging::Level lvl)
+Telescope::TelescopeTrackingPerformanceWriter::
+    TelescopeTrackingPerformanceWriter(
+        Telescope::TelescopeTrackingPerformanceWriter::Config cfg,
+        Acts::Logging::Level lvl)
     : WriterT(cfg.inputTrajectories, "TelescopeTrackingPerformanceWriter", lvl),
-      m_cfg(std::move(cfg)),
-      m_resPlotTool(m_cfg.resPlotToolConfig, lvl),
+      m_cfg(std::move(cfg)), m_resPlotTool(m_cfg.resPlotToolConfig, lvl),
       m_effPlotTool(m_cfg.effPlotToolConfig, lvl),
       m_trackSummaryPlotTool(m_cfg.trackSummaryPlotToolConfig, lvl)
 
@@ -54,7 +54,8 @@ Telescope::TelescopeTrackingPerformanceWriter::TelescopeTrackingPerformanceWrite
   m_trackSummaryPlotTool.book(m_trackSummaryPlotCache);
 }
 
-Telescope::TelescopeTrackingPerformanceWriter::~TelescopeTrackingPerformanceWriter() {
+Telescope::TelescopeTrackingPerformanceWriter::
+    ~TelescopeTrackingPerformanceWriter() {
   m_resPlotTool.clear(m_resPlotCache);
   m_effPlotTool.clear(m_effPlotCache);
   m_trackSummaryPlotTool.clear(m_trackSummaryPlotCache);
@@ -64,7 +65,8 @@ Telescope::TelescopeTrackingPerformanceWriter::~TelescopeTrackingPerformanceWrit
   }
 }
 
-ActsExamples::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::endRun() {
+ActsExamples::ProcessCode
+Telescope::TelescopeTrackingPerformanceWriter::endRun() {
   // fill residual and pull details into additional hists
   m_resPlotTool.refinement(m_resPlotCache);
 
@@ -80,16 +82,16 @@ ActsExamples::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::endRun(
 }
 
 ActsExamples::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::writeT(
-                                                                      const ActsExamples::AlgorithmContext& ctx,
-    const std::vector<PixelMultiTrajectory>& trajectories) {
+    const ActsExamples::AlgorithmContext &ctx,
+    const std::vector<PixelMultiTrajectory> &trajectories) {
   // Exclusive access to the tree while writing
   std::lock_guard<std::mutex> lock(m_writeMutex);
 
   unsigned int itrack = 0;
   // Loop over all trajectories
-  for (const auto& traj : trajectories) {
+  for (const auto &traj : trajectories) {
     // The trajectory entry indices and the multiTrajectory
-    const auto& [trackTips, mj] = traj.trajectory();
+    const auto &[trackTips, mj] = traj.trajectory();
     if (trackTips.empty()) {
       ACTS_WARNING("Empty multiTrajectory.");
       continue;
@@ -102,7 +104,7 @@ ActsExamples::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::writeT(
       return ActsExamples::ProcessCode::ABORT;
     }
     // Get the entry index for the single trajectory
-    auto& trackTip = trackTips.front();
+    auto &trackTip = trackTips.front();
 
     // @Todo: move it to specific tool
     //    if (itrack == 1) {
@@ -131,7 +133,7 @@ ActsExamples::ProcessCode Telescope::TelescopeTrackingPerformanceWriter::writeT(
       ACTS_WARNING("No fitted track parameters.");
       continue;
     }
-    const auto& fittedParameters = traj.trackParameters(trackTip);
+    const auto &fittedParameters = traj.trackParameters(trackTip);
 
     // @Todo: Modify the residual plotting tool and fill the residual plots
     // m_resPlotTool.fill(m_resPlotCache, ctx.geoContext, *ip,

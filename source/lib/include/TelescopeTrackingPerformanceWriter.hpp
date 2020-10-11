@@ -19,7 +19,7 @@
 class TFile;
 class TTree;
 
-namespace Telescope{
+namespace Telescope {
 
 /// Write out the residual and pull of track parameters and efficiency.
 ///
@@ -30,8 +30,8 @@ namespace Telescope{
 ///
 /// Safe to use from multiple writer threads - uses a std::mutex lock.
 class TelescopeTrackingPerformanceWriter final
-  : public ActsExamples::WriterT<std::vector<PixelMultiTrajectory>> {
- public:
+    : public ActsExamples::WriterT<std::vector<PixelMultiTrajectory>> {
+public:
   struct Config {
     /// Input (fitted) trajectories collection.
     std::string inputTrajectories;
@@ -52,15 +52,15 @@ class TelescopeTrackingPerformanceWriter final
   /// Finalize plots.
   ActsExamples::ProcessCode endRun() final override;
 
- private:
-  ActsExamples::ProcessCode writeT(
-                     const ActsExamples::AlgorithmContext& ctx,
-      const std::vector<PixelMultiTrajectory>& trajectories) final override;
+private:
+  ActsExamples::ProcessCode
+  writeT(const ActsExamples::AlgorithmContext &ctx,
+         const std::vector<PixelMultiTrajectory> &trajectories) final override;
 
   Config m_cfg;
   /// Mutex used to protect multi-threaded writes.
   std::mutex m_writeMutex;
-  TFile* m_outputFile{nullptr};
+  TFile *m_outputFile{nullptr};
   /// Plot tool for residuals and pulls.
   ActsExamples::ResPlotTool m_resPlotTool;
   ActsExamples::ResPlotTool::ResPlotCache m_resPlotCache;
@@ -69,7 +69,8 @@ class TelescopeTrackingPerformanceWriter final
   ActsExamples::EffPlotTool::EffPlotCache m_effPlotCache;
   /// Plot tool for track hit info
   ActsExamples::TrackSummaryPlotTool m_trackSummaryPlotTool;
-  ActsExamples::TrackSummaryPlotTool::TrackSummaryPlotCache m_trackSummaryPlotCache;
+  ActsExamples::TrackSummaryPlotTool::TrackSummaryPlotCache
+      m_trackSummaryPlotCache;
 };
 
-}  // namespace FW
+} // namespace Telescope

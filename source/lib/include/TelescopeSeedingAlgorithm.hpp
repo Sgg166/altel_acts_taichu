@@ -4,13 +4,13 @@
 #include <memory>
 #include <vector>
 
+#include "Acts/Fitter/KalmanFitter.hpp"
+#include "Acts/Geometry/TrackingGeometry.hpp"
+#include "Acts/Utilities/Units.hpp"
 #include "ActsExamples/EventData/Track.hpp"
 #include "ActsExamples/Framework/BareAlgorithm.hpp"
 #include "ActsExamples/Framework/RandomNumbers.hpp"
 #include "ActsExamples/Plugins/BField/BFieldOptions.hpp"
-#include "Acts/Fitter/KalmanFitter.hpp"
-#include "Acts/Geometry/TrackingGeometry.hpp"
-#include "Acts/Utilities/Units.hpp"
 #include "PixelMultiTrajectory.hpp"
 #include "PixelSourceLink.hpp"
 
@@ -18,7 +18,6 @@ namespace Telescope {
 
 class TelescopeSeeddingAlgorithm final : public ActsExamples::BareAlgorithm {
 public:
-
   struct Config {
     /// Input data.
     std::string inputSourcelinks{"sourcelinks_to_seed"};
@@ -42,10 +41,11 @@ public:
   ///
   /// @param ctx is the algorithm context that holds event-wise information
   /// @return a process code to steer the algporithm flow
-  ActsExamples::ProcessCode execute(const ActsExamples::AlgorithmContext& ctx) const final override;
+  ActsExamples::ProcessCode
+  execute(const ActsExamples::AlgorithmContext &ctx) const final override;
 
- private:
+private:
   Config m_cfg;
 };
 
-}  // namespace FW
+} // namespace Telescope

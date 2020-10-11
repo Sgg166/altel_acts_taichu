@@ -1,23 +1,22 @@
 #pragma once
 
 #include <Acts/Utilities/Logger.hpp>
-#include <memory>
-#include <string>
 #include <map>
+#include <memory>
 #include <mutex>
+#include <string>
 
-#include "ActsExamples/Framework/IReader.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
+#include "ActsExamples/Framework/IReader.hpp"
 
 #include "JsonGenerator.hpp"
 
 #include "PixelSourceLink.hpp"
 
-
-namespace Telescope{
+namespace Telescope {
 
 class TelescopeJsonTrackReader final : public ActsExamples::IReader {
- public:
+public:
   struct Config {
     std::string inputDataFile;
     std::string outputSourcelinks;
@@ -30,7 +29,7 @@ class TelescopeJsonTrackReader final : public ActsExamples::IReader {
   ///
   /// @params cfg is the configuration object
   /// @params lvl is the logging level
-  TelescopeJsonTrackReader(const Config& cfg, Acts::Logging::Level lvl);
+  TelescopeJsonTrackReader(const Config &cfg, Acts::Logging::Level lvl);
 
   std::string name() const final override;
 
@@ -38,14 +37,16 @@ class TelescopeJsonTrackReader final : public ActsExamples::IReader {
   std::pair<size_t, size_t> availableEvents() const final override;
 
   /// Read out data from the input stream.
-  ActsExamples::ProcessCode read(const ActsExamples::AlgorithmContext& ctx) final override;
+  ActsExamples::ProcessCode
+  read(const ActsExamples::AlgorithmContext &ctx) final override;
 
-  static bool createSourcelinksFromJSON(const Telescope::JsonValue& js_evpack,
-                                        const std::map<size_t, std::shared_ptr<const Acts::Surface>>& surfaces,
-                                        const Acts::BoundMatrix& cov_hit,
-                                        std::vector<Telescope::PixelSourceLink>& sourcelinks);
+  static bool createSourcelinksFromJSON(
+      const Telescope::JsonValue &js_evpack,
+      const std::map<size_t, std::shared_ptr<const Acts::Surface>> &surfaces,
+      const Acts::BoundMatrix &cov_hit,
+      std::vector<Telescope::PixelSourceLink> &sourcelinks);
 
- private:
+private:
   Config m_cfg;
   std::pair<size_t, size_t> m_eventsRange;
   std::unique_ptr<const Acts::Logger> m_logger;
@@ -55,7 +56,7 @@ class TelescopeJsonTrackReader final : public ActsExamples::IReader {
   Acts::BoundMatrix m_cov_hit;
   std::mutex m_mtx_read;
 
-  const Acts::Logger& logger() const { return *m_logger; }
+  const Acts::Logger &logger() const { return *m_logger; }
 };
 
-}
+} // namespace Telescope

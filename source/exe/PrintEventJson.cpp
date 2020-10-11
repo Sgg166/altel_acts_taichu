@@ -15,25 +15,22 @@ Usage:
 
 static Telescope::JsonAllocator jsa;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 
   int do_help = false;
   int do_verbose = false;
-  struct option longopts[] =
-    {
-     { "help",       no_argument,       &do_help,      1  },
-     { "verbose",    no_argument,       &do_verbose,   1  },
-     { "file",      required_argument, NULL,           'f' },
-     { "eventNumber",   required_argument, NULL,      'w' },
-     { 0, 0, 0, 0 }};
-
+  struct option longopts[] = {{"help", no_argument, &do_help, 1},
+                              {"verbose", no_argument, &do_verbose, 1},
+                              {"file", required_argument, NULL, 'f'},
+                              {"eventNumber", required_argument, NULL, 'w'},
+                              {0, 0, 0, 0}};
 
   std::string datafile_name;
   size_t eventNumber = 0;
 
   int c;
   opterr = 1;
-  while ((c = getopt_long_only(argc, argv, "", longopts, NULL))!= -1) {
+  while ((c = getopt_long_only(argc, argv, "", longopts, NULL)) != -1) {
     switch (c) {
     case 'h':
       do_help = 1;
@@ -51,15 +48,15 @@ int main(int argc, char* argv[]) {
     case 0: /* getopt_long() set a variable, just keep going */
       break;
     case 1:
-      fprintf(stderr,"case 1\n");
+      fprintf(stderr, "case 1\n");
       exit(1);
       break;
     case ':':
-      fprintf(stderr,"case :\n");
+      fprintf(stderr, "case :\n");
       exit(1);
       break;
     case '?':
-      fprintf(stderr,"case ?\n");
+      fprintf(stderr, "case ?\n");
       exit(1);
       break;
     default:
@@ -69,17 +66,15 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if(datafile_name.empty()){
+  if (datafile_name.empty()) {
     std::fprintf(stderr, "%s\n", help_usage.c_str());
     exit(0);
   }
-
 
   std::fprintf(stdout, "\n");
   std::fprintf(stdout, "datafile:         %s\n", datafile_name.c_str());
   std::fprintf(stdout, "eventNumber:      %lu\n", eventNumber);
   std::fprintf(stdout, "\n");
-
 
   {
 
@@ -88,20 +83,20 @@ int main(int argc, char* argv[]) {
     uint64_t read_datapack_max = 20000;
     Telescope::JsonDocument doc_data(&jsa);
     Telescope::JsonGenerator gen(datafile_name);
-    while(1){
-      if(read_datapack_count > read_datapack_max ){
+    while (1) {
+      if (read_datapack_count > read_datapack_max) {
         break;
       }
 
       doc_data.Populate(gen);
-      if(!gen.isvalid  ){
+      if (!gen.isvalid) {
         break;
       }
 
       const auto &js_evpack = doc_data;
-      if(js_evpack.HasMember("telescope")){
+      if (js_evpack.HasMember("telescope")) {
         const auto &js_telescope = js_evpack["telescope"];
-        for(const auto& l: js_telescope["locations"].GetObject()){
+        for (const auto &l : js_telescope["locations"].GetObject()) {
           std::string name = l.name.GetString();
           double loc = l.value.GetDouble();
           // loc_layer.insert(std::pair<double, std::string>(loc, name));
@@ -112,34 +107,32 @@ int main(int argc, char* argv[]) {
     }
   }
 
-
   {
     std::printf("\n------------------------------------\n");
     uint64_t read_datapack_count = 0;
     uint64_t read_datapack_max = 20000;
     Telescope::JsonDocument doc_data(&jsa);
     Telescope::JsonGenerator gen(datafile_name);
-    while(1){
-      if(read_datapack_count > read_datapack_max ){
+    while (1) {
+      if (read_datapack_count > read_datapack_max) {
         break;
       }
 
       doc_data.Populate(gen);
-      if(!gen.isvalid  ){
+      if (!gen.isvalid) {
         break;
       }
 
       const auto &js_evpack = doc_data;
-      if(js_evpack.HasMember("testbeam")){
+      if (js_evpack.HasMember("testbeam")) {
         const auto &js_testbeam = js_evpack["testbeam"];
         double beamEnergy = js_testbeam["energy"].GetDouble();
-        std::printf("beam energy  %f GeV \n", beamEnergy );
+        std::printf("beam energy  %f GeV \n", beamEnergy);
         break;
       }
     }
   }
 
-
   {
 
     std::printf("\n------------------------------------\n");
@@ -147,28 +140,30 @@ int main(int argc, char* argv[]) {
     uint64_t read_datapack_max = 20000;
     Telescope::JsonDocument doc_data(&jsa);
     Telescope::JsonGenerator gen(datafile_name);
-    while(1){
-      if(read_datapack_count > read_datapack_max ){
+    while (1) {
+      if (read_datapack_count > read_datapack_max) {
         break;
       }
 
       doc_data.Populate(gen);
-      if(!gen.isvalid  ){
+      if (!gen.isvalid) {
         break;
       }
 
       const auto &evpack = doc_data;
-      if(read_datapack_count == eventNumber){
-        std::printf("----------eventNuber: %lu------------ \n", read_datapack_count);
+      if (read_datapack_count == eventNumber) {
+        std::printf("----------eventNuber: %lu------------ \n",
+                    read_datapack_count);
         Telescope::JsonGenerator::PrintJson(doc_data);
 
         size_t ln = 0;
-        for(const auto&layer : evpack["layers"].GetArray()){
+        for (const auto &layer : evpack["layers"].GetArray()) {
           std::printf("-layer %lu \n", ln);
           std::printf("--rawJson");
           Telescope::JsonGenerator::PrintJson(layer);
-          std::printf("--hitSize:  %u,  hits:  ", layer["hit"].GetArray().Size());
-          for(const auto&hit : layer["hit"].GetArray()){
+          std::printf("--hitSize:  %u,  hits:  ",
+                      layer["hit"].GetArray().Size());
+          for (const auto &hit : layer["hit"].GetArray()) {
             double hx = hit["pos"][0].GetDouble();
             double hy = hit["pos"][1].GetDouble();
             std::printf(" [%f, %f] ", hx, hy);
@@ -178,7 +173,7 @@ int main(int argc, char* argv[]) {
         }
         return 0;
       }
-      read_datapack_count ++;
+      read_datapack_count++;
     }
   }
   return 0;

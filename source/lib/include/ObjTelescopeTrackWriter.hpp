@@ -8,14 +8,13 @@
 
 #pragma once
 
-#include <fstream>
-#include "ActsExamples/Framework/WriterT.hpp"
 #include "Acts/EventData/Measurement.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
+#include "ActsExamples/Framework/WriterT.hpp"
 #include "PixelMultiTrajectory.hpp"
+#include <fstream>
 
-namespace Telescope{
-
+namespace Telescope {
 
 /// @class ObjTelescopeTrackWriter
 ///
@@ -27,23 +26,23 @@ namespace Telescope{
 ///
 /// One Thread per write call and hence thread safe
 class ObjTelescopeTrackWriter
-  : public ActsExamples::WriterT<std::vector<PixelMultiTrajectory>> {
- public:
+    : public ActsExamples::WriterT<std::vector<PixelMultiTrajectory>> {
+public:
   struct Config {
-    std::string inputTrajectories;  ///< input (fitted) trajectories collection
-    std::string outputDir;          ///< where to place output files
-    double outputScalor = 1.0;      ///< scale output values
-    size_t outputPrecision = 6;     ///< floating point precision
+    std::string inputTrajectories; ///< input (fitted) trajectories collection
+    std::string outputDir;         ///< where to place output files
+    double outputScalor = 1.0;     ///< scale output values
+    size_t outputPrecision = 6;    ///< floating point precision
     size_t maxNumTracks =
-        std::numeric_limits<size_t>::max();  ///< maximum number of tracks to
-                                             ///< write
+        std::numeric_limits<size_t>::max(); ///< maximum number of tracks to
+                                            ///< write
   };
 
   /// Constructor with arguments
   ///
   /// @param cfg configuration struct
   /// @param level Output logging level
-  ObjTelescopeTrackWriter(const Config& cfg,
+  ObjTelescopeTrackWriter(const Config &cfg,
                           Acts::Logging::Level level = Acts::Logging::INFO);
 
   /// Virtual destructor
@@ -52,14 +51,14 @@ class ObjTelescopeTrackWriter
   /// End-of-run hook
   ActsExamples::ProcessCode endRun() final override;
 
- private:
-  Config m_cfg;  ///!< Internal configuration represenation
+private:
+  Config m_cfg; ///!< Internal configuration represenation
 
- protected:
+protected:
   /// This implementation holds the actual writing method
   /// and is called by the WriterT<>::write interface
   ActsExamples::ProcessCode writeT(
-                         const ActsExamples::AlgorithmContext& context,
-                         const std::vector<PixelMultiTrajectory>& trackCollection) final override;
+      const ActsExamples::AlgorithmContext &context,
+      const std::vector<PixelMultiTrajectory> &trackCollection) final override;
 };
-}
+} // namespace Telescope

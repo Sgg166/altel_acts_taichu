@@ -13,12 +13,12 @@
 #include <ios>
 #include <stdexcept>
 
-#include "ActsExamples/Utilities/Paths.hpp"
 #include "Acts/EventData/Measurement.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/MultiTrajectoryHelpers.hpp"
 #include "Acts/EventData/TrackParameters.hpp"
 #include "Acts/Utilities/Helpers.hpp"
+#include "ActsExamples/Utilities/Paths.hpp"
 
 using Acts::VectorHelpers::eta;
 using Acts::VectorHelpers::perp;
@@ -26,15 +26,14 @@ using Acts::VectorHelpers::phi;
 using Acts::VectorHelpers::theta;
 
 using Measurement =
-    Acts::Measurement<Telescope::PixelSourceLink, Acts::BoundIndices, Acts::eBoundLoc0,
-                      Acts::eBoundLoc1>;
+    Acts::Measurement<Telescope::PixelSourceLink, Acts::BoundIndices,
+                      Acts::eBoundLoc0, Acts::eBoundLoc1>;
 
 Telescope::RootTelescopeTrackWriter::RootTelescopeTrackWriter(
-    const Telescope::RootTelescopeTrackWriter::Config& cfg,
+    const Telescope::RootTelescopeTrackWriter::Config &cfg,
     Acts::Logging::Level lvl)
     : WriterT(cfg.inputTrajectories, "RootTelescopeTrackWriter", lvl),
-      m_cfg(cfg),
-      m_outputFile(cfg.rootFile) {
+      m_cfg(cfg), m_outputFile(cfg.rootFile) {
   // An input collection name and tree name must be specified
   if (m_cfg.inputTrajectories.empty()) {
     throw std::invalid_argument("Missing input trajectory collection");
@@ -190,18 +189,19 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::endRun() {
     m_outputTree->Write();
     ACTS_INFO("Write trajectories to tree '"
               << m_cfg.outputTreename << "' in '"
-              << ActsExamples::joinPaths(m_cfg.outputDir, m_cfg.outputFilename) << "'");
+              << ActsExamples::joinPaths(m_cfg.outputDir, m_cfg.outputFilename)
+              << "'");
   }
   return ActsExamples::ProcessCode::SUCCESS;
 }
 
 ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
-    const ActsExamples::AlgorithmContext& ctx,
-    const std::vector<PixelMultiTrajectory>& trajectories) {
+    const ActsExamples::AlgorithmContext &ctx,
+    const std::vector<PixelMultiTrajectory> &trajectories) {
   if (m_outputFile == nullptr)
     return ActsExamples::ProcessCode::SUCCESS;
 
-  auto& gctx = ctx.geoContext;
+  auto &gctx = ctx.geoContext;
 
   // Exclusive access to the tree while writing
   std::lock_guard<std::mutex> lock(m_writeMutex);
@@ -211,15 +211,15 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
 
   // Loop over the trajectories
   int iTraj = 0;
-  for (const auto& traj : trajectories) {
+  for (const auto &traj : trajectories) {
     // The trajectory entry indices and the multiTrajectory
-    const auto& [trackTips, mj] = traj.trajectory();
+    const auto &[trackTips, mj] = traj.trajectory();
     if (trackTips.empty()) {
       ACTS_WARNING("Empty multiTrajectory.");
       continue;
     }
 
-    for (const auto& trackTip : trackTips) {
+    for (const auto &trackTip : trackTips) {
       m_trajNr = iTraj;
       // Collect the trajectory summary info
       auto trajState =
@@ -231,21 +231,18 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
       m_hasFittedParams = false;
       if (traj.hasTrackParameters(trackTip)) {
         m_hasFittedParams = true;
-        const auto& boundParam = traj.trackParameters(trackTip);
-        const auto& parameter = boundParam.parameters();
-        const auto& covariance = *boundParam.covariance();
+        const auto &boundParam = traj.trackParameters(trackTip);
+        const auto &parameter = boundParam.parameters();
+        const auto &covariance = *boundParam.covariance();
         m_eLOC0_fit = parameter[Acts::eBoundLoc0];
         m_eLOC1_fit = parameter[Acts::eBoundLoc1];
         m_ePHI_fit = parameter[Acts::eBoundPhi];
         m_eTHETA_fit = parameter[Acts::eBoundTheta];
         m_eQOP_fit = parameter[Acts::eBoundQOverP];
         m_eT_fit = parameter[Acts::eBoundTime];
-        m_err_eLOC0_fit =
-            sqrt(covariance(Acts::eBoundLoc0, Acts::eBoundLoc0));
-        m_err_eLOC1_fit =
-            sqrt(covariance(Acts::eBoundLoc1, Acts::eBoundLoc1));
-        m_err_ePHI_fit =
-            sqrt(covariance(Acts::eBoundPhi, Acts::eBoundPhi));
+        m_err_eLOC0_fit = sqrt(covariance(Acts::eBoundLoc0, Acts::eBoundLoc0));
+        m_err_eLOC1_fit = sqrt(covariance(Acts::eBoundLoc1, Acts::eBoundLoc1));
+        m_err_ePHI_fit = sqrt(covariance(Acts::eBoundPhi, Acts::eBoundPhi));
         m_err_eTHETA_fit =
             sqrt(covariance(Acts::eBoundTheta, Acts::eBoundTheta));
         m_err_eQOP_fit =
@@ -257,15 +254,15 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
       m_nPredicted = 0;
       m_nFiltered = 0;
       m_nSmoothed = 0;
-      mj.visitBackwards(trackTip, [&](const auto& state) {
+      mj.visitBackwards(trackTip, [&](const auto &state) {
         // we only fill the track states with non-outlier measurement
         auto typeFlags = state.typeFlags();
         if (not typeFlags.test(Acts::TrackStateFlag::MeasurementFlag)) {
           return true;
         }
 
-	auto meas = std::get<Measurement>(*state.uncalibrated());
-        auto& surface = meas.referenceObject();
+        auto meas = std::get<Measurement>(*state.uncalibrated());
+        auto &surface = meas.referenceObject();
 
         // get the geometry ID
         auto geoID = surface.geometryId();
@@ -278,7 +275,8 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
                              meas.parameters()[Acts::eBoundLoc1]);
         // get global position
         Acts::Vector3D mom(1, 1, 1);
-        Acts::Vector3D global = surface.localToGlobal(ctx.geoContext, local, mom);
+        Acts::Vector3D global =
+            surface.localToGlobal(ctx.geoContext, local, mom);
 
         // get measurement covariance
         auto cov = meas.covariance();
@@ -340,10 +338,8 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
               sqrt(covariance(Acts::eBoundTime, Acts::eBoundTime)));
 
           // predicted residual
-          m_res_eLOC0_prt.push_back(
-              local.x() - parameters[Acts::eBoundLoc0]);
-          m_res_eLOC1_prt.push_back(
-              local.y() - parameters[Acts::eBoundLoc1]);
+          m_res_eLOC0_prt.push_back(local.x() - parameters[Acts::eBoundLoc0]);
+          m_res_eLOC1_prt.push_back(local.y() - parameters[Acts::eBoundLoc1]);
 
           // predicted parameter pull
           m_pull_eLOC0_prt.push_back(
@@ -354,21 +350,21 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
               sqrt(covariance(Acts::eBoundLoc1, Acts::eBoundLoc1)));
 
           // further predicted parameter info
-            Acts::FreeVector freeParams =
-            Acts::detail::transformBoundToFreeParameters(surface, gctx,
-                                                         parameters);
-        m_x_prt.push_back(freeParams[Acts::eFreePos0]);
-        m_y_prt.push_back(freeParams[Acts::eFreePos1]);
-        m_z_prt.push_back(freeParams[Acts::eFreePos2]);
-        auto p = std::abs(1 / freeParams[Acts::eFreeQOverP]);
-        m_px_prt.push_back(p * freeParams[Acts::eFreeDir0]);
-        m_py_prt.push_back(p * freeParams[Acts::eFreeDir1]);
-        m_pz_prt.push_back(p * freeParams[Acts::eFreeDir2]);
-        m_pT_prt.push_back(p * std::hypot(freeParams[Acts::eFreeDir0],
-                                          freeParams[Acts::eFreeDir1]));
-        m_eta_prt.push_back(
-            Acts::VectorHelpers::eta(freeParams.segment<3>(Acts::eFreeDir0)));
-	} else {
+          Acts::FreeVector freeParams =
+              Acts::detail::transformBoundToFreeParameters(surface, gctx,
+                                                           parameters);
+          m_x_prt.push_back(freeParams[Acts::eFreePos0]);
+          m_y_prt.push_back(freeParams[Acts::eFreePos1]);
+          m_z_prt.push_back(freeParams[Acts::eFreePos2]);
+          auto p = std::abs(1 / freeParams[Acts::eFreeQOverP]);
+          m_px_prt.push_back(p * freeParams[Acts::eFreeDir0]);
+          m_py_prt.push_back(p * freeParams[Acts::eFreeDir1]);
+          m_pz_prt.push_back(p * freeParams[Acts::eFreeDir2]);
+          m_pT_prt.push_back(p * std::hypot(freeParams[Acts::eFreeDir0],
+                                            freeParams[Acts::eFreeDir1]));
+          m_eta_prt.push_back(
+              Acts::VectorHelpers::eta(freeParams.segment<3>(Acts::eFreeDir0)));
+        } else {
           // push default values if no predicted parameter
           m_res_x_hit.push_back(-99.);
           m_res_y_hit.push_back(-99.);
@@ -408,8 +404,8 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
         if (state.hasFiltered()) {
           filtered = true;
           m_nFiltered++;
-          auto parameters = state.filtered(); 
-	  auto covariance = state.filteredCovariance();
+          auto parameters = state.filtered();
+          auto covariance = state.filteredCovariance();
           // filtered parameter
           m_eLOC0_flt.push_back(parameters[Acts::eBoundLoc0]);
           m_eLOC1_flt.push_back(parameters[Acts::eBoundLoc1]);
@@ -433,10 +429,8 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
               sqrt(covariance(Acts::eBoundTime, Acts::eBoundTime)));
 
           // filtered residual
-          m_res_eLOC0_flt.push_back(
-              local.x() - parameters[Acts::eBoundLoc0]);
-          m_res_eLOC1_flt.push_back(
-              local.y() - parameters[Acts::eBoundLoc1]);
+          m_res_eLOC0_flt.push_back(local.x() - parameters[Acts::eBoundLoc0]);
+          m_res_eLOC1_flt.push_back(local.y() - parameters[Acts::eBoundLoc1]);
 
           // filtered parameter pull
           m_pull_eLOC0_flt.push_back(
@@ -448,21 +442,21 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
 
           // more filtered parameter info
           const Acts::FreeVector freeParams =
-          Acts::detail::transformBoundToFreeParameters(surface, gctx,
-                                                         parameters);
-        m_x_flt.push_back(freeParams[Acts::eFreePos0]);
-        m_y_flt.push_back(freeParams[Acts::eFreePos1]);
-        m_z_flt.push_back(freeParams[Acts::eFreePos2]);
-        const auto p = std::abs(1 / freeParams[Acts::eFreeQOverP]);
-        m_px_flt.push_back(p * freeParams[Acts::eFreeDir0]);
-        m_py_flt.push_back(p * freeParams[Acts::eFreeDir1]);
-        m_pz_flt.push_back(p * freeParams[Acts::eFreeDir2]);
-        m_pT_flt.push_back(p * std::hypot(freeParams[Acts::eFreeDir0],
-                                          freeParams[Acts::eFreeDir1]));
-        m_eta_flt.push_back(
-            Acts::VectorHelpers::eta(freeParams.segment<3>(Acts::eFreeDir0)));
+              Acts::detail::transformBoundToFreeParameters(surface, gctx,
+                                                           parameters);
+          m_x_flt.push_back(freeParams[Acts::eFreePos0]);
+          m_y_flt.push_back(freeParams[Acts::eFreePos1]);
+          m_z_flt.push_back(freeParams[Acts::eFreePos2]);
+          const auto p = std::abs(1 / freeParams[Acts::eFreeQOverP]);
+          m_px_flt.push_back(p * freeParams[Acts::eFreeDir0]);
+          m_py_flt.push_back(p * freeParams[Acts::eFreeDir1]);
+          m_pz_flt.push_back(p * freeParams[Acts::eFreeDir2]);
+          m_pT_flt.push_back(p * std::hypot(freeParams[Acts::eFreeDir0],
+                                            freeParams[Acts::eFreeDir1]));
+          m_eta_flt.push_back(
+              Acts::VectorHelpers::eta(freeParams.segment<3>(Acts::eFreeDir0)));
 
-	  m_chi2.push_back(state.chi2());
+          m_chi2.push_back(state.chi2());
         } else {
           // push default values if no filtered parameter
           m_eLOC0_flt.push_back(-99.);
@@ -496,8 +490,8 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
         if (state.hasSmoothed()) {
           smoothed = true;
           m_nSmoothed++;
-          auto parameters = state.smoothed(); 
-	  auto covariance = state.smoothedCovariance();
+          auto parameters = state.smoothed();
+          auto covariance = state.smoothedCovariance();
 
           // smoothed parameter
           m_eLOC0_smt.push_back(parameters[Acts::eBoundLoc0]);
@@ -522,10 +516,8 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
               sqrt(covariance(Acts::eBoundTime, Acts::eBoundTime)));
 
           // smoothed residual
-          m_res_eLOC0_smt.push_back(
-              local.x() - parameters[Acts::eBoundLoc0]);
-          m_res_eLOC1_smt.push_back(
-              local.y() - parameters[Acts::eBoundLoc1]);
+          m_res_eLOC0_smt.push_back(local.x() - parameters[Acts::eBoundLoc0]);
+          m_res_eLOC1_smt.push_back(local.y() - parameters[Acts::eBoundLoc1]);
 
           // smoothed parameter pull
           m_pull_eLOC0_smt.push_back(
@@ -536,21 +528,21 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
               sqrt(covariance(Acts::eBoundLoc1, Acts::eBoundLoc1)));
 
           // further smoothed parameter info
-           const Acts::FreeVector freeParams =
-            Acts::detail::transformBoundToFreeParameters(surface, gctx,
-                                                         parameters);
-        m_x_smt.push_back(freeParams[Acts::eFreePos0]);
-        m_y_smt.push_back(freeParams[Acts::eFreePos1]);
-        m_z_smt.push_back(freeParams[Acts::eFreePos2]);
-        const auto p = std::abs(1 / freeParams[Acts::eFreeQOverP]);
-        m_px_smt.push_back(p * freeParams[Acts::eFreeDir0]);
-        m_py_smt.push_back(p * freeParams[Acts::eFreeDir1]);
-        m_pz_smt.push_back(p * freeParams[Acts::eFreeDir2]);
-        m_pT_smt.push_back(p * std::hypot(freeParams[Acts::eFreeDir0],
-                                          freeParams[Acts::eFreeDir1]));
-        m_eta_smt.push_back(
-            Acts::VectorHelpers::eta(freeParams.segment<3>(Acts::eFreeDir0)));
-	} else {
+          const Acts::FreeVector freeParams =
+              Acts::detail::transformBoundToFreeParameters(surface, gctx,
+                                                           parameters);
+          m_x_smt.push_back(freeParams[Acts::eFreePos0]);
+          m_y_smt.push_back(freeParams[Acts::eFreePos1]);
+          m_z_smt.push_back(freeParams[Acts::eFreePos2]);
+          const auto p = std::abs(1 / freeParams[Acts::eFreeQOverP]);
+          m_px_smt.push_back(p * freeParams[Acts::eFreeDir0]);
+          m_py_smt.push_back(p * freeParams[Acts::eFreeDir1]);
+          m_pz_smt.push_back(p * freeParams[Acts::eFreeDir2]);
+          m_pT_smt.push_back(p * std::hypot(freeParams[Acts::eFreeDir0],
+                                            freeParams[Acts::eFreeDir1]));
+          m_eta_smt.push_back(
+              Acts::VectorHelpers::eta(freeParams.segment<3>(Acts::eFreeDir0)));
+        } else {
           // push default values if no smoothed parameter
           m_eLOC0_smt.push_back(-99.);
           m_eLOC1_smt.push_back(-99.);
@@ -582,7 +574,7 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
         m_flt.push_back(filtered);
         m_smt.push_back(smoothed);
         return true;
-      });  // all states
+      }); // all states
 
       // fill the variables for one track to tree
       m_outputTree->Fill();
@@ -683,8 +675,8 @@ ActsExamples::ProcessCode Telescope::RootTelescopeTrackWriter::writeT(
       m_eta_smt.clear();
       m_pT_smt.clear();
       iTraj++;
-    }  // all sub-trajectory in multiTrajectory
-  }    // all multi-trajectories
+    } // all sub-trajectory in multiTrajectory
+  }   // all multi-trajectories
 
   return ActsExamples::ProcessCode::SUCCESS;
 }

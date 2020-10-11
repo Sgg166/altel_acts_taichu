@@ -11,13 +11,12 @@
 #include <unordered_map>
 #include <utility>
 
-#include "ActsExamples/Validation/ProtoTrackClassification.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/TrackParameters.hpp"
+#include "ActsExamples/Validation/ProtoTrackClassification.hpp"
 #include "PixelSourceLink.hpp"
 
-
-namespace Telescope{
+namespace Telescope {
 using IndexedParams = std::unordered_map<size_t, Acts::BoundTrackParameters>;
 
 /// @brief Struct for truth track fitting/finding result with
@@ -31,7 +30,7 @@ using IndexedParams = std::unordered_map<size_t, Acts::BoundTrackParameters>;
 ///
 /// @note The MultiTrajectory is thought to be empty if there is no entry index
 struct PixelMultiTrajectory {
- public:
+public:
   /// @brief Default constructor
   ///
   PixelMultiTrajectory() = default;
@@ -42,25 +41,23 @@ struct PixelMultiTrajectory {
   /// @param tTips The entry indices for trajectories in multiTrajectory
   /// @param parameters The fitted track parameters indexed by trajectory entry
   /// index
-  PixelMultiTrajectory(const Acts::MultiTrajectory<PixelSourceLink>& multiTraj,
-                       const std::vector<size_t>& tTips,
-                       const IndexedParams& parameters)
-      : m_multiTrajectory(multiTraj),
-        m_trackTips(tTips),
+  PixelMultiTrajectory(const Acts::MultiTrajectory<PixelSourceLink> &multiTraj,
+                       const std::vector<size_t> &tTips,
+                       const IndexedParams &parameters)
+      : m_multiTrajectory(multiTraj), m_trackTips(tTips),
         m_trackParameters(parameters) {}
 
   /// @brief Copy constructor
   ///
   /// @param rhs The source PixelMultiTrajectory
-  PixelMultiTrajectory(const PixelMultiTrajectory& rhs)
-      : m_multiTrajectory(rhs.m_multiTrajectory),
-        m_trackTips(rhs.m_trackTips),
+  PixelMultiTrajectory(const PixelMultiTrajectory &rhs)
+      : m_multiTrajectory(rhs.m_multiTrajectory), m_trackTips(rhs.m_trackTips),
         m_trackParameters(rhs.m_trackParameters) {}
 
   /// @brief Copy move constructor
   ///
   /// @param rhs The source PixelMultiTrajectory
-  PixelMultiTrajectory(PixelMultiTrajectory&& rhs)
+  PixelMultiTrajectory(PixelMultiTrajectory &&rhs)
       : m_multiTrajectory(std::move(rhs.m_multiTrajectory)),
         m_trackTips(std::move(rhs.m_trackTips)),
         m_trackParameters(std::move(rhs.m_trackParameters)) {}
@@ -72,7 +69,7 @@ struct PixelMultiTrajectory {
   /// @brief assignment operator
   ///
   /// @param rhs The source PixelMultiTrajectory
-  PixelMultiTrajectory& operator=(const PixelMultiTrajectory& rhs) {
+  PixelMultiTrajectory &operator=(const PixelMultiTrajectory &rhs) {
     m_multiTrajectory = rhs.m_multiTrajectory;
     m_trackTips = rhs.m_trackTips;
     m_trackParameters = rhs.m_trackParameters;
@@ -82,7 +79,7 @@ struct PixelMultiTrajectory {
   /// @brief assignment move operator
   ///
   /// @param rhs The source PixelMultiTrajectory
-  PixelMultiTrajectory& operator=(PixelMultiTrajectory&& rhs) {
+  PixelMultiTrajectory &operator=(PixelMultiTrajectory &&rhs) {
     m_multiTrajectory = std::move(rhs.m_multiTrajectory);
     m_trackTips = std::move(rhs.m_trackTips);
     m_trackParameters = std::move(rhs.m_trackParameters);
@@ -94,7 +91,7 @@ struct PixelMultiTrajectory {
   /// @param entryIndex The trajectory entry index
   ///
   /// @return Whether there is trajectory with provided entry index
-  bool hasTrajectory(const size_t& entryIndex) const {
+  bool hasTrajectory(const size_t &entryIndex) const {
     return std::count(m_trackTips.begin(), m_trackTips.end(), entryIndex) > 0;
   }
 
@@ -103,7 +100,7 @@ struct PixelMultiTrajectory {
   /// @param entryIndex The trajectory entry index
   ///
   /// @return Whether having fitted track parameters or not
-  bool hasTrackParameters(const size_t& entryIndex) const {
+  bool hasTrackParameters(const size_t &entryIndex) const {
     return m_trackParameters.count(entryIndex) > 0;
   }
 
@@ -122,7 +119,8 @@ struct PixelMultiTrajectory {
   /// @param entryIndex The trajectory entry index
   ///
   /// @return The fitted track parameters of the trajectory
-  const Acts::BoundTrackParameters& trackParameters(const size_t& entryIndex) const {
+  const Acts::BoundTrackParameters &
+  trackParameters(const size_t &entryIndex) const {
     auto it = m_trackParameters.find(entryIndex);
     if (it != m_trackParameters.end()) {
       return it->second;
@@ -133,7 +131,7 @@ struct PixelMultiTrajectory {
     }
   }
 
- private:
+private:
   // The multiTrajectory
   Acts::MultiTrajectory<PixelSourceLink> m_multiTrajectory;
 
@@ -144,4 +142,4 @@ struct PixelMultiTrajectory {
   IndexedParams m_trackParameters = {};
 };
 
-}
+} // namespace Telescope

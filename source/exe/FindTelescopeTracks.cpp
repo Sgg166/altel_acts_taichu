@@ -6,7 +6,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "Acts/MagneticField/ConstantBField.hpp"
 #include "Acts/Geometry/CuboidVolumeBounds.hpp"
 #include "Acts/Geometry/LayerArrayCreator.hpp"
 #include "Acts/Geometry/LayerCreator.hpp"
@@ -17,6 +16,7 @@
 #include "Acts/Geometry/TrackingGeometryBuilder.hpp"
 #include "Acts/Geometry/TrackingVolume.hpp"
 #include "Acts/Geometry/TrackingVolumeArrayCreator.hpp"
+#include "Acts/MagneticField/ConstantBField.hpp"
 #include "Acts/Material/HomogeneousSurfaceMaterial.hpp"
 #include "Acts/Material/Material.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
@@ -29,28 +29,29 @@
 #include "Acts/Utilities/Logger.hpp"
 #include "Acts/Utilities/Units.hpp"
 
+#include "ActsExamples/Framework/IWriter.hpp"
 #include "ActsExamples/Framework/Sequencer.hpp"
 #include "ActsExamples/Framework/WhiteBoard.hpp"
-#include "ActsExamples/Framework/IWriter.hpp"
 #include "ActsExamples/Plugins/Obj/ObjTrackingGeometryWriter.hpp"
 
-#include "TelescopeDetectorElement.hpp"
-#include "TelescopeTrack.hpp"
-#include "TelescopeTrackingPerformanceWriter.hpp"
-#include "TelescopeTrackFindingAlgorithm.hpp"
+#include "JsonGenerator.hpp"
 #include "ObjTelescopeTrackWriter.hpp"
 #include "RootTelescopeTrackWriter.hpp"
+#include "TelescopeDetectorElement.hpp"
 #include "TelescopeJsonTrackReader.hpp"
 #include "TelescopeJsonTrackWriter.hpp"
-#include "JsonGenerator.hpp"
+#include "TelescopeTrack.hpp"
+#include "TelescopeTrackFindingAlgorithm.hpp"
+#include "TelescopeTrackingPerformanceWriter.hpp"
 
-
+#include "getopt.h"
 #include <filesystem>
 #include <memory>
-#include "getopt.h"
 
-using JsonValue = rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
-using JsonDocument = rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
+using JsonValue =
+    rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
+using JsonDocument =
+    rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
 
 using namespace Acts::UnitLiterals;
 
@@ -73,30 +74,27 @@ Usage:
   -seedResTheta   [float]      preset seed track resolution Theta
 )";
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   rapidjson::CrtAllocator jsa;
 
   int do_help = false;
   int do_verbose = false;
-  struct option longopts[] =
-    {
-     { "help",           no_argument,       &do_help,      1  },
-     { "verbose",        no_argument,       &do_verbose,   1  },
-     { "thread",         required_argument, NULL,           'd' },
-     { "eventMax",       required_argument, NULL,           'm' },
-     { "data",           required_argument, NULL,           'f' },
-     { "fittedFile",     required_argument, NULL,           'b' },
-     { "outputdir",      required_argument, NULL,      'o' },
-     { "geomerty",       required_argument, NULL,      'g' },
-     { "energy",       required_argument, NULL,        'e' },
-     { "resX",           required_argument, NULL,          'r' },
-     { "resY",           required_argument, NULL,          's' },
-     { "seedResX",       required_argument, NULL,        'j' },
-     { "seedResY",       required_argument, NULL,      'k' },
-     { "seedResPhi",     required_argument, NULL,        't' },
-     { "seedResTheta",   required_argument, NULL,      'w' },
-     { 0, 0, 0, 0 }};
-
+  struct option longopts[] = {{"help", no_argument, &do_help, 1},
+                              {"verbose", no_argument, &do_verbose, 1},
+                              {"thread", required_argument, NULL, 'd'},
+                              {"eventMax", required_argument, NULL, 'm'},
+                              {"data", required_argument, NULL, 'f'},
+                              {"fittedFile", required_argument, NULL, 'b'},
+                              {"outputdir", required_argument, NULL, 'o'},
+                              {"geomerty", required_argument, NULL, 'g'},
+                              {"energy", required_argument, NULL, 'e'},
+                              {"resX", required_argument, NULL, 'r'},
+                              {"resY", required_argument, NULL, 's'},
+                              {"seedResX", required_argument, NULL, 'j'},
+                              {"seedResY", required_argument, NULL, 'k'},
+                              {"seedResPhi", required_argument, NULL, 't'},
+                              {"seedResTheta", required_argument, NULL, 'w'},
+                              {0, 0, 0, 0}};
 
   size_t threadNum = 1;
   size_t eventMaxNum = -1;
@@ -111,12 +109,12 @@ int main(int argc, char* argv[]) {
 
   double seedResX = 15_mm;
   double seedResY = 15_mm;
-  double seedResPhi  = 0.7_rad;
+  double seedResPhi = 0.7_rad;
   double seedResTheta = 0.7_rad;
 
   int c;
   opterr = 1;
-  while ((c = getopt_long_only(argc, argv, "", longopts, NULL))!= -1) {
+  while ((c = getopt_long_only(argc, argv, "", longopts, NULL)) != -1) {
     switch (c) {
     case 'h':
       do_help = 1;
@@ -167,15 +165,15 @@ int main(int argc, char* argv[]) {
     case 0: /* getopt_long() set a variable, just keep going */
       break;
     case 1:
-      fprintf(stderr,"case 1\n");
+      fprintf(stderr, "case 1\n");
       exit(1);
       break;
     case ':':
-      fprintf(stderr,"case :\n");
+      fprintf(stderr, "case :\n");
       exit(1);
       break;
     case '?':
-      fprintf(stderr,"case ?\n");
+      fprintf(stderr, "case ?\n");
       exit(1);
       break;
     default:
@@ -184,7 +182,6 @@ int main(int argc, char* argv[]) {
       break;
     }
   }
-
 
   std::fprintf(stdout, "\n");
   std::fprintf(stdout, "datafile:         %s\n", datafile_name.c_str());
@@ -199,39 +196,44 @@ int main(int argc, char* argv[]) {
   std::fprintf(stdout, "seedResTheta:     %f\n", seedResTheta);
   std::fprintf(stdout, "\n");
 
-
-  if(datafile_name.empty() || fitted_datafile_name.empty() || outputDir.empty() || geofile_name.empty() ){
+  if (datafile_name.empty() || fitted_datafile_name.empty() ||
+      outputDir.empty() || geofile_name.empty()) {
     std::fprintf(stderr, "%s\n", help_usage.c_str());
     exit(0);
   }
 
   std::filesystem::path path_dir_output = std::filesystem::absolute(outputDir);
-  std::filesystem::file_status st_dir_output = std::filesystem::status(path_dir_output);
-  if(!std::filesystem::exists(st_dir_output)){
-    std::fprintf(stderr, "Output folder does not exist: %s\n", path_dir_output.c_str());
-    std::filesystem::file_status st_parent = std::filesystem::status(path_dir_output.parent_path());
-    if(std::filesystem::exists(st_parent) && std::filesystem::is_directory(st_parent)){
-      if(std::filesystem::create_directory(path_dir_output)){
+  std::filesystem::file_status st_dir_output =
+      std::filesystem::status(path_dir_output);
+  if (!std::filesystem::exists(st_dir_output)) {
+    std::fprintf(stderr, "Output folder does not exist: %s\n",
+                 path_dir_output.c_str());
+    std::filesystem::file_status st_parent =
+        std::filesystem::status(path_dir_output.parent_path());
+    if (std::filesystem::exists(st_parent) &&
+        std::filesystem::is_directory(st_parent)) {
+      if (std::filesystem::create_directory(path_dir_output)) {
         std::printf("Create output folder: %s\n", path_dir_output.c_str());
-      }
-      else{
+      } else {
         throw;
       }
-    }
-    else{
+    } else {
       throw;
     }
   }
 
   std::map<size_t, std::array<double, 6>> geoconf;
   geoconf = Telescope::JsonGenerator::ReadGeoFromGeoFile(geofile_name);
-  for(const auto& [id, lgeo] : geoconf){
-    std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  rotationX: %f   rotationY: %f   rotationZ: %f\n",
+  for (const auto &[id, lgeo] : geoconf) {
+    std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  "
+                "rotationX: %f   rotationY: %f   rotationZ: %f\n",
                 id, lgeo[0], lgeo[1], lgeo[2], lgeo[3], lgeo[4], lgeo[5]);
   }
 
-  if(beamEnergy<0){
-    beamEnergy = Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) * Acts::UnitConstants::GeV;
+  if (beamEnergy < 0) {
+    beamEnergy =
+        Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) *
+        Acts::UnitConstants::GeV;
   }
 
   std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);
@@ -243,15 +245,17 @@ int main(int argc, char* argv[]) {
   std::vector<std::shared_ptr<Telescope::TelescopeDetectorElement>> element_col;
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
 
-  Telescope::BuildGeometry(gctx, trackingGeometry, element_col, geoconf, 40_mm, 20_mm, 80_um);
+  Telescope::BuildGeometry(gctx, trackingGeometry, element_col, geoconf, 40_mm,
+                           20_mm, 80_um);
   std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces_selected;
-  for(const auto& e: element_col){
+  for (const auto &e : element_col) {
     auto id = e->telDetectorID();
-    surfaces_selected[id] =  e->surface().getSharedPtr();
+    surfaces_selected[id] = e->surface().getSharedPtr();
   }
 
   /////////////////////////////////////
-  Acts::Logging::Level logLevel = do_verbose? (Acts::Logging::VERBOSE):(Acts::Logging::INFO);
+  Acts::Logging::Level logLevel =
+      do_verbose ? (Acts::Logging::VERBOSE) : (Acts::Logging::INFO);
 
   // logLevel = Acts::Logging::WARNING;
 
@@ -263,19 +267,22 @@ int main(int argc, char* argv[]) {
   conf_reader.surfaces = surfaces_selected;
 
   Telescope::TelescopeTrackFindingAlgorithm::Config conf_trackfinding;
-  conf_trackfinding.inputSourcelinks="sourcelinks";
-  conf_trackfinding.outputTrajectories="trajectories";
-  conf_trackfinding.findTracks=Telescope::TelescopeTrackFindingAlgorithm::makeTrackFinderFunction
-    (trackingGeometry, magneticField);
-  conf_trackfinding.sourcelinkSelectorCfg = Acts::CKFSourceLinkSelector::Config{{Acts::GeometryIdentifier(),{500, 1}}};
-  conf_trackfinding.seedSurfaceGeoIDStart = surfaces_selected[0]->geometryId().value();
-  conf_trackfinding.seedSurfaceGeoIDEnd = surfaces_selected[1]->geometryId().value();
+  conf_trackfinding.inputSourcelinks = "sourcelinks";
+  conf_trackfinding.outputTrajectories = "trajectories";
+  conf_trackfinding.findTracks =
+      Telescope::TelescopeTrackFindingAlgorithm::makeTrackFinderFunction(
+          trackingGeometry, magneticField);
+  conf_trackfinding.sourcelinkSelectorCfg = Acts::CKFSourceLinkSelector::Config{
+      {Acts::GeometryIdentifier(), {500, 1}}};
+  conf_trackfinding.seedSurfaceGeoIDStart =
+      surfaces_selected[0]->geometryId().value();
+  conf_trackfinding.seedSurfaceGeoIDEnd =
+      surfaces_selected[1]->geometryId().value();
   conf_trackfinding.seedResX = seedResX;
   conf_trackfinding.seedResY = seedResY;
   conf_trackfinding.seedResPhi = seedResPhi;
   conf_trackfinding.seedResTheta = seedResTheta;
   conf_trackfinding.seedEnergy = beamEnergy;
-
 
   // write the tracks (measurements only for the moment) as Obj
   Telescope::ObjTelescopeTrackWriter::Config conf_trackObjWriter;
@@ -287,15 +294,16 @@ int main(int argc, char* argv[]) {
 
   ////////////////seq////////////////////////
   ActsExamples::Sequencer::Config conf_seq;
-  conf_seq.logLevel  = logLevel;
+  conf_seq.logLevel = logLevel;
   conf_seq.outputDir = path_dir_output.c_str();
   conf_seq.numThreads = threadNum;
   conf_seq.events = eventMaxNum;
   ActsExamples::Sequencer seq(conf_seq);
 
-  seq.addReader(std::make_shared<Telescope::TelescopeJsonTrackReader>(conf_reader, logLevel));
-  seq.addAlgorithm(std::make_shared<Telescope::TelescopeTrackFindingAlgorithm>(conf_trackfinding, logLevel) );
-
+  seq.addReader(std::make_shared<Telescope::TelescopeJsonTrackReader>(
+      conf_reader, logLevel));
+  seq.addAlgorithm(std::make_shared<Telescope::TelescopeTrackFindingAlgorithm>(
+      conf_trackfinding, logLevel));
 
   // write tracks as root tree
   // @Todo: adapt the writer to write trajectories produced by CKF
@@ -304,15 +312,16 @@ int main(int argc, char* argv[]) {
   conf_trackRootWriter.outputDir = path_dir_output.c_str();
   conf_trackRootWriter.outputFilename = "telescope_tracks.root";
   conf_trackRootWriter.outputTreename = "tracks";
-  seq.addWriter(std::make_shared<Telescope::RootTelescopeTrackWriter>(conf_trackRootWriter,  logLevel));
-
+  seq.addWriter(std::make_shared<Telescope::RootTelescopeTrackWriter>(
+      conf_trackRootWriter, logLevel));
 
   Telescope::TelescopeJsonTrackWriter::Config conf_trackJsonWriter;
   conf_trackJsonWriter.inputTrajectories = "trajectories";
   conf_trackJsonWriter.outputDir = path_dir_output.c_str();
   conf_trackJsonWriter.outputFileName = fitted_datafile_name;
   conf_trackJsonWriter.trackSurfaces = surfaces_selected;
-  seq.addWriter(std::make_shared<Telescope::TelescopeJsonTrackWriter>(conf_trackJsonWriter,  logLevel));
+  seq.addWriter(std::make_shared<Telescope::TelescopeJsonTrackWriter>(
+      conf_trackJsonWriter, logLevel));
 
   seq.run();
 
