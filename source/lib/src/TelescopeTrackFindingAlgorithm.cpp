@@ -80,13 +80,13 @@ ActsExamples::ProcessCode Telescope::TelescopeTrackFindingAlgorithm::execute(
           const double theta = Acts::VectorHelpers::theta(distVec);
           Acts::Vector3D rPos = global0 - distVec / 2;
           Acts::Vector4D rPos4(rPos.x(), rPos.y(), rPos.z(), 0);
-          Acts::Vector3D rMom(m_cfg.seedEnergy * sin(theta) * cos(phi),
-                              m_cfg.seedEnergy * sin(theta) * sin(phi),
-                              m_cfg.seedEnergy * cos(theta));
+          // Acts::Vector3D rMom(m_cfg.seedEnergy * sin(theta) * cos(phi),
+          //                    m_cfg.seedEnergy * sin(theta) * sin(phi),
+          //                    m_cfg.seedEnergy * cos(theta));
 
           double q = 1;
-          initialParameters.emplace_back(rPos4, phi, theta, m_cfg.seedEnergy,
-                                         q);
+          initialParameters.emplace_back(rPos4, phi, theta, m_cfg.seedEnergy, q,
+                                         cov);
         }
       }
     }

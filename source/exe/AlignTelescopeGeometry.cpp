@@ -339,8 +339,9 @@ int main(int argc, char *argv[]) {
       initialParameters.push_back(rStart);
     }
 
-    auto kfLogger =
-        Acts::getDefaultLogger("KalmanFilter", Acts::Logging::VERBOSE);
+    auto kfLogger = Acts::getDefaultLogger("KalmanFilter",
+                                           do_verbose ? (Acts::Logging::VERBOSE)
+                                                      : (Acts::Logging::INFO));
 
     // Set the KalmanFitter options
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions(
