@@ -49,27 +49,78 @@
 using JsonAllocator = rapidjson::CrtAllocator;
 using JsonStackAllocator = rapidjson::CrtAllocator;
 using JsonValue = rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
-using JsonDocument = rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator, rapidjson::CrtAllocator>;
-using JsonReader = rapidjson::GenericReader<rapidjson::UTF8<char>, rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
-
+using JsonDocument = rapidjson::GenericDocument<rapidjson::UTF8<char>,
+                                                rapidjson::CrtAllocator, rapidjson::CrtAllocator>;
+using JsonReader = rapidjson::GenericReader<rapidjson::UTF8<char>, rapidjson::UTF8<char>,
+                                            rapidjson::CrtAllocator>;
+using JsonWriter = rapidjson::Writer<rapidjson::FileWriteStream,
+                                     rapidjson::UTF8<char>, rapidjson::UTF8<char>,
+                                     rapidjson::CrtAllocator, rapidjson::kWriteDefaultFlags>;
 
 #include <filesystem>
 #include <fstream>
 
-struct JsonFileSerialize{
-  
+struct JsonFileSerializer{
+  JsonFileSerializer(const std::filesystem::path &filepath){
+    std::fprintf(stdout, "output file  %s\n", filepath.c_str());
+    std::filesystem::file_status st_file = std::filesystem::status(filepath);
+    if (!std::filesystem::exists(st_file)) {
+      std::fprintf(stderr, "File < %s > does not exist.\n", filepath.c_str());
+      throw;
+    }
+    if (!std::filesystem::is_regular_file(st_file)) {
+      std::fprintf(stderr, "File < %s > is not regular file.\n",
+                   filepath.c_str());
+      throw;
+    }
 
+    fp = std::fopen(filepath.c_str(), "w");
+    if (!fp) {
+      std::fprintf(stderr, "File opening failed: %s \n", filepath.c_str());
+      throw;
+    }
+    os.reset(new rapidjson::FileWriteStream(fp, writeBuffer, sizeof(writeBuffer)));
+    writer.reset(new JsonWriter(*os));
+    isvalid = true;
+  }
+
+  ~JsonFileSerializer(){
+    if(os){
+      os->Flush();
+    }
+    if (fp){
+      std::fclose(fp);
+    }
+  }
+
+  operator bool() const {
+    return isvalid;
+  }
+
+  void putNextJsonValue(const JsonValue& js){
+    js.Accept(*writer);
+    rapidjson::PutN(*os, '\n', 2);
+  }
+
+  void close(){
+    if(os){
+      os->Flush();
+    }
+    if (fp){
+      std::fclose(fp);
+    }
+    isvalid=false;
+  }
+
+  bool isvalid{0};
+  char writeBuffer[UINT16_MAX+1];
+  std::FILE *fp{0};
+  std::unique_ptr<rapidjson::FileWriteStream> os;
+  std::unique_ptr<JsonWriter> writer;
 };
 
-
-struct JsonFileDeserialize{
-  
-
-};
-
-
-struct JsonGeneratorArrayUnwrap {
-  JsonGeneratorArrayUnwrap(const std::filesystem::path &filepath) {
+struct JsonFileDeserializer {
+  JsonFileDeserializer(const std::filesystem::path &filepath) {
     std::fprintf(stdout, "input file  %s\n", filepath.c_str());
     std::filesystem::file_status st_file = std::filesystem::status(filepath);
     if (!std::filesystem::exists(st_file)) {
@@ -99,7 +150,7 @@ struct JsonGeneratorArrayUnwrap {
     isvalid = true;
   }
 
-  ~JsonGeneratorArrayUnwrap() {
+  ~JsonFileDeserializer() {
     if (fp) {
       std::fclose(fp);
     }
@@ -133,6 +184,11 @@ struct JsonGeneratorArrayUnwrap {
     return true;
   }
 
+
+  operator bool() const {
+    return isvalid;
+  }
+
   JsonDocument getNextJsonDocument(){
     JsonDocument jsd;
     if(isvalid){
@@ -153,13 +209,13 @@ struct JsonGeneratorArrayUnwrap {
     return jsv;
   }
 
-  size_t filesize;
-  std::FILE *fp;
+  size_t filesize{0};
+  std::FILE *fp{0};
   char readBuffer[UINT16_MAX + 1];
   std::unique_ptr<rapidjson::FileReadStream> is;
   JsonReader reader;
-  bool isvalid;
-  bool isarray;
+  bool isvalid{false};
+  bool isarray{false};
 
   /*
   static void example(const std::string &datafile_name) {
@@ -220,6 +276,19 @@ namespace JsonUtils{
     JsonValue js;
     js.CopyFrom(jsdoc, jsa);
     return js;
+  }
+
+  inline std::string stringJsonValue(const JsonValue& o, bool pretty = true){
+    rapidjson::StringBuffer sb;
+    if(pretty){
+      rapidjson::PrettyWriter<rapidjson::StringBuffer> w(sb);
+      o.Accept(w);
+    }
+    else{
+      rapidjson::Writer<rapidjson::StringBuffer> w(sb);
+      o.Accept(w);
+    }
+    return std::string(sb.GetString(), sb.GetSize());
   }
 
   inline void printJsonValue(const JsonValue& o, bool pretty = true){
