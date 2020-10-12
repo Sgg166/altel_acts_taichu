@@ -1,5 +1,5 @@
 
-add_subdirectory(rapidjson)
+# add_subdirectory(rapidjson)
 
 
 aux_source_directory(src LIB_SRC)
