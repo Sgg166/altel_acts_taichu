@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
   }
 
   std::map<size_t, std::array<double, 6>> geoconf;
-  geoconf = Telescope::JsonGenerator::ReadGeoFromDataFile(dataHit_path);
+  geoconf = Telescope::ReadGeoFromDataFile(dataHit_path);
 
   for (const auto &[id, lgeo] : geoconf) {
     std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  "
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   }
 
   double beamEnergy =
-      Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) *
+      Telescope::ReadBeamEnergyFromDataFile(datafile_name) *
       Acts::UnitConstants::GeV;
 
   std::fprintf(stdout, "beamEnergy:       %f\n", beamEnergy);

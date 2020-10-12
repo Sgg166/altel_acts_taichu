@@ -154,13 +154,13 @@ int main(int argc, char *argv[]) {
       if (read_datapack_count == eventNumber) {
         std::printf("----------eventNuber: %lu------------ \n",
                     read_datapack_count);
-        Telescope::JsonGenerator::PrintJson(doc_data);
+        JsonUtils::printJsonValue(doc_data, true);
 
         size_t ln = 0;
         for (const auto &layer : evpack["layers"].GetArray()) {
           std::printf("-layer %lu \n", ln);
           std::printf("--rawJson");
-          Telescope::JsonGenerator::PrintJson(layer);
+          JsonUtils::printJsonValue(layer, true);
           std::printf("--hitSize:  %u,  hits:  ",
                       layer["hit"].GetArray().Size());
           for (const auto &hit : layer["hit"].GetArray()) {

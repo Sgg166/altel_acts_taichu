@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
   }
 
   std::map<size_t, std::array<double, 6>> geoconf;
-  geoconf = Telescope::JsonGenerator::ReadGeoFromGeoFile(geofile_name);
+  geoconf = Telescope::ReadGeoFromGeoFile(geofile_name);
   for (const auto &[id, lgeo] : geoconf) {
     std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  "
                 "rotationX: %f   rotationY: %f   rotationZ: %f\n",
@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
 
   if (beamEnergy < 0) {
     beamEnergy =
-        Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) *
+        Telescope::ReadBeamEnergyFromDataFile(datafile_name) *
         Acts::UnitConstants::GeV;
   }
 

@@ -10,7 +10,7 @@
 // or
 // #define RAPIDJSON_SSE42
 // or
-// #define RAPIDJSON_NEON 
+// #define RAPIDJSON_NEON
 // or
 // not enable
 
@@ -19,9 +19,9 @@
 #  define RAPIDJSON_HAS_CXX11_RVALUE_REFS 1
 #  define RAPIDJSON_HAS_CXX11_RANGE_FOR 1
 #  define RAPIDJSON_HAS_STDSTRING 1
-#  define RAPIDJSON_NO_INT64DEFINE 
+#  define RAPIDJSON_NO_INT64DEFINE 1
    namespace rapidjson { typedef ::std::uint64_t uint64_t; typedef ::std::int64_t int64_t;}
-#  define RAPIDJSON_NO_SIZETYPEDEFINE 
+#  define RAPIDJSON_NO_SIZETYPEDEFINE 1
    namespace rapidjson { typedef ::std::size_t SizeType;}
 #  include "rapidjson.h"
 #  include "allocators.h"
@@ -53,4 +53,187 @@ using JsonDocument = rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson
 using JsonReader = rapidjson::GenericReader<rapidjson::UTF8<char>, rapidjson::UTF8<char>, rapidjson::CrtAllocator>;
 
 
+#include <filesystem>
+#include <fstream>
+
+struct JsonFileSerialize{
+  
+
+};
+
+
+struct JsonFileDeserialize{
+  
+
+};
+
+
+struct JsonGeneratorArrayUnwrap {
+  JsonGeneratorArrayUnwrap(const std::filesystem::path &filepath) {
+    std::fprintf(stdout, "input file  %s\n", filepath.c_str());
+    std::filesystem::file_status st_file = std::filesystem::status(filepath);
+    if (!std::filesystem::exists(st_file)) {
+      std::fprintf(stderr, "File < %s > does not exist.\n", filepath.c_str());
+      throw;
+    }
+    if (!std::filesystem::is_regular_file(st_file)) {
+      std::fprintf(stderr, "File < %s > is not regular file.\n",
+                   filepath.c_str());
+      throw;
+    }
+    filesize = std::filesystem::file_size(filepath);
+
+    fp = std::fopen(filepath.c_str(), "r");
+    if (!fp) {
+      std::fprintf(stderr, "File opening failed: %s \n", filepath.c_str());
+      throw;
+    }
+    is.reset(new rapidjson::FileReadStream(fp, readBuffer, sizeof(readBuffer)));
+    rapidjson::SkipWhitespace(*is);
+    if (is->Peek() == '[') {
+      is->Take();
+      isarray = true;
+    } else {
+      isarray = false;
+    }
+    isvalid = true;
+  }
+
+  ~JsonGeneratorArrayUnwrap() {
+    if (fp) {
+      std::fclose(fp);
+    }
+  }
+
+  bool operator()(JsonDocument &doc) {
+    reader.Parse<rapidjson::kParseStopWhenDoneFlag>(*is, doc);
+    if (reader.HasParseError()) {
+      if (is->Tell() + 10 < filesize) {
+        std::fprintf(
+                     stderr,
+                     "rapidjson error<%s> when parsing input data at offset %llu\n",
+                     rapidjson::GetParseError_En(reader.GetParseErrorCode()),
+                     reader.GetErrorOffset());
+        throw;
+      } // otherwise, it reaches almost end of file. mute the errer message
+      isvalid = false;
+      return false;
+    }
+    if (isarray) {
+      if (is->Peek() == ',') {
+        is->Take();
+      } else {
+        rapidjson::SkipWhitespace(*is);
+        if (is->Peek() == ',') {
+          is->Take();
+        }
+      }
+    }
+    isvalid = true;
+    return true;
+  }
+
+  JsonDocument getNextJsonDocument(){
+    JsonDocument jsd;
+    if(isvalid){
+      jsd.Populate(*this);
+    }
+    return jsd;
+  }
+
+  JsonValue getNextJsonValue(JsonAllocator& jsa){
+    JsonValue jsv;
+    if(isvalid){
+      JsonDocument jsd(&jsa);
+      jsd.Populate(*this);
+      if(isvalid){
+        jsd.Swap(jsv);
+      }
+    }
+    return jsv;
+  }
+
+  size_t filesize;
+  std::FILE *fp;
+  char readBuffer[UINT16_MAX + 1];
+  std::unique_ptr<rapidjson::FileReadStream> is;
+  JsonReader reader;
+  bool isvalid;
+  bool isarray;
+
+  /*
+  static void example(const std::string &datafile_name) {
+    JsonAllocator s_jsa;
+    JsonDocument doc(&s_jsa);
+    JsonGeneratorArrayUnwrap gen(datafile_name);
+    int n = 0;
+    std::chrono::high_resolution_clock::time_point t1 =
+      std::chrono::high_resolution_clock::now();
+    while (1) { // doc is cleared at beginning of each loop
+      doc.Populate(gen);
+      if (!gen) {
+        break;
+      }
+      n++;
+    }
+    std::chrono::high_resolution_clock::time_point t2 =
+      std::chrono::high_resolution_clock::now();
+    double time_sec_total =
+      std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1)
+      .count();
+    double time_sec_per = time_sec_total / n;
+    std::printf(
+                "datapack %llu, time_sec_total %f, time_sec_per %f,  data_req %f \n", n,
+                time_sec_total, time_sec_per, 1. / time_sec_per);
+  }
+  */
+};
+
+namespace JsonUtils{
+  inline std::string readFile(const std::string& path){
+    std::ifstream ifs(path);
+    if(!ifs.good()){
+      std::fprintf(stderr, "unable to read file path<%s>\n", path);
+      throw std::runtime_error("File open error\n");
+    }
+    std::string str;
+    str.assign((std::istreambuf_iterator<char>(ifs) ),
+               (std::istreambuf_iterator<char>()));
+    return str;
+  }
+
+  inline JsonDocument createJsonDocument(const std::string& str){
+    std::istringstream iss(str);
+    rapidjson::IStreamWrapper isw(iss);
+    JsonDocument jsdoc;
+    jsdoc.ParseStream(isw);
+    if(jsdoc.HasParseError()){
+      std::fprintf(stderr, "rapidjson error<%s> when parsing input data at offset %llu\n",
+                   rapidjson::GetParseError_En(jsdoc.GetParseError()), jsdoc.GetErrorOffset());
+      throw std::runtime_error("TelGL::createJsonDocument has ParseError\n");
+    }
+    return jsdoc;
+  }
+
+  inline JsonValue createJsonValue(JsonAllocator& jsa, const std::string& str){
+    JsonDocument jsdoc = createJsonDocument(str);
+    JsonValue js;
+    js.CopyFrom(jsdoc, jsa);
+    return js;
+  }
+
+  inline void printJsonValue(const JsonValue& o, bool pretty = true){
+    rapidjson::StringBuffer sb;
+    if(pretty){
+      rapidjson::PrettyWriter<rapidjson::StringBuffer> w(sb);
+      o.Accept(w);
+    }
+    else{
+      rapidjson::Writer<rapidjson::StringBuffer> w(sb);
+      o.Accept(w);
+    }
+    rapidjson::PutN(sb, '\n', 1);
+    std::fwrite(sb.GetString(), 1, sb.GetSize(), stdout);
+  }
+}
 #endif

@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 
   // Construct a target plane surface
   std::map<size_t, std::array<double, 6>> geoconf;
-  geoconf = Telescope::JsonGenerator::ReadGeoFromGeoFile(geofile_name);
+  geoconf = Telescope::ReadGeoFromGeoFile(geofile_name);
   std::array<double, 6> target_layer_geoconf = geoconf.at(target_layer_id);
   double cx = target_layer_geoconf[0];
   double cy = target_layer_geoconf[1];

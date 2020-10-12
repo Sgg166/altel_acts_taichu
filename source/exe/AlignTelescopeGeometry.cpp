@@ -193,9 +193,9 @@ int main(int argc, char *argv[]) {
   std::printf("--------read geo and beam energy\n");
   std::map<size_t, std::array<double, 6>> geoconf;
   if (!geofile_name.empty())
-    geoconf = Telescope::JsonGenerator::ReadGeoFromGeoFile(geofile_name);
+    geoconf = Telescope::ReadGeoFromGeoFile(geofile_name);
   else {
-    geoconf = Telescope::JsonGenerator::ReadGeoFromDataFile(datafile_name);
+    geoconf = Telescope::ReadGeoFromDataFile(datafile_name);
   }
   for (const auto &[id, lgeo] : geoconf) {
     std::printf("layer: %lu   centerX: %f   centerY: %f   centerZ: %f  "
@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
   }
   if (beamEnergy < 0) {
     beamEnergy =
-        Telescope::JsonGenerator::ReadBeamEnergyFromDataFile(datafile_name) *
+        Telescope::ReadBeamEnergyFromDataFile(datafile_name) *
         Acts::UnitConstants::GeV;
   }
 
@@ -389,7 +389,7 @@ int main(int argc, char *argv[]) {
     }
     std::printf("select %lu datapacks (single track events) \n",
                 sourcelinkTracks.size());
-    Telescope::JsonGenerator::WriteGeoToGeoFile(outputfile_name, geo_result);
+    Telescope::WriteGeoToGeoFile(outputfile_name, geo_result);
   }
   return 0;
 }
