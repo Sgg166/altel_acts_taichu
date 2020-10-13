@@ -1,11 +1,13 @@
 
-add_executable(TelAlign TelAlign.cpp)
-list(APPEND EXE_TARGET_LIST TelAlign)
-target_link_libraries(TelAlign
-  altel-actsnew
-  ActsAlignment
-  mycommon
-  )
+add_executable(TelDetectorAlign TelAlign.cpp)
+list(APPEND EXE_TARGET_LIST TelDetectorAlign)
+target_link_libraries(TelDetectorAlign
+  altel-actsnew ActsAlignment mycommon)
+
+add_executable(TelTrackFind TelTrackFind.cpp)
+list(APPEND EXE_TARGET_LIST TelTrackFind)
+target_link_libraries(TelTrackFind
+  altel-actsnew ActsAlignment mycommon)
 
 # install-tree
 install(TARGETS ${EXE_TARGET_LIST}

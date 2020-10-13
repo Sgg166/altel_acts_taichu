@@ -57,9 +57,9 @@ namespace TelActs{
   = Acts::Result<ActsAlignment::AlignmentResult>;
   using AlignmentFunction
   = std::function<AlignResult(const std::vector<std::vector<PixelSourceLink>> &,
-                             const std::vector<Acts::CurvilinearTrackParameters> &,
-                             const ActsAlignment::AlignmentOptions<
-                             Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>> &)>;
+                              const std::vector<Acts::CurvilinearTrackParameters> &,
+                              const ActsAlignment::AlignmentOptions<
+                              Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>> &)>;
   AlignmentFunction makeAlignmentFunction(std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry,
                                           std::shared_ptr<Acts::ConstantBField> magneticField,
                                           Acts::Logging::Level lvl);
