@@ -105,6 +105,8 @@ public:
 
   size_t telDetectorID() const { return m_tel_det_id; }
 
+  size_t id() const { return m_tel_det_id; }
+
   /// Return surface associated with this detector element
   const Acts::Surface &surface() const override;
 

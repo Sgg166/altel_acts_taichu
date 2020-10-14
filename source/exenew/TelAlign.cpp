@@ -308,10 +308,12 @@ int main(int argc, char *argv[]) {
                                                       : (Acts::Logging::INFO));
 
     // Set the KalmanFitter options
+    Acts::PropagatorPlainOptions pOptions;
+    pOptions.mass = 0.511 * Acts::UnitConstants::MeV;
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions(
         gctx, mctx, cctx, Acts::VoidOutlierFinder(),
-        Acts::LoggerWrapper{*kfLogger},
-        Acts::PropagatorPlainOptions()); // pSurface default nullptr
+        Acts::LoggerWrapper{*kfLogger},pOptions
+        ); // pSurface default nullptr
 
     // Set the alignment options
     ActsAlignment::AlignmentOptions<

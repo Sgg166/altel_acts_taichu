@@ -23,14 +23,14 @@ class PixelSourceLink {
 public:
   PixelSourceLink(const Acts::Surface &surface, Acts::Vector2D values,
                   Acts::BoundMatrix cov)
-      : m_values(values), m_cov(cov), m_surface(&surface) {}
+      : m_values(values), m_cov(cov), m_surface(&surface) {
+  }
   /// Must be default_constructible to satisfy SourceLinkConcept.
   PixelSourceLink() = default;
   PixelSourceLink(PixelSourceLink &&) = default;
   PixelSourceLink(const PixelSourceLink &) = default;
   PixelSourceLink &operator=(PixelSourceLink &&) = default;
   PixelSourceLink &operator=(const PixelSourceLink &) = default;
-
 
   constexpr const Acts::Surface &referenceSurface() const { return *m_surface; }
   Acts::FittableMeasurement<PixelSourceLink> operator*() const {
@@ -51,6 +51,8 @@ public:
     return global;
   }
 
+
+  
 private:
   Acts::Vector2D m_values;
   Acts::BoundMatrix m_cov;
