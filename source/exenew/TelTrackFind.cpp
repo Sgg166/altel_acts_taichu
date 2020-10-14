@@ -35,6 +35,61 @@
 #include "getopt.h"
 #include "myrapidjson.h"
 
+
+
+
+/// @brief Evaluate the projection Jacobian from free to curvilinear parameters
+///
+/// @param [in] direction Normalised direction vector
+///
+/// @return Projection Jacobian
+Acts::FreeToBoundMatrix
+freeToCurvilinearJacobian(const Acts::Vector3D &direction) {
+  // Optimized trigonometry on the propagation direction
+  const double x = direction(0); // == cos(phi) * sin(theta)
+  const double y = direction(1); // == sin(phi) * sin(theta)
+  const double z = direction(2); // == cos(theta)
+  // can be turned into cosine/sine
+  const double cosTheta = z;
+  const double sinTheta = sqrt(x * x + y * y);
+  const double invSinTheta = 1. / sinTheta;
+  const double cosPhi = x * invSinTheta;
+  const double sinPhi = y * invSinTheta;
+  // prepare the jacobian to curvilinear
+  Acts::FreeToBoundMatrix jacToCurv = Acts::FreeToBoundMatrix::Zero();
+  if (std::abs(cosTheta) < Acts::s_curvilinearProjTolerance) {
+    // We normally operate in curvilinear coordinates defined as follows
+    jacToCurv(0, 0) = -sinPhi;
+    jacToCurv(0, 1) = cosPhi;
+    jacToCurv(1, 0) = -cosPhi * cosTheta;
+    jacToCurv(1, 1) = -sinPhi * cosTheta;
+    jacToCurv(1, 2) = sinTheta;
+  } else {
+    // Under grazing incidence to z, the above coordinate system definition
+    // becomes numerically unstable, and we need to switch to another one
+    const double c = sqrt(y * y + z * z);
+    const double invC = 1. / c;
+    jacToCurv(0, 1) = -z * invC;
+    jacToCurv(0, 2) = y * invC;
+    jacToCurv(1, 0) = c;
+    jacToCurv(1, 1) = -x * y * invC;
+    jacToCurv(1, 2) = -x * z * invC;
+  }
+  // Time parameter
+  jacToCurv(5, 3) = 1.;
+  // Directional and momentum parameters for curvilinear
+  jacToCurv(2, 4) = -sinPhi * invSinTheta;
+  jacToCurv(2, 5) = cosPhi * invSinTheta;
+  jacToCurv(3, 4) = cosPhi * cosTheta;
+  jacToCurv(3, 5) = sinPhi * cosTheta;
+  jacToCurv(3, 6) = -sinTheta;
+  jacToCurv(4, 7) = 1.;
+
+  return jacToCurv;
+}
+
+
+
 using namespace Acts::UnitLiterals;
 
 static const std::string help_usage = R"(
@@ -235,21 +290,29 @@ int main(int argc, char *argv[]) {
 
   // Set up surfaces
   std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces_selected;
+  std::map<std::shared_ptr<const Acts::Surface>, size_t> surface_id_map;
   for (const auto &e : element_col) {
     auto id = e->telDetectorID();
-    surfaces_selected[id] = e->surface().getSharedPtr();
+    auto surface = e->surface().getSharedPtr();
+    surfaces_selected[id] = surface;
+    surface_id_map[surface] = id;
   }
 
   /////////////////////////////////////
   Acts::Logging::Level logLevel =
       do_verbose ? (Acts::Logging::VERBOSE) : (Acts::Logging::INFO);
 
+  //////////// hit data
+  Acts::BoundMatrix cov_hit = Acts::BoundMatrix::Zero();
+  cov_hit(0, 0) = resX * resX;
+  cov_hit(1, 1) = resY * resY;
+
   /////////////  track seed conf
   size_t seedSurfaceGeoIDStart = surfaces_selected[0]->geometryId().value();
   size_t seedSurfaceGeoIDEnd = surfaces_selected[1]->geometryId().value();
 
-  Acts::BoundSymMatrix cov;
-  cov << seedResX * seedResX, 0., 0., 0., 0., 0., 0.,
+  Acts::BoundSymMatrix cov_seed;
+  cov_seed << seedResX * seedResX, 0., 0., 0., 0., 0., 0.,
     seedResY * seedResY, 0., 0., 0., 0., 0., 0.,
     seedResPhi * seedResPhi, 0., 0., 0., 0., 0., 0.,
     seedResTheta * seedResTheta, 0., 0., 0., 0., 0., 0.,
@@ -277,19 +340,36 @@ int main(int argc, char *argv[]) {
   // 500 chi2cut,   1 max number of selected sourcelinks in a single surface;
 
 
+
+
 ///////////////////////////////////////////////////
-  JsonFileDeserializer jsf(datafile_name);
+  JsonFileDeserializer jsfd(datafile_name);
+  JsonFileSerializer jsfs(fitted_datafile_name);
+
   size_t eventNumber = 0;
-  while(jsf && (eventNumber< eventMaxNum || eventMaxNum<0)){
-    auto evpack = jsf.getNextJsonDocument();
+  while(jsfd && (eventNumber< eventMaxNum || eventMaxNum<0)){
+    auto evpack = jsfd.getNextJsonDocument();
     if(evpack.IsNull()){
       std::fprintf(stdout, "reach null object, end of file\n");
       break;
     }
 
     std::vector<TelActs::PixelSourceLink> sourcelinks;
-    // TODO, read source link
-
+    const auto &layers = evpack["layers"];
+    for (const auto &layer : layers.GetArray()) {
+      size_t id_ext = layer["ext"].GetUint();
+      auto surface_it = surfaces_selected.find(id_ext);
+      if (surface_it == surfaces_selected.end()) {
+        continue;
+      }
+      for (const auto &hit : layer["hit"].GetArray()) {
+        double x_hit = hit["pos"][0].GetDouble() - 0.02924 * 1024 / 2.0;
+        double y_hit = hit["pos"][1].GetDouble() - 0.02688 * 512 / 2.0;
+        Acts::Vector2D loc_hit;
+        loc_hit << x_hit, y_hit;
+        sourcelinks.emplace_back(*(surface_it->second), loc_hit, cov_hit);
+      }
+    }
 
     if (sourcelinks.empty()) {
       std::fprintf(stdout, "Empty event <%d> found.\n", eventNumber);
@@ -323,7 +403,7 @@ int main(int argc, char *argv[]) {
           Acts::Vector3D rPos = global0 - distVec / 2;
           Acts::Vector4D rPos4(rPos.x(), rPos.y(), rPos.z(), 0);
           double q = 1;
-          initialParameters.emplace_back(rPos4, phi, theta, beamEnergy, q,cov);
+          initialParameters.emplace_back(rPos4, phi, theta, beamEnergy, q,cov_seed);
         }
       }
     }
@@ -352,6 +432,130 @@ int main(int argc, char *argv[]) {
     }
     eventNumber ++;
     //TODO: write  fitted_datafile_name
+
+
+    //////////////////////////////////////////////////////////////
+
+    JsonAllocator jsa;
+    JsonValue js_output(rapidjson::kObjectType);
+    js_output.AddMember("eventNum", JsonValue(eventNumber), jsa);
+    JsonValue js_tracks(rapidjson::kArrayType);
+
+    for (const auto &traj : trajectories) {
+      const auto &[trackTips, mj] = traj.trajectory();
+      // Loop over all trajectories in a multiTrajectory
+      // size of trackTips should <= 1
+      for (const size_t &trackTip : trackTips) {
+        // Collect the trajectory summary info
+        auto trajState =
+          Acts::MultiTrajectoryHelpers::trajectoryState(mj, trackTip);
+        if (trajState.nMeasurements != surfaces_selected.size()) {
+          continue;
+        }
+        JsonValue js_track(rapidjson::kObjectType);
+        JsonValue js_states(rapidjson::kArrayType);
+        JsonValue js_states_reverse(rapidjson::kArrayType);
+        mj.visitBackwards(trackTip, [&](const auto &state) {
+                                      // only fill the track states with non-outlier measurement
+                                      auto typeFlags = state.typeFlags();
+                                      if (not typeFlags.test(Acts::TrackStateFlag::MeasurementFlag)) {
+                                        return true;
+                                      }
+                                      if (!state.hasSmoothed()) {
+                                        return true;
+                                      }
+
+                                      auto state_surface = state.referenceSurface().getSharedPtr();
+                                      auto surface_it = surface_id_map.find(state_surface);
+                                      if (surface_it == surface_id_map.end()) {
+                                        return true;
+                                      }
+                                      size_t layerid = surface_it->second;
+
+                                      // Get the source link info
+                                      auto meas = std::get<
+                                        Acts::Measurement<TelActs::PixelSourceLink, Acts::BoundIndices,
+                                                          Acts::eBoundLoc0, Acts::eBoundLoc1>>(
+                                                            *state.uncalibrated());
+
+                                      // Get local position
+                                      Acts::Vector2D pos_local(meas.parameters()[Acts::eBoundLoc0],
+                                                               meas.parameters()[Acts::eBoundLoc1]);
+
+                                      // The bound parameters info
+                                      // Acts::BoundTrackParameters boundpara(state_surface,
+                                      //                                state.smoothed(),
+                                      //                                state.smoothedCovariance()
+                                      //						  );
+
+                                      // 1) Transform bound parameter to free parameter
+                                      // 1.1)Fist transform the smoothed bound parameters to free parameters
+                                      // to get the position and momentum
+                                      Acts::FreeVector freeParams =
+                                        Acts::detail::transformBoundToFreeParameters(
+                                          *state_surface, gctx, state.smoothed());
+                                      // 1.2)Get the global position, direction, q/p, t etc.
+                                      Acts::Vector3D pos(freeParams[Acts::eFreePos0],
+                                                         freeParams[Acts::eFreePos1],
+                                                         freeParams[Acts::eFreePos2]);
+                                      Acts::Vector3D dir(freeParams[Acts::eFreeDir0],
+                                                         freeParams[Acts::eFreeDir1],
+                                                         freeParams[Acts::eFreeDir2]);
+                                      double p = std::abs(1 / freeParams[Acts::eFreeQOverP]);
+                                      ;
+                                      double q = p * freeParams[Acts::eFreeQOverP];
+                                      double t = freeParams[Acts::eFreeTime];
+
+                                      /// 1.3) Initialize the jacobian from local to the global frame
+                                      Acts::BoundToFreeMatrix jacToGlobal = Acts::BoundToFreeMatrix::Zero();
+                                      // Calculate the jacobian
+                                      state_surface->initJacobianToGlobal(gctx, jacToGlobal,
+                                                                          pos, dir, state.smoothed());
+                                      Acts::FreeSymMatrix freeCovariance =
+                                        jacToGlobal * state.smoothedCovariance() * jacToGlobal.transpose();
+
+                                      // 2) Transform free parameter to curvilinear parameter
+                                      Acts::FreeToBoundMatrix jacToCurv = freeToCurvilinearJacobian(dir);
+                                      Acts::BoundSymMatrix curvCovariance =
+                                        jacToCurv * freeCovariance * jacToCurv.transpose();
+
+                                      // Write out the curvilinear parameters and its covariance
+                                      JsonValue js_track_state(rapidjson::kObjectType); //
+                                      js_track_state.AddMember("id", JsonValue(layerid), jsa);
+                                      js_track_state.AddMember("x", JsonValue(pos.x()), jsa);
+                                      js_track_state.AddMember("y", JsonValue(pos.y()), jsa);
+                                      js_track_state.AddMember("z", JsonValue(pos.z()), jsa);
+                                      js_track_state.AddMember("lx", JsonValue(pos_local.x()), jsa);
+                                      js_track_state.AddMember("ly", JsonValue(pos_local.y()), jsa);
+                                      js_track_state.AddMember("dx", JsonValue(dir.x()), jsa);
+                                      js_track_state.AddMember("dy", JsonValue(dir.y()), jsa);
+                                      js_track_state.AddMember("dz", JsonValue(dir.z()), jsa);
+                                      js_track_state.AddMember("p", JsonValue(p), jsa);
+                                      js_track_state.AddMember("q", JsonValue(q), jsa);
+                                      js_track_state.AddMember("t", JsonValue(t), jsa);
+
+                                      const double *cov_data = curvCovariance.data();
+                                      JsonValue js_state_cov(rapidjson::kArrayType); //
+                                      js_state_cov.Reserve(Acts::eBoundSize * Acts::eBoundSize, jsa);
+                                      for (size_t n = 0; n < Acts::eBoundSize * Acts::eBoundSize; n++) {
+                                        js_state_cov.PushBack(JsonValue(*(cov_data + n)), jsa);
+                                      }
+                                      js_track_state.AddMember("cov", std::move(js_state_cov), jsa);
+                                      js_states_reverse.PushBack(std::move(js_track_state), jsa);
+                                      return true;
+                                    });
+
+        for (size_t i = js_states_reverse.Size(); i > 0; i--) {
+          js_states.PushBack(std::move(js_states_reverse[i - 1]), jsa);
+        }
+        js_track.AddMember("states", std::move(js_states), jsa);
+        js_tracks.PushBack(std::move(js_track), jsa);
+      }
+    }
+    js_output.AddMember("tracks", std::move(js_tracks), jsa);
+
+    jsfs.putNextJsonValue(js_output);
+
   }
 
   return 0;

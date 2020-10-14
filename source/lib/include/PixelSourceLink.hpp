@@ -31,8 +31,8 @@ public:
   PixelSourceLink &operator=(PixelSourceLink &&) = default;
   PixelSourceLink &operator=(const PixelSourceLink &) = default;
 
-  constexpr const Acts::Surface &referenceSurface() const { return *m_surface; }
 
+  constexpr const Acts::Surface &referenceSurface() const { return *m_surface; }
   Acts::FittableMeasurement<PixelSourceLink> operator*() const {
     return Acts::Measurement<PixelSourceLink, Acts::BoundIndices,
                              Acts::eBoundLoc0, Acts::eBoundLoc1>{

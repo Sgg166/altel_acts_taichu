@@ -63,14 +63,34 @@ using JsonWriter = rapidjson::Writer<rapidjson::FileWriteStream,
 struct JsonFileSerializer{
   JsonFileSerializer(const std::filesystem::path &filepath){
     std::fprintf(stdout, "output file  %s\n", filepath.c_str());
-    std::filesystem::file_status st_file = std::filesystem::status(filepath);
-    if (!std::filesystem::exists(st_file)) {
-      std::fprintf(stderr, "File < %s > does not exist.\n", filepath.c_str());
-      throw;
+
+    
+
+    std::filesystem::path path_dir_output = std::filesystem::absolute(filepath).parent_path();
+    std::filesystem::file_status st_dir_output =
+      std::filesystem::status(path_dir_output);
+    if (!std::filesystem::exists(st_dir_output)) {
+      std::fprintf(stdout, "Output folder does not exist: %s\n",
+                   path_dir_output.c_str());
+      std::filesystem::file_status st_parent =
+        std::filesystem::status(path_dir_output.parent_path());
+      if (std::filesystem::exists(st_parent) &&
+          std::filesystem::is_directory(st_parent)) {
+        if (std::filesystem::create_directory(path_dir_output)) {
+          std::fprintf(stdout, "Create output folder: %s\n", path_dir_output.c_str());
+        } else {
+          std::fprintf(stderr, "Unable to create folder: %s\n", path_dir_output.c_str());
+          throw;
+        }
+      } else {
+        std::fprintf(stderr, "Unable to create folder: %s\n", path_dir_output.c_str());
+        throw;
+      }
     }
-    if (!std::filesystem::is_regular_file(st_file)) {
-      std::fprintf(stderr, "File < %s > is not regular file.\n",
-                   filepath.c_str());
+
+    std::filesystem::file_status st_file = std::filesystem::status(filepath);
+    if (std::filesystem::exists(st_file)) {
+      std::fprintf(stderr, "File < %s > exists.\n", filepath.c_str());
       throw;
     }
 
