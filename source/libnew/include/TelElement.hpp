@@ -43,6 +43,9 @@ namespace TelActs {
 ///
 /// This is a lightweight type of detector element,
 /// it simply implements the base class.
+class TelescopeDetectorElement;
+using TelElement = TelescopeDetectorElement;
+
 class TelescopeDetectorElement : public Acts::DetectorElementBase {
 public:
   /// Constructor for single sided detector element

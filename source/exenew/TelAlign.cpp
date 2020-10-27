@@ -5,20 +5,22 @@ using namespace Acts::UnitLiterals;
 
 static const std::string help_usage = R"(
 Usage:
-  -help              help message
-  -verbose           verbose flag
-  -file       [jsonfile]   name of data json file
-  -energy     [float]      beam energy, GeV
-  -out        [jsonfile]   alignment result
-  -geo        [jsonfile]   geometry input file
-  -resX       [float]      preset detector hit resolution X
-  -resY       [float]      preset detector hit resolution Y
-  -resPhi     [float]      preset seed track resolution Phi
-  -resTheta   [float]      preset seed track resolution Theta
-  -maxItera   [integer]    max time of alignement iterations
-  -deltaItera [integer]    converge condition: delta iteration
-  -deltaChi2  [float]      converge condition: delta Chi2ONdf
-
+  -help                    help message
+  -verbose                 verbose flag
+  -hitFile        [PATH]   name of data json file
+  -energy         [float]  beam energy, GeV
+  -outputGeometry [PATH]   alignment result file
+  -inputGeometry  [PATH]   geometry input file
+  -hitResX        [float]  preset detector hit resolution X
+  -hitResY        [float]  preset detector hit resolution Y
+  -seedResX       [float]  preset detector seed resolution X
+  -seedResY       [float]  preset detector seed resolution Y
+  -seedResPhi     [float]  preset seed track resolution Phi
+  -seedResTheta   [float]  preset seed track resolution Theta
+  -maxItera       [int]    max time of alignement iterations
+  -deltaItera     [int]    converge condition: delta iteration
+  -deltaChi2      [float]  converge condition: delta Chi2ONdf
+  -chi2ONdfCutOff [float]
 )";
 
 int main(int argc, char *argv[]) {
@@ -26,44 +28,46 @@ int main(int argc, char *argv[]) {
   int do_verbose = false;
   struct option longopts[] = {{"help", no_argument, &do_help, 1},
                               {"verbose", no_argument, &do_verbose, 1},
-                              {"file", required_argument, NULL, 'f'},
+                              {"hitFile", required_argument, NULL, 'f'},
                               {"energy", required_argument, NULL, 'e'},
-                              {"out", required_argument, NULL, 'o'},
-                              {"geomerty", required_argument, NULL, 'g'},
-                              {"resX", required_argument, NULL, 'r'},
-                              {"resY", required_argument, NULL, 's'},
-                              {"resPhi", required_argument, NULL, 't'},
-                              {"resTheta", required_argument, NULL, 'w'},
+                              {"outputGeometry", required_argument, NULL, 'o'},
+                              {"inputGeomerty", required_argument, NULL, 'g'},
+                              {"hitResX", required_argument, NULL, 'r'},
+                              {"hitResY", required_argument, NULL, 's'},
+                              {"seedResX", required_argument, NULL, 'u'},
+                              {"seedResY", required_argument, NULL, 'q'},
+                              {"seedResPhi", required_argument, NULL, 't'},
+                              {"seedResTheta", required_argument, NULL, 'w'},
                               {"maxItera", required_argument, NULL, 'x'},
                               {"deltaItera", required_argument, NULL, 'y'},
                               {"deltaChi2", required_argument, NULL, 'z'},
-                              {0, 0, 0, 0}};
+                              {"chi2ONdfCutOff", required_argument, NULL, 'p'},
+                             {0, 0, 0, 0}};
 
   std::string datafile_name;
   std::string outputfile_name;
   std::string geofile_name;
   double resX = 150_um;
   double resY = 150_um;
-  // Use large starting parameter covariance
-  double resLoc1 = 50_um;
-  double resLoc2 = 50_um;
-  double resPhi = 0.7;
-  double resTheta = 0.7;
+
+ // Use large starting parameter covariance
+  double resLoc1 = 20_um;
+  double resLoc2 = 20_um;
+  double resPhi = 0.02;
+  double resTheta = 0.02;
+
   // Iterations converge criteria
   size_t maxNumIterations = 400;
   size_t nIterations = 10;
   double deltaChi2ONdf = 1e-5;
+  double chi2ONdfCutOff = 0.0001;
+
   double beamEnergy = -1;
 
   int c;
   opterr = 1;
   while ((c = getopt_long_only(argc, argv, "", longopts, NULL)) != -1) {
     switch (c) {
-    case 'h':
-      do_help = 1;
-      std::fprintf(stdout, "%s\n", help_usage.c_str());
-      exit(0);
-      break;
     case 'f':
       datafile_name = optarg;
       break;
@@ -82,6 +86,12 @@ int main(int argc, char *argv[]) {
     case 's':
       resY = std::stod(optarg);
       break;
+    case 'u':
+      resLoc1 = std::stod(optarg);
+      break;
+    case 'q':
+      resLoc2 = std::stod(optarg);
+      break;
     case 't':
       resPhi = std::stod(optarg);
       break;
@@ -96,6 +106,9 @@ int main(int argc, char *argv[]) {
       break;
     case 'z':
       deltaChi2ONdf = std::stod(optarg);
+      break;
+    case 'p':
+      chi2ONdfCutOff = std::stod(optarg);
       break;
 
       /////generic part below///////////
@@ -182,12 +195,13 @@ int main(int argc, char *argv[]) {
   /////////////////////////////////////
   // The criteria to determine if the iteration has converged. @Todo: to use
   // delta chi2 instead
-  double chi2ONdfCutOff = 0.01;
   std::pair<size_t, double> deltaChi2ONdfCutOff = {nIterations, deltaChi2ONdf};
   // set up the alignment dnf for each iteration
   std::map<unsigned int, std::bitset<6>> iterationState;
   for (unsigned int iIter = 0; iIter < maxNumIterations; iIter++) {
     std::bitset<6> mask(std::string("111111"));
+
+    // mask = std::bitset<6>(std::string("000011"));
     if (iIter % 2 == 0) {
       // only align offset along x/y
       mask = std::bitset<6>(std::string("000011"));
@@ -277,11 +291,6 @@ int main(int argc, char *argv[]) {
     // seeding
     std::vector<Acts::CurvilinearTrackParameters> initialParameters;
     initialParameters.reserve(sourcelinkTracks.size());
-    Acts::BoundSymMatrix cov_seed;
-    cov_seed << resLoc1 * resLoc1, 0., 0., 0., 0., 0., 0., resLoc2 * resLoc2,
-        0., 0., 0., 0., 0., 0., resPhi * resPhi, 0., 0., 0., 0., 0., 0.,
-        resTheta * resTheta, 0., 0., 0., 0., 0., 0., 0.0001, 0., 0., 0., 0., 0.,
-        0., 1.;
 
     for (const auto &sourcelinks : sourcelinkTracks) {
       // Create initial parameters
@@ -292,11 +301,14 @@ int main(int argc, char *argv[]) {
 
       const double phi = Acts::VectorHelpers::phi(distance);
       const double theta = Acts::VectorHelpers::theta(distance);
-      Acts::Vector3D rPos = global0 - distance / 2;
+      Acts::Vector3D rPos = global0;
       Acts::Vector4D rPos4(rPos.x(), rPos.y(), rPos.z(), 0);
-      // Acts::Vector3D rMom(beamEnergy * sin(theta) * cos(phi),
-      //                    beamEnergy * sin(theta) * sin(phi),
-      //                    beamEnergy * cos(theta));
+
+      Acts::BoundSymMatrix cov_seed;
+      cov_seed << resLoc1 * resLoc1, 0., 0., 0., 0., 0., 0., resLoc2 * resLoc2,
+        0., 0., 0., 0., 0., 0., resPhi * resPhi, 0., 0., 0., 0., 0., 0.,
+        resTheta * resTheta, 0., 0., 0., 0., 0., 0., 0.0001, 0., 0., 0., 0., 0.,
+        0., 1.;
 
       Acts::CurvilinearTrackParameters rStart(rPos4, phi, theta, 1., beamEnergy,
                                               cov_seed);
@@ -330,8 +342,6 @@ int main(int argc, char *argv[]) {
                   result.error().message().c_str());
     }
 
-    std::printf("Alignment finished with deltaChi2 = %f \n",
-                result.value().deltaChi2);
     std::map<size_t, std::array<double, 6>> geo_result;
     auto &js_dets = jsd_geo["geometry"]["detectors"];
     for (const auto &det : element_col) {

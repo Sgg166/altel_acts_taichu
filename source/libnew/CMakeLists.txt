@@ -4,7 +4,7 @@ add_library(altel-actsnew SHARED ${LIB_SRC})
 target_include_directories( altel-actsnew
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
+  # $<INSTALL_INTERFACE:include>
   PRIVATE
   $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
   )

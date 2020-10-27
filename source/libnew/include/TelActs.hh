@@ -47,8 +47,8 @@
 
 #include "ActsAlignment/Kernel/Alignment.hpp"
 
-#include "TelescopeDetectorElement.hpp"
-#include "PixelSourceLink.hpp"
+#include "TelElement.hpp"
+#include "TelSourceLink.hpp"
 #include "myrapidjson.h"
 
 namespace TelActs{

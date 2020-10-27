@@ -29,13 +29,11 @@
 #include "Acts/Utilities/Logger.hpp"
 #include "Acts/Utilities/Units.hpp"
 
-#include "PixelMultiTrajectory.hpp"
+#include "TelMultiTrajectory.hpp"
 
 #include "TelActs.hh"
 #include "getopt.h"
 #include "myrapidjson.h"
-
-
 
 using namespace Acts::UnitLiterals;
 
@@ -49,13 +47,16 @@ Usage:
   -trackFile      [PATH]       path to fitted track data file (output)
   -energy         [float]      beam energy, GeV
   -dutID          [int]        ID of DUT which is excluded from track fit
-  -hitResX        [float]      preset detector hit resolution X
-  -hitResY        [float]      preset detector hit resolution Y
-  -seedResX       [float]      preset seed track resolution X
-  -seedResY       [float]      preset seed track resolution Y
   -seedResPhi     [float]      preset seed track resolution Phi
   -seedResTheta   [float]      preset seed track resolution Theta
 )";
+
+
+  // -hitResX        [float]      preset detector hit resolution X
+  // -hitResY        [float]      preset detector hit resolution Y
+  // -seedResX       [float]      preset seed track resolution X
+  // -seedResY       [float]      preset seed track resolution Y
+
 
 int main(int argc, char *argv[]) {
   rapidjson::CrtAllocator jsa;
@@ -70,10 +71,10 @@ int main(int argc, char *argv[]) {
                               {"geomertyFile", required_argument, NULL, 'g'},
                               {"energy", required_argument, NULL, 'e'},
                               {"dutID", required_argument, NULL, 'd'},
-                              {"hitResX", required_argument, NULL, 'r'},
-                              {"hitResY", required_argument, NULL, 's'},
-                              {"seedResX", required_argument, NULL, 'j'},
-                              {"seedResY", required_argument, NULL, 'k'},
+                              // {"hitResX", required_argument, NULL, 'r'},
+                              // {"hitResY", required_argument, NULL, 's'},
+                              // {"seedResX", required_argument, NULL, 'j'},
+                              // {"seedResY", required_argument, NULL, 'k'},
                               {"seedResPhi", required_argument, NULL, 't'},
                               {"seedResTheta", required_argument, NULL, 'w'},
                               {0, 0, 0, 0}};
@@ -84,14 +85,14 @@ int main(int argc, char *argv[]) {
   std::string fitted_datafile_name;
   std::string geofile_name;
   double beamEnergy = -1;
-  double resX = 5_um;
-  double resY = 5_um;
+  // double resX = 5_um;
+  // double resY = 5_um;
   // Use large starting parameter covariance
 
-  double seedResX = 15_mm;
-  double seedResY = 15_mm;
-  double seedResPhi = 0.7_rad;
-  double seedResTheta = 0.7_rad;
+  double seedResX = 5_um;
+  double seedResY = 5_um;
+  double seedResPhi = 0.1_rad;
+  double seedResTheta = 0.1_rad;
 
   int c;
   opterr = 1;
@@ -115,12 +116,12 @@ int main(int argc, char *argv[]) {
     case 'd':
       dutID = std::stol(optarg);
       break;
-    case 'r':
-      resX = std::stod(optarg);
-      break;
-    case 's':
-      resY = std::stod(optarg);
-      break;
+    // case 'r':
+    //   resX = std::stod(optarg);
+    //   break;
+    // case 's':
+    //   resY = std::stod(optarg);
+    //   break;
     case 'j':
       seedResX = std::stod(optarg);
       break;
@@ -170,10 +171,10 @@ int main(int argc, char *argv[]) {
   std::fprintf(stdout, "datafile:         %s\n", datafile_name.c_str());
   std::fprintf(stdout, "geofile:          %s\n", geofile_name.c_str());
   std::fprintf(stdout, "fittedFile:       %s\n", fitted_datafile_name.c_str());
-  std::fprintf(stdout, "resX:             %f\n", resX);
-  std::fprintf(stdout, "resY:             %f\n", resY);
-  std::fprintf(stdout, "seedResX:         %f\n", seedResX);
-  std::fprintf(stdout, "seedResY:         %f\n", seedResY);
+  // std::fprintf(stdout, "resX:             %f\n", resX);
+  // std::fprintf(stdout, "resY:             %f\n", resY);
+  // std::fprintf(stdout, "seedResX:         %f\n", seedResX);
+  // std::fprintf(stdout, "seedResY:         %f\n", seedResY);
   std::fprintf(stdout, "seedResPhi:       %f\n", seedResPhi);
   std::fprintf(stdout, "seedResTheta:     %f\n", seedResTheta);
   std::fprintf(stdout, "\n");
@@ -195,11 +196,6 @@ int main(int argc, char *argv[]) {
   // Setup the magnetic field
   auto magneticField = std::make_shared<Acts::ConstantBField>(0_T, 0_T, 0_T);
 
-  //////////// hit data
-  Acts::BoundMatrix cov_hit = Acts::BoundMatrix::Zero();
-  cov_hit(0, 0) = resX * resX;
-  cov_hit(1, 1) = resY * resY;
-
   /////////////  track seed conf
   Acts::BoundSymMatrix cov_seed;
   cov_seed << seedResX * seedResX, 0., 0., 0., 0., 0., 0.,
@@ -219,28 +215,24 @@ int main(int argc, char *argv[]) {
 
   std::printf("--------create acts geo object-----\n");
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
-  std::vector<std::shared_ptr<TelActs::TelescopeDetectorElement>> element_col;
+  std::vector<std::shared_ptr<TelActs::TelElement>> element_col;
   std::tie(trackingGeometry, element_col)  = TelActs::buildGeometry(gctx, jsd_geo);
   //40_mm, 20_mm, 80_um
 
   // Set up surfaces
-  std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces_selected;
-  for (const auto &e : element_col) {
-    auto id = e->telDetectorID();
-    if (id==dutID)
-      continue;
-    auto surface = e->surface().getSharedPtr();
-    surfaces_selected[id] = surface;
+  size_t id_seed = 0;
+  std::shared_ptr<const Acts::Surface> surface_seed;
+  for(auto& e: element_col){
+    if(e->id() == id_seed){
+      surface_seed = e->surface().getSharedPtr();
+    }
   }
-  // seed surface pair
-  size_t seedSurfaceGeoIDStart = surfaces_selected[0]->geometryId().value();
-  size_t seedSurfaceGeoIDEnd = surfaces_selected[1]->geometryId().value();
 
   ///////////// trackfind conf
   auto trackFindFun = TelActs::makeTrackFinderFunction(trackingGeometry, magneticField);
 
   Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg = Acts::CKFSourceLinkSelector::Config{
-    {Acts::GeometryIdentifier(), {500, 1}}}; //max chi2, max number of selected hits
+    {Acts::GeometryIdentifier(), {10, 1}}}; //max chi2, max number of selected hits
   // 500 chi2cut,   1 max number of selected sourcelinks in a single surface;
 
   auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
@@ -257,7 +249,6 @@ int main(int argc, char *argv[]) {
     gctx, mctx, cctx, sourcelinkSelectorCfg, Acts::LoggerWrapper{*kfLogger}, pOptions,
     refSurface.get());
 
-
 ///////////////////////////////////////////////////
   JsonFileDeserializer jsfd(datafile_name);
   JsonFileSerializer jsfs(fitted_datafile_name);
@@ -270,70 +261,27 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    const auto &layers = evpack["layers"];
+    auto sourcelinks = TelActs::TelSourceLink::CreateSourceLinks(evpack, element_col);// all element, TODO: select
 
-    JsonValue js_hits(rapidjson::kArrayType);
-    for (const auto &layer : layers.GetArray()) {
-      size_t id_ext = layer["ext"].GetUint();
-      for (const auto &hit : layer["hit"].GetArray()) {
-        double x_hit = hit["pos"][0].GetDouble() - 0.02924 * 1024 / 2.0;
-        double y_hit = hit["pos"][1].GetDouble() - 0.02688 * 512 / 2.0;
-        JsonValue js_hit(rapidjson::kObjectType);
-        js_hit.AddMember("id", id_ext, jsa);
-        js_hit.AddMember("x", x_hit, jsa);
-        js_hit.AddMember("y", y_hit, jsa);
-        js_hits.PushBack(std::move(js_hit), jsa);
-      }
-    }
-
-    std::vector<TelActs::PixelSourceLink> sourcelinks;
-    for(const auto &js_hit : js_hits.GetArray()) {
-      size_t id = js_hit["id"].GetUint();
-      auto surface_it = surfaces_selected.find(id);
-      if(surface_it != surfaces_selected.end()) {
-        Acts::Vector2D loc_hit;
-        double x = js_hit["x"].GetDouble();
-        double y = js_hit["y"].GetDouble();
-        loc_hit << x, y;
-        sourcelinks.emplace_back(*(surface_it->second), loc_hit, cov_hit);
-      }
-    }
     if(sourcelinks.empty()) {
       std::fprintf(stdout, "Empty event <%d>.\n", eventNumber);
     }
 
-    // Start to find seeds for this event using the source links on the first
-    // two layers
     std::vector<Acts::CurvilinearTrackParameters> initialParameters;
-    for (const auto &sl0 : sourcelinks) {
-      const auto &surface0 = sl0.referenceSurface();
-      if (surface0.geometryId().value() != seedSurfaceGeoIDStart) {
+    for (auto &sl : sourcelinks) {
+      if( surface_seed != sl.referenceSurface().getSharedPtr() ){
         continue;
       }
-      const Acts::Vector3D global0 = sl0.globalPosition(gctx);
-      for (const auto &sl1 : sourcelinks) {
-        const auto &surface1 = sl1.referenceSurface();
-        if (surface1.geometryId().value() != seedSurfaceGeoIDEnd) {
-          continue;
-        }
-        const Acts::Vector3D global1 = sl1.globalPosition(gctx);
-        Acts::Vector3D distVec = global1 - global0;
-        // compare their distance in x-y (r-phi) plane
-        const double rDist = std::abs(Acts::VectorHelpers::perp(distVec));
-        // @todo: add options for the seed cuts
-        if (rDist <= 3_mm) {
-          const double phi = Acts::VectorHelpers::phi(distVec);
-          const double theta = Acts::VectorHelpers::theta(distVec);
-          Acts::Vector3D rPos = global0 - distVec / 2;
-          Acts::Vector4D rPos4(rPos.x(), rPos.y(), rPos.z(), 0);
-          double q = 1;
-          initialParameters.emplace_back(rPos4, phi, theta, beamEnergy, q,cov_seed);
-        }
-      }
+      Acts::Vector3D global = sl.globalPosition(gctx);
+      const double phi = 0.0000001;
+      const double theta = 0.0000001;
+      Acts::Vector4D rPos4(global.x(), global.y(), global.z(), 0);
+      double q = 1;
+      initialParameters.emplace_back(rPos4, phi, theta, beamEnergy, q, cov_seed);
     }
 
     ////////////////////////////////
-    std::vector<TelActs::PixelMultiTrajectory> trajectories;
+    std::vector<TelActs::TelMultiTrajectory> trajectories;
     // Loop ever the seeds
     size_t iseed = 0;
     size_t nTracks = 0;
@@ -357,18 +305,18 @@ int main(int argc, char *argv[]) {
     }
 
     //////////////////////////////////////////////////////////////
-    JsonValue js_output(rapidjson::kObjectType);
-    js_output.AddMember("eventNum", JsonValue(eventNumber), jsa);
-    JsonValue js_tracks(rapidjson::kArrayType);
-    for (const auto &traj : trajectories) {
-      auto js_track_mj = traj.createJsonValue(jsa, gctx);
-      for(auto &js_track : js_track_mj.GetArray()){
-        js_tracks.PushBack(std::move(js_track), jsa);
-      }
-    }
-    js_output.AddMember("hits", std::move(js_hits), jsa);
-    js_output.AddMember("tracks", std::move(js_tracks), jsa);
-    jsfs.putNextJsonValue(js_output);
+    // JsonValue js_output(rapidjson::kObjectType);
+    // js_output.AddMember("eventNum", JsonValue(eventNumber), jsa);
+    // JsonValue js_tracks(rapidjson::kArrayType);
+    // for (const auto &traj : trajectories) {
+    //   auto js_track_mj = traj.createJsonValue(jsa, gctx);
+    //   for(auto &js_track : js_track_mj.GetArray()){
+    //     js_tracks.PushBack(std::move(js_track), jsa);
+    //   }
+    // }
+    // js_output.AddMember("hits", std::move(js_hits), jsa);
+    // js_output.AddMember("tracks", std::move(js_tracks), jsa);
+    // jsfs.putNextJsonValue(js_output);
 
     eventNumber ++;
     //TODO gl

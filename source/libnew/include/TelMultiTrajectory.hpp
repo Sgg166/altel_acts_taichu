@@ -15,12 +15,15 @@
 #include "Acts/EventData/TrackParameters.hpp"
 #include "Acts/EventData/MultiTrajectoryHelpers.hpp"
 
-#include "PixelSourceLink.hpp"
+#include "TelSourceLink.hpp"
 
-#include "TelescopeDetectorElement.hpp"
+#include "TelElement.hpp"
 #include "myrapidjson.h"
 
 namespace TelActs {
+
+using namespace Acts::UnitLiterals;
+
 using IndexedParams = std::unordered_map<size_t, Acts::BoundTrackParameters>;
 
 /// @brief Struct for truth track fitting/finding result with
@@ -33,6 +36,9 @@ using IndexedParams = std::unordered_map<size_t, Acts::BoundTrackParameters>;
 /// trajectories in the MultiTrajectory.
 ///
 /// @note The MultiTrajectory is thought to be empty if there is no entry index
+  class PixelMultiTrajectory;
+  using TelMultiTrajectory = PixelMultiTrajectory;
+
 struct PixelMultiTrajectory {
 public:
   /// @brief Default constructor
