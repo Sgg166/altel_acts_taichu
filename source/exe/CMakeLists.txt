@@ -1,81 +1,13 @@
 
-add_executable(AlignTelescopeGeometry AlignTelescopeGeometry.cpp)
-list(APPEND EXE_TARGET_LIST AlignTelescopeGeometry)
-target_link_libraries(AlignTelescopeGeometry PRIVATE
-  altel-acts
+add_executable(TelDetectorAlign TelAlign.cpp)
+list(APPEND EXE_TARGET_LIST TelDetectorAlign)
+target_link_libraries(TelDetectorAlign
+  altel-actsnew ActsAlignment mycommon)
 
-  ActsAlignment
-
-  ActsExamplesFramework
-  ActsExamplesCommon
-  ActsExamplesDetectorsCommon
-  ActsExamplesMagneticField
-  ActsExamplesIoCsv
-  ActsExamplesIoObj
-  ActsExamplesIoPerformance
-  rapidjson
-
-  ROOT::Core
-  ROOT::Hist
-  ROOT::Tree
-  )
-
-
-add_executable(EstimateTrackParameters EstimateTrackParameters.cpp)
-list(APPEND EXE_TARGET_LIST EstimateTrackParameters)
-target_link_libraries(EstimateTrackParameters PRIVATE
-  altel-acts
-
-  ActsAlignment
-
-  ActsExamplesFramework
-  ActsExamplesCommon
-  ActsExamplesDetectorsCommon
-  ActsExamplesMagneticField
-  ActsExamplesIoCsv
-  ActsExamplesIoObj
-  ActsExamplesIoPerformance
-  rapidjson
-
-  ROOT::Core
-  ROOT::Hist
-  ROOT::Tree
-  Boost::boost
-  )
-
-
-
-add_executable(FindTelescopeTracks FindTelescopeTracks.cpp)
-list(APPEND EXE_TARGET_LIST FindTelescopeTracks)
-target_link_libraries(FindTelescopeTracks PRIVATE
-  altel-acts
-
-  ActsAlignment
-
-  ActsExamplesFramework
-  ActsExamplesCommon
-  ActsExamplesDetectorsCommon
-  ActsExamplesMagneticField
-  ActsExamplesIoCsv
-  ActsExamplesIoObj
-  ActsExamplesIoPerformance
-  rapidjson
-
-  ROOT::Core
-  ROOT::Hist
-  ROOT::Tree
-  )
-
-
-add_executable(PrintEventJson PrintEventJson.cpp)
-list(APPEND EXE_TARGET_LIST PrintEventJson)
-target_link_libraries(PrintEventJson PRIVATE
-  altel-acts
-  rapidjson
-  )
-
-
-
+add_executable(TelTrackFind TelTrackFind.cpp)
+list(APPEND EXE_TARGET_LIST TelTrackFind)
+target_link_libraries(TelTrackFind
+  altel-actsnew ActsAlignment mycommon)
 
 # install-tree
 install(TARGETS ${EXE_TARGET_LIST}

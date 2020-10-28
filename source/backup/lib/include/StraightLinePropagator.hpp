@@ -13,7 +13,7 @@
 #include "Acts/Utilities/ParameterDefinitions.hpp"
 #include "Acts/Utilities/Units.hpp"
 
-namespace TelActs {
+namespace Telescope {
 
 struct StraightLinePropagator {
   using Stepper = Acts::StraightLineStepper;
