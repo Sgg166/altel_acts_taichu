@@ -1,36 +1,4 @@
-// This file is part of the Acts project.
-//
-// Copyright (C) 2019 CERN for the benefit of the Acts project
-//
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
-#include "Acts/Geometry/CuboidVolumeBounds.hpp"
-#include "Acts/Geometry/LayerArrayCreator.hpp"
-#include "Acts/Geometry/LayerCreator.hpp"
-#include "Acts/Geometry/PassiveLayerBuilder.hpp"
-#include "Acts/Geometry/PlaneLayer.hpp"
-#include "Acts/Geometry/SurfaceArrayCreator.hpp"
-#include "Acts/Geometry/TrackingGeometry.hpp"
-#include "Acts/Geometry/TrackingGeometryBuilder.hpp"
-#include "Acts/Geometry/TrackingVolume.hpp"
-#include "Acts/Geometry/TrackingVolumeArrayCreator.hpp"
-#include "Acts/MagneticField/ConstantBField.hpp"
-#include "Acts/Material/HomogeneousSurfaceMaterial.hpp"
-#include "Acts/Material/Material.hpp"
-#include "Acts/Surfaces/PlaneSurface.hpp"
-#include "Acts/Surfaces/RectangleBounds.hpp"
-#include "Acts/Surfaces/SurfaceArray.hpp"
-#include "Acts/Utilities/BinUtility.hpp"
-#include "Acts/Utilities/BinnedArray.hpp"
-#include "Acts/Utilities/BinnedArrayXD.hpp"
-#include "Acts/Utilities/Definitions.hpp"
-#include "Acts/Utilities/Logger.hpp"
-#include "Acts/Utilities/Units.hpp"
-
 #include "TelMultiTrajectory.hpp"
-
 #include "TelActs.hh"
 #include "getopt.h"
 #include "myrapidjson.h"
@@ -216,7 +184,7 @@ int main(int argc, char *argv[]) {
   std::printf("--------create acts geo object-----\n");
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
   std::vector<std::shared_ptr<TelActs::TelElement>> element_col;
-  std::tie(trackingGeometry, element_col)  = TelActs::buildGeometry(gctx, jsd_geo);
+  std::tie(trackingGeometry, element_col)  = TelActs::TelElement::buildGeometry(gctx, jsd_geo);
   //40_mm, 20_mm, 80_um
 
   // Set up surfaces

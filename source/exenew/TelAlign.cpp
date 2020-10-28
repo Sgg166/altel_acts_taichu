@@ -175,12 +175,12 @@ int main(int argc, char *argv[]) {
   std::printf("--------create acts geo object-----\n");
   std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
   std::vector<std::shared_ptr<TelActs::TelescopeDetectorElement>> element_col;
-  std::tie(trackingGeometry, element_col)  = TelActs::buildGeometry(gctx, jsd_geo);
+  std::tie(trackingGeometry, element_col)  = TelActs::TelElement::buildGeometry(gctx, jsd_geo);
 
   // Set up surfaces
   std::map<size_t, std::shared_ptr<const Acts::Surface>> surfaces_selected;
   for (const auto &e : element_col) {
-    auto id = e->telDetectorID();
+    auto id = e->id();
     surfaces_selected[id] = e->surface().getSharedPtr();
   }
 
@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
       const auto &rotation = transform.rotation();
       const Acts::Vector3D rotAngles = rotation.eulerAngles(2, 1, 0);
 
-      size_t id = det->telDetectorID();
+      size_t id = det->id();
       double cx = translation.x();
       double cy = translation.y();
       double cz = translation.z();
