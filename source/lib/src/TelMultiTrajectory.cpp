@@ -49,7 +49,6 @@ TelActs::TelMultiTrajectory::freeToCurvilinearJacobian(const Acts::Vector3D &dir
 }
 
 
-
 JsonValue TelActs::TelMultiTrajectory::createJsonValue(JsonAllocator& jsa, Acts::GeometryContext& gctx) const {
   JsonValue js_tracks(rapidjson::kArrayType);
   for (const size_t &trackTip : m_trackTips) {
@@ -157,4 +156,105 @@ JsonValue TelActs::TelMultiTrajectory::createJsonValue(JsonAllocator& jsa, Acts:
     js_tracks.PushBack(std::move(js_track), jsa);
   }
   return js_tracks;
+}
+
+
+
+void TelActs::TelMultiTrajectory::fillSingleTrack(
+  Acts::GeometryContext& gctx,
+
+  std::vector<size_t>& idMeas,
+  std::vector<double>& xMeas,
+  std::vector<double>& yMeas,
+  std::vector<double>& xResidLocal,
+  std::vector<double>& yResidLocal,
+
+  std::vector<size_t>& idFit,
+  std::vector<double>& xFitLocal,
+  std::vector<double>& yFitLocal,
+  std::vector<double>& xFitWorld,
+  std::vector<double>& yFitWorld,
+  std::vector<double>& zFitWorld)const
+{
+
+  idMeas.clear();
+  xMeas.clear();
+  yMeas.clear();
+  xResidLocal.clear();
+  yResidLocal.clear();
+
+  idFit.clear();
+  xFitLocal.clear();
+  yFitLocal.clear();
+  xFitWorld.clear();
+  yFitWorld.clear();
+  zFitWorld.clear();
+
+
+  if(m_trackTips.size()==0){
+    std::fprintf(stderr, "something wrong, more than 1 track per seed\n");
+    return;
+  }
+
+  m_multiTrajectory.visitBackwards(
+    m_trackTips[0], [&](const auto &state) {
+                      // only fill the track states with non-outlier measurement
+                      auto typeFlags = state.typeFlags();
+                      if (!state.hasSmoothed()) {
+                        return true;
+                      }
+
+                      auto telSurface = state.referenceSurface().getSharedPtr();
+                      auto telElement = dynamic_cast<const TelActs::TelElement*>(
+                        telSurface->associatedDetectorElement());
+                      if(!telElement){
+                        return true;
+                      }
+                      size_t layerid = telElement->id();
+
+                      // Get fit local
+                      Acts::Vector2D fit_pos_local(state.smoothed()[Acts::eBoundLoc0],
+                                                   state.smoothed()[Acts::eBoundLoc1]);
+                      // Get fit global
+                      Acts::FreeVector freeParams =
+                        Acts::detail::transformBoundToFreeParameters(
+                          *telSurface, gctx, state.smoothed());
+
+                      Acts::Vector3D fit_pos_global(freeParams[Acts::eFreePos0],
+                                                    freeParams[Acts::eFreePos1],
+                                                    freeParams[Acts::eFreePos2]);
+                      idFit.push_back(layerid);
+                      xFitLocal.push_back(fit_pos_local(0));
+                      yFitLocal.push_back(fit_pos_local(1));
+                      xFitWorld.push_back(fit_pos_global(0));
+                      yFitWorld.push_back(fit_pos_global(1));
+                      zFitWorld.push_back(fit_pos_global(2));
+
+                      if(state.hasUncalibrated()){
+                        Acts::Vector2D meas_pos_local;
+                        Acts::Vector2D residual_local;
+                        meas_pos_local = state.uncalibrated().value();
+                        residual_local = meas_pos_local -fit_pos_local;
+
+                        idMeas.push_back(layerid);
+                        xMeas.push_back(meas_pos_local(0));
+                        yMeas.push_back(meas_pos_local(1));
+                        xResidLocal.push_back(residual_local(0));
+                        yResidLocal.push_back(residual_local(1));
+                      }
+                      return true;
+                    });
+
+
+  std::reverse(idMeas.begin(), idMeas.end());
+  std::reverse(xMeas.begin(),  xMeas.end());
+  std::reverse(yMeas.begin(),  yMeas.end());
+  std::reverse(xResidLocal.begin(), xResidLocal.end());
+  std::reverse(yResidLocal.begin(), yResidLocal.end());
+
+  std::reverse(idFit.begin(), idFit.end());
+  std::reverse(xFitLocal.begin(), xFitLocal.end());
+  std::reverse(yFitLocal.begin(), yFitLocal.end());
+  std::reverse(xFitWorld.begin(), xFitWorld.end());
+  std::reverse(yFitWorld.begin(), yFitWorld.end());
 }

@@ -12,10 +12,12 @@ using PixelSourceLink = TelSourceLink;
 
 class TelSourceLink {
 public:
+
   TelSourceLink(const Acts::Surface &surface, Acts::Vector2D values,
                   Acts::BoundMatrix cov)
       : m_values(values), m_cov(cov), m_surface(&surface) {
   }
+
   /// Must be default_constructible to satisfy SourceLinkConcept.
   TelSourceLink() = default;
   TelSourceLink(TelSourceLink &&) = default;
@@ -32,11 +34,17 @@ public:
         m_values[0], m_values[1]};
   }
 
-  // reset the covariance
-  // should be done by calibrator?
+  const Acts::Vector2D& value() const{
+    return m_values;
+  }
+
+  Acts::Vector2D& value(){
+    return m_values;
+  }
+
+  
   void setCovariance(const Acts::BoundMatrix &cov) { m_cov = cov; }
 
-  // get the global position
   Acts::Vector3D globalPosition(const Acts::GeometryContext &gctx) const {
     Acts::Vector3D mom(1, 1, 1);
     Acts::Vector3D global = m_surface->localToGlobal(gctx, m_values, mom);

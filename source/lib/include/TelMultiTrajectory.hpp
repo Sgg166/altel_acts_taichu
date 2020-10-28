@@ -86,38 +86,22 @@ public:
   }
 
   /// @brief Indicator if a trajectory exists
-  ///
-  /// @param entryIndex The trajectory entry index
-  ///
-  /// @return Whether there is trajectory with provided entry index
   bool hasTrajectory(const size_t &entryIndex) const {
     return std::count(m_trackTips.begin(), m_trackTips.end(), entryIndex) > 0;
   }
 
   /// @brief Indicator if there is fitted track parameters for one trajectory
-  ///
-  /// @param entryIndex The trajectory entry index
-  ///
-  /// @return Whether having fitted track parameters or not
   bool hasTrackParameters(const size_t &entryIndex) const {
     return m_trackParameters.count(entryIndex) > 0;
   }
 
   /// @brief Getter for multiTrajectory
-  ///
-  /// @return The multiTrajectory with trajectory entry indices
-  ///
-  /// @note It could return an empty multiTrajectory
   std::pair<std::vector<size_t>, Acts::MultiTrajectory<PixelSourceLink>>
   trajectory() const {
     return std::make_pair(m_trackTips, m_multiTrajectory);
   }
 
   /// @brief Getter of fitted track parameters for one trajectory
-  ///
-  /// @param entryIndex The trajectory entry index
-  ///
-  /// @return The fitted track parameters of the trajectory
   const Acts::BoundTrackParameters &
   trackParameters(const size_t &entryIndex) const {
     auto it = m_trackParameters.find(entryIndex);
@@ -129,6 +113,22 @@ public:
           std::to_string(entryIndex));
     }
   }
+
+  void fillSingleTrack(
+    Acts::GeometryContext& gctx,
+
+    std::vector<size_t>& idMeas,
+    std::vector<double>& xMeas,
+    std::vector<double>& yMeas,
+    std::vector<double>& xResidLocal,
+    std::vector<double>& yResidLocal,
+
+    std::vector<size_t>& idFit,
+    std::vector<double>& xFitLocal,
+    std::vector<double>& yFitLocal,
+    std::vector<double>& xFitWorld,
+    std::vector<double>& yFitWorld,
+    std::vector<double>& zFitWorld)const;
 
   JsonValue createJsonValue(JsonAllocator& jsa, Acts::GeometryContext& gctx) const;
 
@@ -142,7 +142,7 @@ public:
 
 private:
   // The multiTrajectory
-  Acts::MultiTrajectory<PixelSourceLink> m_multiTrajectory;
+  Acts::MultiTrajectory<TelSourceLink> m_multiTrajectory;
 
   // The entry indices of trajectories stored in multiTrajectory
   std::vector<size_t> m_trackTips = {};

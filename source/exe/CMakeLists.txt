@@ -2,12 +2,23 @@
 add_executable(TelDetectorAlign TelAlign.cpp)
 list(APPEND EXE_TARGET_LIST TelDetectorAlign)
 target_link_libraries(TelDetectorAlign
-  altel-actsnew ActsAlignment mycommon)
+  altel-acts ActsAlignment mycommon)
 
 add_executable(TelTrackFind TelTrackFind.cpp)
 list(APPEND EXE_TARGET_LIST TelTrackFind)
 target_link_libraries(TelTrackFind
-  altel-actsnew ActsAlignment mycommon)
+  altel-acts ActsAlignment mycommon)
+
+
+find_package(ROOT REQUIRED COMPONENTS RIO Net)
+
+add_executable(TelTrackResidual TelTrackResidual.cpp)
+list(APPEND EXE_TARGET_LIST TelTrackResidual)
+target_link_libraries(TelTrackResidual
+  altel-acts ActsAlignment mycommon
+  ROOT::Core ROOT::Tree ROOT::RIO ROOT::Hist ROOT::Graf ROOT::Graf3d
+  )
+
 
 # install-tree
 install(TARGETS ${EXE_TARGET_LIST}
