@@ -3,6 +3,8 @@
 #include "getopt.h"
 #include "myrapidjson.h"
 
+#include <numeric>
+#include <chrono>
 
 #include <TROOT.h>
 #include <TFile.h>
@@ -25,6 +27,9 @@ Usage:
   -rootFile       [PATH]       path to root file (output)
   -energy         [float]      beam energy, GeV
   -dutID          [int]        ID of DUT which is excluded from track fit
+
+examples:
+./bin/TelTrackResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo /work/testbeam/altel_align/runspace/test313/align_313_geo.json -r actsfit.root -even 10
 )";
 
 
@@ -45,15 +50,15 @@ int main(int argc, char *argv[]) {
 
   int64_t eventMaxNum = -1;
   int64_t dutID = -1;
-  std::string datafile_name;
-  std::string rootfile_name;
-  std::string geofile_name;
+  std::string dataFile_path;
+  std::string rootFile_path;
+  std::string geoFile_path;
   double beamEnergy = -1;
 
   double seedResX = 5_um;
   double seedResY = 5_um;
-  double seedResPhi = 0.1_rad;
-  double seedResTheta = 0.1_rad;
+  double seedResPhi = 0.03_rad;
+  double seedResTheta = 0.03_rad;
 
   int c;
   opterr = 1;
@@ -63,13 +68,13 @@ int main(int argc, char *argv[]) {
       eventMaxNum = std::stoul(optarg);
       break;
     case 'f':
-      datafile_name = optarg;
+      dataFile_path = optarg;
       break;
     case 'b':
-      rootfile_name = optarg;
+      rootFile_path = optarg;
       break;
     case 'g':
-      geofile_name = optarg;
+      geoFile_path = optarg;
       break;
     case 'e':
       beamEnergy = std::stod(optarg) * Acts::UnitConstants::GeV;
@@ -111,15 +116,15 @@ int main(int argc, char *argv[]) {
   }
 
   std::fprintf(stdout, "\n");
-  std::fprintf(stdout, "datafile:         %s\n", datafile_name.c_str());
-  std::fprintf(stdout, "geofile:          %s\n", geofile_name.c_str());
-  std::fprintf(stdout, "rootFile:         %s\n", rootfile_name.c_str());
+  std::fprintf(stdout, "dataFile:         %s\n", dataFile_path.c_str());
+  std::fprintf(stdout, "geoFile:          %s\n", geoFile_path.c_str());
+  std::fprintf(stdout, "rootFile:         %s\n", rootFile_path.c_str());
   std::fprintf(stdout, "seedResPhi:       %f\n", seedResPhi);
   std::fprintf(stdout, "seedResTheta:     %f\n", seedResTheta);
   std::fprintf(stdout, "\n");
 
-  if (datafile_name.empty() || rootfile_name.empty() ||
-      geofile_name.empty()) {
+  if (dataFile_path.empty() || rootFile_path.empty() ||
+      geoFile_path.empty()) {
     std::fprintf(stderr, "%s\n", help_usage.c_str());
     exit(0);
   }
@@ -137,41 +142,90 @@ int main(int argc, char *argv[]) {
 
   /////////////  track seed conf
   Acts::BoundSymMatrix cov_seed;
-  cov_seed << seedResX * seedResX, 0., 0., 0., 0., 0., 0.,
-    seedResY * seedResY, 0., 0., 0., 0., 0., 0.,
-    seedResPhi * seedResPhi, 0., 0., 0., 0., 0., 0.,
-    seedResTheta * seedResTheta, 0., 0., 0., 0., 0., 0.,
-    0.0001, 0., 0., 0., 0., 0., 0., 1.;
+  double seedResX2 = seedResX * seedResX;
+  double seedResY2 = seedResY * seedResY;
+  double seedResPhi2 = seedResPhi * seedResPhi;
+  double seedResTheta2 = seedResTheta * seedResTheta;
+  cov_seed <<
+    seedResX2,0.,       0.,         0.,           0.,     0.,
+    0.,       seedResY2,0.,         0.,           0.,     0.,
+    0.,       0.,       seedResPhi2,0.,           0.,     0.,
+    0.,       0.,       0.,         seedResTheta2,0.,     0.,
+    0.,       0.,       0.,         0.,           0.0001, 0.,
+    0.,       0.,       0.,         0.,           0.,     1.;
 
   std::printf("--------read geo-----\n");
-  std::string str_geo = JsonUtils::readFile(geofile_name);
+  std::string str_geo = JsonUtils::readFile(geoFile_path);
   JsonDocument jsd_geo = JsonUtils::createJsonDocument(str_geo);
   if(jsd_geo.IsNull()){
-    std::fprintf(stderr, "Geometry file <%s> does not contain any json objects.\n", geofile_name.c_str() );
+    std::fprintf(stderr, "Geometry file <%s> does not contain any json objects.\n", geoFile_path.c_str() );
     throw;
   }
   JsonUtils::printJsonValue(jsd_geo, true);
 
   std::printf("--------create acts geo object-----\n");
-  std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
-  std::vector<std::shared_ptr<TelActs::TelElement>> element_col;
-  std::tie(trackingGeometry, element_col)  = TelActs::TelElement::buildGeometry(gctx, jsd_geo);
+  if (!jsd_geo.HasMember("geometry")) {
+    throw;
+  }
+  const auto &js_geo = jsd_geo["geometry"];
+
+
+  std::vector<std::shared_ptr<TelActs::TelElement>> eleDets;
+  const auto &js_dets = js_geo["detectors"];
+  for(const auto& js_det: js_dets.GetArray()){
+    auto ele = std::make_shared<TelActs::TelElement>(js_det);
+    eleDets.push_back(ele);
+  }
+
+  std::vector<std::shared_ptr<TelActs::TelElement>> eleTargets;
+  const auto &js_targets = js_geo["targets"];
+  for(const auto& js_target: js_targets.GetArray()){
+    auto ele = std::make_shared<TelActs::TelElement>(js_target);
+    eleTargets.push_back(ele);
+  }
+
+
+  std::vector<std::shared_ptr<TelActs::TelElement>> eleDetsAndTargets;
+  for(auto &e: eleDets){
+    eleDetsAndTargets.push_back(e);
+  }
+  for(auto &e: eleTargets){
+    eleDetsAndTargets.push_back(e);
+  }
+
+  std::fprintf(stdout, "elementN = %d, detN = %d, targetN = %d\n",
+               eleDetsAndTargets.size(), eleDets.size(), eleTargets.size());
+
+  std::shared_ptr<const Acts::TrackingGeometry> worldGeo =
+    TelActs::TelElement::buildWorld(gctx, 1.0_m, 0.1_m, 0.1_m,  eleDetsAndTargets);
+
   //40_mm, 20_mm, 80_um
 
   // Set up surfaces
   size_t id_seed = 0;
   std::shared_ptr<const Acts::Surface> surface_seed;
-  for(auto& e: element_col){
+  for(auto& e: eleDets){
     if(e->id() == id_seed){
       surface_seed = e->surface().getSharedPtr();
     }
   }
 
   ///////////// trackfind conf
-  auto trackFindFun = TelActs::makeTrackFinderFunction(trackingGeometry, magneticField);
+  auto trackFindFun = TelActs::makeTrackFinderFunction(worldGeo, magneticField);
 
-  Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg = Acts::CKFSourceLinkSelector::Config{
-    {Acts::GeometryIdentifier(), {10, 1}}}; //max chi2, max number of selected hits
+  std::vector<Acts::CKFSourceLinkSelector::Config::InputElement> ckfConfigEle_vec;
+  for(auto& e: eleDetsAndTargets){
+    ckfConfigEle_vec.push_back({e->surface().geometryId(), {20,1}}); //chi2, max branches
+  }
+
+  Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg(ckfConfigEle_vec);
+
+  //   = Acts::CKFSourceLinkSelector::Config{
+  //   // {Acts::GeometryIdentifier(), {20, 1}}
+  //   {surface_seed0->geometryIdentifier(), {20, 1}},
+  //   {surface_seed0->geometryIdentifier(), {20, 1}},
+  //   {surface_seed0->geometryIdentifier(), {20, 1}}
+  // }; //max chi2, max number of selected hits
 
   auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
     Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{0, 0., 1.});
@@ -234,9 +288,13 @@ int main(int argc, char *argv[]) {
 
 
 ///////////////////////////////////////////////////
-  JsonFileDeserializer jsfd(datafile_name);
+
+  JsonFileDeserializer jsfd(dataFile_path);
 
   size_t eventNumber = 0;
+  size_t trackNumber = 0;
+  size_t seedNumber = 0;
+  auto tp_start = std::chrono::system_clock::now();
   while(jsfd && (eventNumber< eventMaxNum || eventMaxNum<0)){
     auto evpack = jsfd.getNextJsonDocument();
     if(evpack.IsNull()){
@@ -244,7 +302,7 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    auto sourcelinks = TelActs::TelSourceLink::CreateSourceLinks(evpack, element_col);// all element, TODO: select
+    auto sourcelinks = TelActs::TelSourceLink::CreateSourceLinks(evpack, eleDets);
     if(sourcelinks.empty()) {
       std::fprintf(stdout, "Empty event <%d>.\n", eventNumber);
     }
@@ -254,10 +312,10 @@ int main(int argc, char *argv[]) {
       if( surface_seed != sl.referenceSurface().getSharedPtr() ){
         continue;
       }
-      Acts::Vector3D global = sl.globalPosition(gctx);
-      const double phi = 0.0000001;
-      const double theta = 0.0000001;
-      Acts::Vector4D rPos4(global.x(), global.y(), global.z(), 0);
+      Acts::Vector3D seedOriginWorld = sl.globalPosition(gctx);
+      const double phi = 0;
+      const double theta = 0.5*M_PI;
+      Acts::Vector4D rPos4(seedOriginWorld.x(), seedOriginWorld.y(), seedOriginWorld.z(), 0);
       double q = 1;
       initialParameters.emplace_back(rPos4, phi, theta, beamEnergy, q, cov_seed);
     }
@@ -282,22 +340,74 @@ int main(int argc, char *argv[]) {
       else {
         std::printf("Track finding failed in Event<%lu> seed<%lu>, with error \n",
                     eventNumber, iseed, result.error().message().c_str());
+        // for(const auto& l: evpack["layers"].GetArray()){
+        //   JsonUtils::printJsonValue(l, false);
+        // }
       }
       iseed++;
     }
+    seedNumber+=iseed;
 
+    auto sourcelinksTargets = TelActs::TelSourceLink::CreateSourceLinks(evpack, eleTargets);
     for(const auto &mj: trajectories){
       mj.fillSingleTrack(gctx,
                          idMeas, xMeas, yMeas,
                          xResidLocal, yResidLocal,
                          idFit, xFitLocal, yFitLocal,
-                         xFitWorld, yFitWorld, zFitWorld);
+                         zFitWorld, xFitWorld, yFitWorld);
 
-
+      if(idMeas.size()<4){
+        continue;
+      }
+      for(const auto &sl : sourcelinksTargets){
+        auto baseEle = sl.referenceSurface().associatedDetectorElement();
+        const TelActs::TelElement* ele = dynamic_cast<const TelActs::TelElement*>(baseEle);
+        if(!ele){
+          std::cout<< "too wrong"<<std::endl;
+          continue;
+        }
+        size_t id = ele->id();
+        auto it = std::find (idFit.begin(), idFit.end(), id);
+        if(it==idFit.end()){
+          // std::fprintf(stdout, "not able to find fitted position for id %d\n", id);
+          // for(auto &e: idFit){
+          //   std::cout<< e<<std::endl;
+          // }
+          continue;
+        }
+        size_t n= it-idFit.begin();
+        Acts::Vector2D xy_fit(xFitLocal[n], yFitLocal[n]);
+        Acts::Vector2D xy_meas = sl.value();
+        Acts::Vector2D xy_resid = xy_meas - xy_fit;
+        if(xy_resid.norm()>0.1_mm){
+          // std::fprintf(stdout, "large distance %f\n,  xy_fit = %f, %f   xy_meas = %f, %f\n",
+          //              xy_resid.norm(), xy_fit(0), xy_fit(1), xy_meas(0), xy_meas(1));
+          // JsonUtils::printJsonValue(evpack, false);
+          continue;
+        }
+        idMeas.push_back(id);
+        xMeas.push_back(xy_meas(0));
+        yMeas.push_back(xy_meas(1));
+        xResidLocal.push_back(xy_resid(0));
+        yResidLocal.push_back(xy_resid(1));
+      }
+      trackNumber ++;
+      tree.Fill();
     }
 
     eventNumber ++;
     //TODO gl
   }
+  auto tp_end = std::chrono::system_clock::now();
+  std::chrono::duration<double> dur_diff = tp_end-tp_start;
+  double time_s = dur_diff.count();
+  std::fprintf(stdout, "processed %d events,  %d seeds, %d good tracks\n", eventNumber, seedNumber, trackNumber);
+  std::fprintf(stdout, "total time: %fs, event rate: %fhz,  seed rate: %fhz,  track rate: %fhz",
+               time_s, eventNumber/time_s, seedNumber/time_s, trackNumber/time_s);
+
+  TFile tfile(rootFile_path.c_str(),"recreate");
+  tree.Write();
+  tfile.Close();
+
   return 0;
 }

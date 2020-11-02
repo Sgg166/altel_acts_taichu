@@ -42,8 +42,8 @@ std::vector<TelActs::TelSourceLink> TelActs::TelSourceLink::CreateSourceLinks(
       loc_hit << x, y;
       //////////// hit data
       Acts::BoundMatrix cov_hit = Acts::BoundMatrix::Zero();
-      double resX = 15_um;
-      double resY = 15_um;
+      double resX = 8_um;
+      double resY = 8_um;
       cov_hit(0, 0) = resX * resX;
       cov_hit(1, 1) = resY * resY;
       sourcelinks.emplace_back(ele->surface(), loc_hit, cov_hit);

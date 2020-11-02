@@ -103,7 +103,14 @@ TelActs::TelElement::TelElement(const JsonValue &js_det){
     Acts::AngleAxis3D rotY(ry, Acts::Vector3D::UnitY());
     Acts::AngleAxis3D rotX(rx, Acts::Vector3D::UnitX());
     Acts::Rotation3D rotation = rotZ * rotY * rotX;
-    m_elementTransform = std::make_shared<Acts::Transform3D>(Acts::Translation3D(translation) * rotation);
+
+    Acts::Transform3D xBeamRotation(Acts::Transform3D::Identity());
+    xBeamRotation.linear()<< // y-z-x
+      0, 0, 1,
+      1, 0, 0,
+      0, 1, 0;
+
+    m_elementTransform = std::make_shared<Acts::Transform3D>(xBeamRotation * Acts::Translation3D(translation) * rotation);
 
     Acts::Material silicon = Acts::Material::fromMolarDensity(
       9.370_cm, 46.52_cm, 28.0855, 14, (2.329 / 28.0855) * 1_mol / 1_cm3);
@@ -140,8 +147,8 @@ TelActs::TelElement::buildWorld(Acts::GeometryContext &gctx, double sizex, doubl
       sizex/2., sizey/2.,  sizez/2.);
 
   auto layer_array_binned = Acts::LayerArrayCreator({}).layerArray(
-      gctx, layer_col, sizez/-2, sizez/2,
-      Acts::BinningType::arbitrary, Acts::BinningValue::binZ);
+      gctx, layer_col, sizex/-2, sizex/2,
+      Acts::BinningType::arbitrary, Acts::BinningValue::binX);
 
   auto trackVolume = Acts::TrackingVolume::create(
       Acts::Transform3D::Identity(), tracker_cuboid, nullptr,
@@ -151,7 +158,17 @@ TelActs::TelElement::buildWorld(Acts::GeometryContext &gctx, double sizex, doubl
   // assumming single tracker in the world
   auto tracker_array_binned =
       Acts::TrackingVolumeArrayCreator({}).trackingVolumeArray(
-        gctx, {trackVolume}, Acts::BinningValue::binZ); // by Z axis
+        gctx, {trackVolume}, Acts::BinningValue::binX); // by Z axis
+
+
+  // Acts::Transform3D trafo(Acts::Transform3D::Identity());
+  // trafo.linear()<< // y-z-x
+  //   0, 0, 1,
+  //   1, 0, 0,
+  //   0, 1, 0;
+
+  // std::cout<< trafo<<std::endl;
+
   auto mtvpWorld = Acts::TrackingVolume::create(Acts::Transform3D::Identity(),
                                                 tracker_cuboid,
                                                 tracker_array_binned, "World");
@@ -172,14 +189,14 @@ TelActs::TelElement::buildGeometry(Acts::GeometryContext &nominal_gctx,
   }
   const auto &js_geo = js["geometry"];
   const auto &js_dets = js_geo["detectors"];
-  std::map<size_t, std::array<double, 6>> id_geo_map;
   for(const auto& js_det: js_dets.GetArray()){
     auto detElement = std::make_shared<TelActs::TelElement>(js_det);
     element_col.push_back(detElement);
   }
 
+
   std::shared_ptr<const Acts::TrackingGeometry> geo_world =
-    TelActs::TelElement::buildWorld(nominal_gctx, 0.1_m, 0.1_m, 1.0_m, element_col);
+    TelActs::TelElement::buildWorld(nominal_gctx, 1.0_m, 0.1_m, 0.1_m,  element_col);
 
   return std::make_pair(geo_world, element_col);
 }
