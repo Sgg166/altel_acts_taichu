@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
                eleDetsAndTargets.size(), eleDets.size(), eleTargets.size());
 
   std::shared_ptr<const Acts::TrackingGeometry> worldGeo =
-    TelActs::TelElement::buildWorld(gctx, 1.0_m, 0.1_m, 0.1_m,  eleDetsAndTargets);
+    TelActs::TelElement::buildWorld(gctx, 4.0_m, 0.1_m, 0.1_m,  eleDetsAndTargets);
 
   //40_mm, 20_mm, 80_um
 
