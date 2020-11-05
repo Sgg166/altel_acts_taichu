@@ -55,10 +55,18 @@ int main(int argc, char *argv[]) {
   std::string geoFile_path;
   double beamEnergy = -1;
 
-  double seedResX = 5_um;
-  double seedResY = 5_um;
-  double seedResPhi = 0.03_rad;
-  double seedResTheta = 0.03_rad;
+  // double seedResX = 5_um;
+  // double seedResY = 5_um;
+  // double seedResPhi = 0.03_rad;
+  // double seedResTheta = 0.03_rad;
+
+  double distCollimator = 5_m;
+  double widthCollimator = 2_cm;
+
+  double seedResX = 0.5*widthCollimator;
+  double seedResY = 0.5*widthCollimator;
+  double seedResPhi = 0.5*widthCollimator/distCollimator;
+  double seedResTheta = 0.5*widthCollimator/distCollimator;
 
   int c;
   opterr = 1;
@@ -170,20 +178,39 @@ int main(int argc, char *argv[]) {
   const auto &js_geo = jsd_geo["geometry"];
 
 
-  std::vector<std::shared_ptr<TelActs::TelElement>> eleDets;
   const auto &js_dets = js_geo["detectors"];
+  std::vector<std::shared_ptr<TelActs::TelElement>> eleDets;
   for(const auto& js_det: js_dets.GetArray()){
     auto ele = std::make_shared<TelActs::TelElement>(js_det);
     eleDets.push_back(ele);
   }
+  if(eleDets.size()<3){
+    std::fprintf(stdout, "error: number of detector elements is only %d.", eleDets.size());
+    throw;
+  }
 
-  std::vector<std::shared_ptr<TelActs::TelElement>> eleTargets;
+  std::shared_ptr<TelActs::TelElement> firstEleDet;
+  std::vector<Acts::LayerPtr> layerDets;
+  for(auto &ele: eleDets){
+    layerDets.push_back(ele->layer());
+  }
+  Acts::GeometryObjectSorterT<Acts::LayerPtr> layerSorter(gctx, Acts::BinningValue::binX);
+  std::sort(layerDets.begin(), layerDets.end(), layerSorter);
+  for(auto &ele: eleDets){
+    if(ele->layer() == layerDets[0] ){
+      firstEleDet = ele;
+    }
+  }
+  if(!firstEleDet){
+    std::fprintf(stderr, "error: assign first element");
+  }
+
   const auto &js_targets = js_geo["targets"];
+  std::vector<std::shared_ptr<TelActs::TelElement>> eleTargets;
   for(const auto& js_target: js_targets.GetArray()){
     auto ele = std::make_shared<TelActs::TelElement>(js_target);
     eleTargets.push_back(ele);
   }
-
 
   std::vector<std::shared_ptr<TelActs::TelElement>> eleDetsAndTargets;
   for(auto &e: eleDets){
@@ -197,38 +224,26 @@ int main(int argc, char *argv[]) {
                eleDetsAndTargets.size(), eleDets.size(), eleTargets.size());
 
   std::shared_ptr<const Acts::TrackingGeometry> worldGeo =
-    TelActs::TelElement::buildWorld(gctx, 4.0_m, 0.1_m, 0.1_m,  eleDetsAndTargets);
+    TelActs::TelElement::buildWorld(gctx, 11.0_m, 0.1_m, 0.1_m,  eleDetsAndTargets); //include collimator at -5_m
 
-  //40_mm, 20_mm, 80_um
-
-  // Set up surfaces
-  size_t id_seed = 0;
-  std::shared_ptr<const Acts::Surface> surface_seed;
-  for(auto& e: eleDets){
-    if(e->id() == id_seed){
-      surface_seed = e->surface().getSharedPtr();
-    }
-  }
+  std::shared_ptr<const Acts::Surface> firstSurfaceDet = firstEleDet->surface().getSharedPtr();
 
   ///////////// trackfind conf
   auto trackFindFun = TelActs::makeTrackFinderFunction(worldGeo, magneticField);
 
   std::vector<Acts::CKFSourceLinkSelector::Config::InputElement> ckfConfigEle_vec;
   for(auto& e: eleDetsAndTargets){
-    ckfConfigEle_vec.push_back({e->surface().geometryId(), {20,1}}); //chi2, max branches
+    if(e==firstEleDet){
+      ckfConfigEle_vec.push_back({e->surface().geometryId(), {20,10}}); //first layer can have multi-branches
+    }
+    else{
+      ckfConfigEle_vec.push_back({e->surface().geometryId(), {20,1}}); //chi2, max branches
+    }
   }
-
   Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg(ckfConfigEle_vec);
 
-  //   = Acts::CKFSourceLinkSelector::Config{
-  //   // {Acts::GeometryIdentifier(), {20, 1}}
-  //   {surface_seed0->geometryIdentifier(), {20, 1}},
-  //   {surface_seed0->geometryIdentifier(), {20, 1}},
-  //   {surface_seed0->geometryIdentifier(), {20, 1}}
-  // }; //max chi2, max number of selected hits
-
   auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
-    Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{0, 0., 1.});
+    Acts::Vector3D{-4_m, 0., 0.}, Acts::Vector3D{1., 0., 0.});
 
   Acts::PropagatorPlainOptions pOptions;
   pOptions.maxSteps = 10000;
@@ -286,11 +301,11 @@ int main(int argc, char *argv[]) {
   auto br_yFitWorld = tree.Branch("yFitWorld", &p_yFitWorld);
   auto br_zFitWorld = tree.Branch("zFitWorld", &p_zFitWorld);
 
-
 ///////////////////////////////////////////////////
 
   JsonFileDeserializer jsfd(dataFile_path);
 
+  size_t emptyEventNumber = 0;
   size_t eventNumber = 0;
   size_t trackNumber = 0;
   size_t seedNumber = 0;
@@ -304,61 +319,66 @@ int main(int argc, char *argv[]) {
 
     auto sourcelinks = TelActs::TelSourceLink::CreateSourceLinks(evpack, eleDets);
     if(sourcelinks.empty()) {
-      std::fprintf(stdout, "Empty event <%d>.\n", eventNumber);
+      // std::fprintf(stdout, "Empty event <%d>.\n", eventNumber);
+      emptyEventNumber ++;
+      eventNumber ++;
+      continue;
     }
 
-    std::vector<Acts::CurvilinearTrackParameters> initialParameters;
-    for (auto &sl : sourcelinks) {
-      if( surface_seed != sl.referenceSurface().getSharedPtr() ){
-        continue;
-      }
-      Acts::Vector3D seedOriginWorld = sl.globalPosition(gctx);
-      const double phi = 0;
-      const double theta = 0.5*M_PI;
-      Acts::Vector4D rPos4(seedOriginWorld.x(), seedOriginWorld.y(), seedOriginWorld.z(), 0);
-      double q = 1;
-      initialParameters.emplace_back(rPos4, phi, theta, beamEnergy, q, cov_seed);
-    }
+    // for (auto &sl : sourcelinks) {
+    //   if( firstSurfaceDet != sl.referenceSurface().getSharedPtr() ){
+    //     continue;
+    //   }
+    //   Acts::Vector3D seedOriginWorld = sl.globalPosition(gctx);
+    //   const double phi = 0;
+    //   const double theta = 0.5*M_PI;
+    //   Acts::Vector4D rPos4(seedOriginWorld.x(), seedOriginWorld.y(), seedOriginWorld.z(), 0);
+    //   double q = 1;
+    //   initialParameters.emplace_back(rPos4, phi, theta, beamEnergy, q, cov_seed);
+    // }
+    double q = 1;
+    double phi = 0;
+    double theta = 0.5*M_PI;
+    Acts::Vector4D beamPos4(-distCollimator, 0, 0, 0);
+    Acts::CurvilinearTrackParameters rStart(beamPos4, phi, theta, beamEnergy, q, cov_seed);
+
+
+    // for(const auto& l: evpack["layers"].GetArray()){
+    //   JsonUtils::printJsonValue(l, false);
+    // }
 
     ////////////////////////////////
-    std::vector<TelActs::TelMultiTrajectory> trajectories;
+    std::unique_ptr<TelActs::TelMultiTrajectory> mj;
     // Loop ever the seeds
-    size_t iseed = 0;
     size_t nTracks = 0;
-    for (const auto &rStart : initialParameters) {
-      auto result = trackFindFun(sourcelinks, rStart, ckfOptions);
-      if (result.ok()) {
-        // Get the track finding output object
-        const auto &trackFindingOutput = result.value();
-        // Create a PixelMultiTrajectory
-        nTracks += trackFindingOutput.trackTips.size();
-        trajectories.emplace_back(
-          std::move(trackFindingOutput.fittedStates),
-          std::move(trackFindingOutput.trackTips),
-          std::move(trackFindingOutput.fittedParameters));
-      }
-      else {
-        std::printf("Track finding failed in Event<%lu> seed<%lu>, with error \n",
-                    eventNumber, iseed, result.error().message().c_str());
-        // for(const auto& l: evpack["layers"].GetArray()){
-        //   JsonUtils::printJsonValue(l, false);
-        // }
-      }
-      iseed++;
+    auto result = trackFindFun(sourcelinks, rStart, ckfOptions);
+    if (result.ok()) {
+      // Get the track finding output object
+      const auto &trackFindingOutput = result.value();
+      // Create a PixelMultiTrajectory
+      nTracks += trackFindingOutput.trackTips.size();
+
+      mj.reset(new TelActs::TelMultiTrajectory(
+        std::move(trackFindingOutput.fittedStates),
+        std::move(trackFindingOutput.trackTips),
+        std::move(trackFindingOutput.fittedParameters)));
     }
-    seedNumber+=iseed;
+    else {
+      std::printf("Track finding failed in Event<%lu> , with error \n",
+                  eventNumber, result.error().message().c_str());
+    }
+    seedNumber++;
 
     auto sourcelinksTargets = TelActs::TelSourceLink::CreateSourceLinks(evpack, eleTargets);
-    for(const auto &mj: trajectories){
-      if(mj.trackNumber()==0){
-        continue;
-      }
-      mj.fillSingleTrack(gctx,
-                         idMeas, xMeas, yMeas,
-                         xResidLocal, yResidLocal,
-                         idFit, xFitLocal, yFitLocal,
-                         zFitWorld, xFitWorld, yFitWorld,
-                         0);
+
+    size_t nTrackPerEvent= mj?mj->trackNumber():0;
+    for(size_t indexTrack=0; indexTrack<nTrackPerEvent; indexTrack++){
+      mj->fillSingleTrack(gctx,
+                          idMeas, xMeas, yMeas,
+                          xResidLocal, yResidLocal,
+                          idFit, xFitLocal, yFitLocal,
+                          zFitWorld, xFitWorld, yFitWorld,
+                          indexTrack);
 
       if(idMeas.size()<4){
         continue;
@@ -405,9 +425,9 @@ int main(int argc, char *argv[]) {
   auto tp_end = std::chrono::system_clock::now();
   std::chrono::duration<double> dur_diff = tp_end-tp_start;
   double time_s = dur_diff.count();
-  std::fprintf(stdout, "processed %d events,  %d seeds, %d good tracks\n", eventNumber, seedNumber, trackNumber);
-  std::fprintf(stdout, "total time: %fs, event rate: %fhz,  seed rate: %fhz,  track rate: %fhz",
-               time_s, eventNumber/time_s, seedNumber/time_s, trackNumber/time_s);
+  std::fprintf(stdout, "processed %d events, include %d empty events, %d good tracks\n", eventNumber, emptyEventNumber, trackNumber);
+  std::fprintf(stdout, "total time: %fs, event rate: %fhz,  non-empty event rate: %fhz,  empty event rate: %fhz,  track rate: %fhz",
+               time_s, eventNumber/time_s, (eventNumber-emptyEventNumber)/time_s, emptyEventNumber/time_s, trackNumber/time_s);
 
   TFile tfile(rootFile_path.c_str(),"recreate");
   tree.Write();

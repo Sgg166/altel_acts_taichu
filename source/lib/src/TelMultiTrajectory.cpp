@@ -174,7 +174,9 @@ void TelActs::TelMultiTrajectory::fillSingleTrack(
   std::vector<double>& yFitLocal,
   std::vector<double>& xFitWorld,
   std::vector<double>& yFitWorld,
-  std::vector<double>& zFitWorld)const
+  std::vector<double>& zFitWorld,
+  size_t indexTrack
+  )const
 {
 
   idMeas.clear();
@@ -190,14 +192,13 @@ void TelActs::TelMultiTrajectory::fillSingleTrack(
   yFitWorld.clear();
   zFitWorld.clear();
 
-
-  if(m_trackTips.size()==0){
-    std::fprintf(stderr, "something wrong, more than 1 track per seed\n");
-    return;
+  if(indexTrack >= m_trackTips.size()){
+    std::fprintf(stderr, "something wrong, request track #%d in %d tracks\n");
+    throw;
   }
 
   m_multiTrajectory.visitBackwards(
-    m_trackTips[0], [&](const auto &state) {
+    m_trackTips[indexTrack], [&](const auto &state) {
                       // only fill the track states with non-outlier measurement
                       auto typeFlags = state.typeFlags();
                       if (!state.hasSmoothed()) {

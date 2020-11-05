@@ -3,6 +3,9 @@
 
 #include "Acts/Geometry/DetectorElementBase.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
+#include "Acts/Utilities/Helpers.hpp"
+#include "Acts/Utilities/BinningType.hpp"
+#include "Acts/Geometry/GeometryObjectSorter.hpp"
 
 #include "myrapidjson.h"
 

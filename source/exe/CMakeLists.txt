@@ -20,6 +20,14 @@ target_link_libraries(TelTrackResidual
   )
 
 
+add_executable(TelDetectorResidual TelDetectorResidual.cpp)
+list(APPEND EXE_TARGET_LIST TelDetectorResidual)
+target_link_libraries(TelDetectorResidual
+  altel-acts ActsAlignment mycommon
+  ROOT::Core ROOT::Tree ROOT::RIO ROOT::Hist ROOT::Graf ROOT::Graf3d
+  )
+
+
 # install-tree
 install(TARGETS ${EXE_TARGET_LIST}
   EXPORT ${PROJECT_NAME}Targets

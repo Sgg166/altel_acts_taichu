@@ -114,6 +114,10 @@ public:
     }
   }
 
+  size_t trackNumber()const{
+    return m_trackTips.size();
+  }
+
   void fillSingleTrack(
     Acts::GeometryContext& gctx,
 
@@ -128,7 +132,9 @@ public:
     std::vector<double>& yFitLocal,
     std::vector<double>& xFitWorld,
     std::vector<double>& yFitWorld,
-    std::vector<double>& zFitWorld)const;
+    std::vector<double>& zFitWorld,
+    size_t indexTrack=0
+    )const;
 
   JsonValue createJsonValue(JsonAllocator& jsa, Acts::GeometryContext& gctx) const;
 

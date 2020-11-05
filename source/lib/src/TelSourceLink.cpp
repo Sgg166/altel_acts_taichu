@@ -3,7 +3,6 @@
 
 using namespace Acts::UnitLiterals;
 
-
 std::vector<TelActs::TelSourceLink> TelActs::TelSourceLink::CreateSourceLinks(
   const JsonValue &js,
   const std::vector<std::shared_ptr<TelActs::TelElement>> eles)

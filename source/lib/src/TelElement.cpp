@@ -93,10 +93,15 @@ TelActs::TelElement::TelElement(const JsonValue &js_det){
     m_tel_det_id = id;
 
     m_elementThickness = 80_um; //TODO: sz;
+    // auto rBounds = std::make_shared<Acts::RectangleBounds>(
+    //   sx / 2.0 * Acts::UnitConstants::mm ,
+    //   sy / 2.0 * Acts::UnitConstants::mm);
+
     auto rBounds = std::make_shared<Acts::RectangleBounds>(
-      sx / 2.0 * Acts::UnitConstants::mm ,
-      sy / 2.0 * Acts::UnitConstants::mm);
-    // 50_mm, 25_mm, 80_um
+      sx * Acts::UnitConstants::mm ,
+      sy * Acts::UnitConstants::mm);
+    //NOTE: workaround, enlarge sensor size to prevent buggy decision of reaching end of tracker
+
 
     Acts::Vector3D translation(cx, cy, cz);
     Acts::AngleAxis3D rotZ(rz, Acts::Vector3D::UnitZ());
@@ -146,9 +151,11 @@ TelActs::TelElement::buildWorld(Acts::GeometryContext &gctx, double sizex, doubl
   auto tracker_cuboid = std::make_shared<Acts::CuboidVolumeBounds>(
       sizex/2., sizey/2.,  sizez/2.);
 
-  auto layer_array_binned = Acts::LayerArrayCreator({}).layerArray(
-      gctx, layer_col, sizex/-2, sizex/2,
-      Acts::BinningType::arbitrary, Acts::BinningValue::binX);
+  Acts::LayerArrayCreator layerArrayCreater({});
+  auto layer_array_binned = layerArrayCreater.layerArray(
+    gctx, layer_col, sizex/-2, sizex/2,
+    Acts::BinningType::arbitrary, Acts::BinningValue::binX);
+
 
   auto trackVolume = Acts::TrackingVolume::create(
       Acts::Transform3D::Identity(), tracker_cuboid, nullptr,
@@ -196,7 +203,7 @@ TelActs::TelElement::buildGeometry(Acts::GeometryContext &nominal_gctx,
 
 
   std::shared_ptr<const Acts::TrackingGeometry> geo_world =
-    TelActs::TelElement::buildWorld(nominal_gctx, 1.0_m, 0.1_m, 0.1_m,  element_col);
+    TelActs::TelElement::buildWorld(nominal_gctx, 4.0_m, 0.1_m, 0.1_m,  element_col);
 
   return std::make_pair(geo_world, element_col);
 }
