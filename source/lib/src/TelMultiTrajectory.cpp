@@ -159,6 +159,11 @@ JsonValue TelActs::TelMultiTrajectory::createJsonValue(JsonAllocator& jsa, Acts:
 }
 
 
+// void TelActs::TelMultiTrajectory::fillSingleTrack(
+//   Acts::GeometryContext& gctx,
+//   size_t indexTrack){
+  
+// }
 
 void TelActs::TelMultiTrajectory::fillSingleTrack(
   Acts::GeometryContext& gctx,
@@ -220,6 +225,11 @@ void TelActs::TelMultiTrajectory::fillSingleTrack(
                       Acts::FreeVector freeParams =
                         Acts::detail::transformBoundToFreeParameters(
                           *telSurface, gctx, state.smoothed());
+
+                      Acts::Vector3D fit_dir_global(freeParams[Acts::eFreeDir0],
+                                                    freeParams[Acts::eFreeDir1],
+                                                    freeParams[Acts::eFreeDir2]);
+
 
                       Acts::Vector3D fit_pos_global(freeParams[Acts::eFreePos0],
                                                     freeParams[Acts::eFreePos1],
