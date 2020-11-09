@@ -42,7 +42,14 @@ public:
     return m_values;
   }
 
-  
+  const size_t& detectorId() const{
+    return m_detId;
+  }
+
+  size_t& detectorId(){
+    return m_detId;
+  }
+
   void setCovariance(const Acts::BoundMatrix &cov) { m_cov = cov; }
 
   Acts::Vector3D globalPosition(const Acts::GeometryContext &gctx) const {
@@ -54,6 +61,7 @@ public:
   static std::vector<TelSourceLink> CreateSourceLinks(const JsonValue &js, const std::vector<std::shared_ptr<TelElement>> eles);
 private:
   Acts::Vector2D m_values;
+  size_t m_detId;
   Acts::BoundMatrix m_cov;
   // need to store pointers to make the object copyable
   const Acts::Surface *m_surface;

@@ -199,6 +199,15 @@ int main(int argc, char *argv[]) {
   std::shared_ptr<const Acts::TrackingGeometry> worldGeo =
     TelActs::TelElement::buildWorld(gctx, 4.0_m, 0.1_m, 0.1_m,  eleDetsAndTargets);
 
+  std::map<Acts::GeometryIdentifier, size_t> mapSurId2DetId;
+  std::map<size_t, Acts::GeometryIdentifier> mapDetId2SurId;
+  for(auto &ele: eleDetsAndTargets){
+    size_t detId = ele->id();
+    Acts::GeometryIdentifier surId = ele->surface().geometryId();
+    mapDetId2SurId[detId] = surId;
+    mapSurId2DetId[surId] = detId;
+  }
+
   //40_mm, 20_mm, 80_um
 
   // Set up surfaces
@@ -353,7 +362,7 @@ int main(int argc, char *argv[]) {
       if(mj.trackNumber()==0){
         continue;
       }
-      mj.fillSingleTrack(gctx,
+      mj.fillSingleTrack(gctx, mapSurId2DetId,
                          idMeas, xMeas, yMeas,
                          xResidLocal, yResidLocal,
                          idFit, xFitLocal, yFitLocal,
@@ -361,16 +370,20 @@ int main(int argc, char *argv[]) {
                          0);
 
       if(idMeas.size()<4){
+        std::cout<<idMeas.size()<< " measus is less than"<< 4<<std::endl;
         continue;
       }
       for(const auto &sl : sourcelinksTargets){
         auto baseEle = sl.referenceSurface().associatedDetectorElement();
-        const TelActs::TelElement* ele = dynamic_cast<const TelActs::TelElement*>(baseEle);
-        if(!ele){
-          std::cout<< "too wrong"<<std::endl;
-          continue;
-        }
-        size_t id = ele->id();
+        // const TelActs::TelElement* ele = dynamic_cast<const TelActs::TelElement*>(baseEle);
+        // if(!ele){
+        //   std::cout<< "too wrong"<<std::endl;
+        //   continue;
+        // }
+        // size_t id = ele->id();
+        size_t id = mapSurId2DetId.at(sl.referenceSurface().geometryId());
+
+
         auto it = std::find (idFit.begin(), idFit.end(), id);
         if(it==idFit.end()){
           // std::fprintf(stdout, "not able to find fitted position for id %d\n", id);

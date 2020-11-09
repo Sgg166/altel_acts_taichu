@@ -14,7 +14,6 @@
 #include "myrapidjson.h"
 
 
-
 namespace TelActs {
 
 using IndexedParams = std::unordered_map<size_t, Acts::BoundTrackParameters>;
@@ -124,6 +123,7 @@ public:
 
   void fillSingleTrack(
     Acts::GeometryContext& gctx,
+    const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId,
 
     std::vector<size_t>& idMeas,
     std::vector<double>& xMeas,
@@ -141,6 +141,11 @@ public:
     )const;
 
   JsonValue createJsonValue(JsonAllocator& jsa, Acts::GeometryContext& gctx) const;
+
+  std::unique_ptr<TelEvent> createTelEvent(
+    Acts::GeometryContext& gctx,
+    const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId,
+    size_t runN, size_t eventN, size_t detSetupN)const;
 
 /// @brief Evaluate the projection Jacobian from free to curvilinear parameters
 ///

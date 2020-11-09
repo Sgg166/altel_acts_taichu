@@ -51,33 +51,6 @@
 
 using namespace Acts::UnitLiterals;
 
-/*
-TelActs::TelElement::TelElement(size_t telDetID,
-                                std::shared_ptr<Acts::Transform3D> transform,
-                                double widthX, double heightY, double thickZ)
-  : Acts::DetectorElementBase(), m_tel_det_id(telDetID),
-    m_elementTransform(std::move(transform)), m_elementThickness(thickZ) {
-
-  Acts::Material silicon = Acts::Material::fromMolarDensity(
-    9.370_cm, 46.52_cm, 28.0855, 14, (2.329 / 28.0855) * 1_mol / 1_cm3);
-
-  auto material = std::make_shared<Acts::HomogeneousSurfaceMaterial>(
-    Acts::MaterialSlab(silicon, m_elementThickness));
-
-  auto rBounds =
-    std::make_shared<Acts::RectangleBounds>(widthX / 2.0, heightY / 2.0);
-  auto pBounds = std::dynamic_pointer_cast<Acts::PlanarBounds>(rBounds);
-  m_surface = Acts::Surface::makeShared<Acts::PlaneSurface>(pBounds, *this);
-  m_surface->assignSurfaceMaterial(material);
-  std::unique_ptr<Acts::SurfaceArray> surArray(
-    new Acts::SurfaceArray(m_surface));
-  m_layer = Acts::PlaneLayer::create(*m_elementTransform, pBounds,
-                                     std::move(surArray),
-                                     5 * Acts::UnitConstants::mm);
-  m_surface->associateLayer(*m_layer);
-}
-*/
-
 TelActs::TelElement::TelElement(const JsonValue &js_det){
     size_t id = js_det["id"].GetUint();
     double cx = js_det["center"]["x"].GetDouble();
@@ -92,16 +65,15 @@ TelActs::TelElement::TelElement(const JsonValue &js_det){
 
     m_tel_det_id = id;
 
-    m_elementThickness = 80_um; //TODO: sz;
+    m_elementThickness = 80_um;
     // auto rBounds = std::make_shared<Acts::RectangleBounds>(
     //   sx / 2.0 * Acts::UnitConstants::mm ,
     //   sy / 2.0 * Acts::UnitConstants::mm);
 
-    auto rBounds = std::make_shared<Acts::RectangleBounds>(
-      sx * Acts::UnitConstants::mm ,
-      sy * Acts::UnitConstants::mm);
-    //NOTE: workaround, enlarge sensor size to prevent buggy decision of reaching end of tracker
-
+    std::shared_ptr<Acts::PlanarBounds> pBounds(new Acts::RectangleBounds(
+                                                  sx * Acts::UnitConstants::mm ,
+                                                  sy * Acts::UnitConstants::mm));
+    //NOTE: workaround, enlarge sensor size x2 to prevent buggy decision of reaching end of tracker
 
     Acts::Vector3D translation(cx, cy, cz);
     Acts::AngleAxis3D rotZ(rz, Acts::Vector3D::UnitZ());
@@ -116,20 +88,18 @@ TelActs::TelElement::TelElement(const JsonValue &js_det){
       0, 1, 0;
 
     m_elementTransform = std::make_shared<Acts::Transform3D>(xBeamRotation * Acts::Translation3D(translation) * rotation);
+    m_layer = Acts::PlaneLayer::create(*m_elementTransform, pBounds,
+                                       nullptr, 5 * Acts::UnitConstants::mm);
+
 
     Acts::Material silicon = Acts::Material::fromMolarDensity(
       9.370_cm, 46.52_cm, 28.0855, 14, (2.329 / 28.0855) * 1_mol / 1_cm3);
     auto material = std::make_shared<Acts::HomogeneousSurfaceMaterial>(
       Acts::MaterialSlab(silicon, m_elementThickness));
-    auto pBounds = std::dynamic_pointer_cast<Acts::PlanarBounds>(rBounds);
-    m_surface = Acts::Surface::makeShared<Acts::PlaneSurface>(pBounds, *this);
-    m_surface->assignSurfaceMaterial(material);
-    std::unique_ptr<Acts::SurfaceArray> surArray(
-      new Acts::SurfaceArray(m_surface));
-    m_layer = Acts::PlaneLayer::create(*m_elementTransform, pBounds,
-                                       std::move(surArray),
-                                       5 * Acts::UnitConstants::mm);
-    m_surface->associateLayer(*m_layer);
+
+    m_layer->surfaceRepresentation().assignSurfaceMaterial(material);
+
+    m_surface = m_layer->surfaceRepresentation().getSharedPtr();
 }
 
 
@@ -161,26 +131,20 @@ TelActs::TelElement::buildWorld(Acts::GeometryContext &gctx, double sizex, doubl
       Acts::Transform3D::Identity(), tracker_cuboid, nullptr,
       std::move(layer_array_binned), nullptr, {}, "Tracker");
 
-  // Build world volume
-  // assumming single tracker in the world
-  auto tracker_array_binned =
-      Acts::TrackingVolumeArrayCreator({}).trackingVolumeArray(
-        gctx, {trackVolume}, Acts::BinningValue::binX); // by Z axis
+  // // Build world volume
+  // // assumming single tracker in the world
+  // auto tracker_array_binned =
+  //     Acts::TrackingVolumeArrayCreator({}).trackingVolumeArray(
+  //       gctx, {trackVolume}, Acts::BinningValue::binX); // by x axis
 
-
-  // Acts::Transform3D trafo(Acts::Transform3D::Identity());
-  // trafo.linear()<< // y-z-x
-  //   0, 0, 1,
-  //   1, 0, 0,
-  //   0, 1, 0;
 
   // std::cout<< trafo<<std::endl;
 
-  auto mtvpWorld = Acts::TrackingVolume::create(Acts::Transform3D::Identity(),
-                                                tracker_cuboid,
-                                                tracker_array_binned, "World");
+  // auto mtvpWorld = Acts::TrackingVolume::create(Acts::Transform3D::Identity(),
+  //                                               tracker_cuboid,
+  //                                               tracker_array_binned, "World");
   std::shared_ptr<Acts::TrackingGeometry> geo_world;
-  geo_world.reset(new Acts::TrackingGeometry(mtvpWorld));
+  geo_world.reset(new Acts::TrackingGeometry(trackVolume));
 
   return geo_world;
 }
