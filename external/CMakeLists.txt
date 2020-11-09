@@ -16,10 +16,26 @@ find_package(Boost 1.69 REQUIRED
 
 find_package(ROOT REQUIRED HINTS $ENV{ROOTSYS}/cmake NO_CMAKE_SYSTEM_PATH)
 
+cmake_host_system_information(RESULT HOST_MEMORY_MB QUERY TOTAL_PHYSICAL_MEMORY)
+cmake_host_system_information(RESULT HOST_CPU_CORE QUERY NUMBER_OF_PHYSICAL_CORES)
+math(EXPR N_THREADS_BUILD_ACTS "${HOST_MEMORY_MB} / 1000 / 6")
+if(N_THREADS_BUILD_ACTS GREATER HOST_CPU_CORE)
+  math(EXPR N_THREADS_BUILD_ACTS "${HOST_CPU_CORE} + 1")
+endif()
+    
+message(STATUS "")
+message(STATUS "")
+message(STATUS "Host cpu: ${HOST_CPU_CORE} cores")
+message(STATUS "Host memory: ${HOST_MEMORY_MB} MB")
+message(STATUS "Limited by host memory, ${N_THREADS_BUILD_ACTS} threads can be used to build acts")
+message(STATUS "To build ACTS package, use command:  make external_acts")
+
 externalproject_add(
   external_acts
   SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/acts-core
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}  -DBOOST_INCLUDEDIR=${Boost_INCLUDE_DIR} -DBOOST_LIBRARYDIR=${Boost_LIBRARY_DIR_RELEASE} -DACTS_BUILD_FATRAS=ON -DACTS_BUILD_DIGITIZATION_PLUGIN=ON -DACTS_BUILD_IDENTIFICATION_PLUGIN=ON -DACTS_BUILD_TGEO_PLUGIN=ON -DACTS_BUILD_EXAMPLES=ON  -DACTS_BUILD_ALIGNMENT=ON
+  BUILD_ALWAYS true
+  BUILD_COMMAND make -j${N_THREADS_BUILD_ACTS}
   )
+
 set_target_properties(external_acts PROPERTIES EXCLUDE_FROM_ALL TRUE)
-message("To build ACTS package, use command:  make external_acts")
