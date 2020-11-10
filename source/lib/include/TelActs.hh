@@ -4,6 +4,7 @@
 
 #include "Acts/TrackFinding/CKFSourceLinkSelector.hpp"
 #include "Acts/TrackFinding/CombinatorialKalmanFilter.hpp"
+#include "Acts/Geometry/PlaneLayer.hpp"
 
 #include "ActsAlignment/Kernel/Alignment.hpp"
 
@@ -43,15 +44,27 @@ namespace TelActs{
   std::unique_ptr<TelEvent> createTelEvent(
     Acts::GeometryContext& gctx,
     const Acts::CombinatorialKalmanFilterResult<TelActs::TelSourceLink>& ckfResult,
-    const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId,
+    const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
     size_t runN, size_t eventN, size_t detSetupN);
 
 
+  std::unique_ptr<TelActs::TelEvent> createTelEvent(
+    const JsonValue& js,
+    std::vector<std::shared_ptr<Acts::PlaneLayer>>& planeLayers,
+    const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
+    size_t runN, size_t eventN, size_t detSetupN);
+
   void matchAddExtraHitMeas(
     Acts::GeometryContext& gctx,
-    const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId,
+    const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
     std::shared_ptr<TelEvent> telEvent,
     const std::vector<TelSourceLink>& sourcelinksTargets
     );
+
+
+  std::vector<TelActs::TelSourceLink> createSourceLink(
+    const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
+    std::vector<std::shared_ptr<Acts::PlaneLayer>>& planeLayers,
+    std::shared_ptr<TelActs::TelEvent> telEvent);
 
 };

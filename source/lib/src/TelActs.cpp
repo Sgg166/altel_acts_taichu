@@ -176,6 +176,53 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
   return telEvent;
 }
 
+
+
+std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
+  const JsonValue& js,
+  std::vector<std::shared_ptr<Acts::PlaneLayer>>& planeLayers,
+  const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
+  size_t runN, size_t eventN, size_t detSetupN){
+
+  std::map<size_t, std::shared_ptr<Acts::PlaneLayer>> mapDetId2PlaneLayer;
+  for(auto &aPlaneLayer: planeLayers){
+    Acts::GeometryIdentifier geoId= aPlaneLayer->geometryId();
+    size_t detId = mapGeoId2DetId.at(geoId);
+    mapDetId2PlaneLayer[detId] = aPlaneLayer;
+  }
+
+  std::unique_ptr<TelActs::TelEvent> telEvent(new TelActs::TelEvent{runN, eventN, detSetupN, {}, {}, {}});
+
+  const auto &layers = js["layers"];
+  for (const auto &layer : layers.GetArray()) {
+    size_t detId = layer["ext"].GetUint();
+    auto it = mapDetId2PlaneLayer.find(detId);
+    if(it == mapDetId2PlaneLayer.end()){
+      continue;
+    }
+    uint16_t tri = layer["tri"].GetUint();
+
+    for (const auto &hit : layer["hit"].GetArray()) {
+      double hitMeasU = hit["pos"][0].GetDouble() - 0.02924 * 1024 / 2.0;
+      double hitMeasV = hit["pos"][1].GetDouble() - 0.02688 * 512 / 2.0;
+
+      std::vector<std::shared_ptr<TelActs::TelRawMeasure>> rawMeasCol;
+      for(const auto &pix :  hit["pix"].GetArray()){
+        std::shared_ptr<TelActs::TelRawMeasure> rawMeas(new TelActs::TelRawMeasure);
+        rawMeas->uvdcS[0] = int16_t(pix[0].GetInt());
+        rawMeas->uvdcS[1] = int16_t(pix[0].GetInt());
+        rawMeas->uvdcS[2] = int16_t(detId);
+        rawMeas->uvdcS[3] = int16_t(tri);
+        rawMeasCol.push_back(rawMeas);
+      }
+      telEvent->HMs.emplace_back(new TelActs::TelHitMeasure{detId, {hitMeasU, hitMeasV}, rawMeasCol});
+    }
+  }
+  return telEvent;
+}
+
+
+
 using namespace Acts::UnitLiterals;
 
 void TelActs::matchAddExtraHitMeas(
@@ -208,4 +255,40 @@ void TelActs::matchAddExtraHitMeas(
         aTelHit->HM.reset(new TelActs::TelHitMeasure{id, {xy_meas(0), xy_meas(1)}, {}});
       }
     }
+}
+
+std::vector<TelActs::TelSourceLink> TelActs::createSourceLink(
+  const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
+  std::vector<std::shared_ptr<Acts::PlaneLayer>>& planeLayers,
+  std::shared_ptr<TelActs::TelEvent> telEvent){
+
+  std::map<size_t, std::shared_ptr<Acts::PlaneLayer>> mapDetId2PlaneLayer;
+  for(auto &aPlaneLayer: planeLayers){
+    Acts::GeometryIdentifier geoId= aPlaneLayer->geometryId();
+    size_t detId = mapGeoId2DetId.at(geoId);
+    mapDetId2PlaneLayer[detId] = aPlaneLayer;
+  }
+
+  std::vector<TelActs::TelSourceLink> sourceLinks;
+  auto & hitsMeas= telEvent->HMs;
+  for(auto &aHitMeas : hitsMeas){
+    auto detN = aHitMeas->DN;
+    auto it = mapDetId2PlaneLayer.find(detN);
+    if(it==mapDetId2PlaneLayer.end()){
+      continue;
+    }
+
+    auto u = aHitMeas->PLs[0];
+    auto v = aHitMeas->PLs[1];
+
+    Acts::Vector2D hitLoc;
+    hitLoc << u, v;
+    Acts::BoundMatrix hitCov = Acts::BoundMatrix::Zero();
+    double hitResolU = 6_um;
+    double hitResolV = 6_um;
+    hitCov(0, 0) = hitResolU * hitResolU;
+    hitCov(1, 1) = hitResolV * hitResolV;
+    sourceLinks.emplace_back(*(it->second), hitLoc, hitCov);
+  }
+  return sourceLinks;
 }

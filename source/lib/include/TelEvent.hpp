@@ -22,11 +22,14 @@ namespace TelActs{
     unsigned char vUC[8];
   };
 
+
   struct TelHitMeasure{
     uint64_t DN{0};    // detector id
     double PLs[2]{0.0, 0.0};  // local pos
     std::vector<std::shared_ptr<TelRawMeasure>> Ms;// measures
   };
+
+  using TelHitMeas = TelHitMeasure;
 
   struct TelHitFit{
     uint64_t DN{0};   // detector id
