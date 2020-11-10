@@ -10,13 +10,13 @@ target_link_libraries(TelTrackFind
   altel-acts ActsAlignment mycommon)
 
 
-find_package(ROOT REQUIRED COMPONENTS RIO Net)
+find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
 
 add_executable(TelTrackResidual TelTrackResidual.cpp)
 list(APPEND EXE_TARGET_LIST TelTrackResidual)
 target_link_libraries(TelTrackResidual
   altel-acts ActsAlignment mycommon
-  ROOT::Core ROOT::Tree ROOT::RIO ROOT::Hist ROOT::Graf ROOT::Graf3d
+  ROOT::Core ROOT::RIO ROOT::Tree
   )
 
 
@@ -24,7 +24,7 @@ add_executable(TelDetectorResidual TelDetectorResidual.cpp)
 list(APPEND EXE_TARGET_LIST TelDetectorResidual)
 target_link_libraries(TelDetectorResidual
   altel-acts ActsAlignment mycommon
-  ROOT::Core ROOT::Tree ROOT::RIO ROOT::Hist ROOT::Graf ROOT::Graf3d
+  ROOT::Core ROOT::RIO ROOT::Tree
   )
 
 

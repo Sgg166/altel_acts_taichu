@@ -36,6 +36,13 @@ externalproject_add(
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}  -DBOOST_INCLUDEDIR=${Boost_INCLUDE_DIR} -DBOOST_LIBRARYDIR=${Boost_LIBRARY_DIR_RELEASE} -DACTS_BUILD_FATRAS=ON -DACTS_BUILD_ALIGNMENT=ON
   BUILD_ALWAYS true
   BUILD_COMMAND make -j${N_THREADS_BUILD_ACTS}
+  INSTALL_COMMAND make install
+  COMMAND   echo ""
+  COMMAND   echo ""
+  COMMAND   echo ">>>>>>>External project ACTS is built and installed<<<<<<<<"
+  COMMAND   echo "!!!!Please run cmake again for main project to get updated ACTS installation!!!!"
+  COMMAND   echo "eg. cmake .."
+  COMMAND   echo ""
   )
 
 set_target_properties(external_acts PROPERTIES EXCLUDE_FROM_ALL TRUE)

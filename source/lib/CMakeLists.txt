@@ -9,9 +9,11 @@ target_include_directories( altel-acts
   $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
   )
 
+find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
+
 target_link_libraries(
   altel-acts  
-  PUBLIC ActsCore ActsAlignment
+  PUBLIC ActsCore ActsAlignment ROOT::Core ROOT::RIO ROOT::Tree
   PRIVATE mycommon
   )
 
