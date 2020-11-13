@@ -3,7 +3,6 @@
 #include "getopt.h"
 #include "myrapidjson.h"
 
-
 #include <numeric>
 #include <chrono>
 
@@ -22,7 +21,7 @@ Usage:
   -hitFile        <path>       path data input file (input)
   -rootFile       <path>       path to root file (output)
   -particleEnergy <float>      energy of beam particle, electron, (Gev)
-  -dutId          <int>...     DUT IDs which are complectely excluded from track fitting. Residual are caculated.
+  -targetId       <int>...     IDs of target detector which are complectely excluded from track fitting. Residual are caculated.
 
 examples:
 ./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo /work/testbeam/altel_align/runspace/test313/align_313_geo.json -r detresid.root -eventM 10
@@ -54,7 +53,7 @@ int main(int argc, char *argv[]) {
                                 {"rootFile", required_argument, NULL, 'b'},
                                 {"geometryFile", required_argument, NULL, 'g'},
                                 {"particleEnergy", required_argument, NULL, 'e'},
-                                {"dutId", required_argument, NULL, 'd'},
+                                {"targetId", required_argument, NULL, 'd'},
                                 {0, 0, 0, 0}};
 
     if(argc == 1){
@@ -207,76 +206,60 @@ int main(int argc, char *argv[]) {
     throw;
   }
   const auto &js_geo = jsd_geo["geometry"];
-
   const auto &js_dets = js_geo["detectors"];
-  std::vector<std::shared_ptr<TelActs::TelElement>> eleDets;
+
+  std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> mapDetId2PlaneLayer;
+  std::vector<std::shared_ptr<const Acts::PlaneLayer>> layerDets;
+  std::vector<std::shared_ptr<const Acts::PlaneLayer>> layerTargets;
+  std::vector<std::shared_ptr<const Acts::PlaneLayer>> allPlaneLayers;
+
   for(const auto& js_det: js_dets.GetArray()){
-    auto ele = std::make_shared<TelActs::TelElement>(js_det);
-    eleDets.push_back(ele);
+    auto [detId, planeLayer] = TelActs::createPlaneLayer(js_det);
+    layerDets.push_back(planeLayer);
+    mapDetId2PlaneLayer[detId] = planeLayer;
   }
-  if(eleDets.size()<3){
-    std::fprintf(stdout, "error: number of detector elements is only %d.", eleDets.size());
+  if(layerDets.size()<3){
+    std::fprintf(stdout, "error: number of detector elements is only %d.", layerDets.size());
     throw;
   }
 
-  std::shared_ptr<TelActs::TelElement> firstEleDet;
-  std::vector<Acts::LayerPtr> layerDets;
-  for(auto &ele: eleDets){
-    layerDets.push_back(ele->layer());
-  }
-  Acts::GeometryObjectSorterT<Acts::LayerPtr> layerSorter(gctx, Acts::BinningValue::binX);
+  Acts::GeometryObjectSorterT<std::shared_ptr<const Acts::PlaneLayer>> layerSorter(gctx, Acts::BinningValue::binX);
   std::sort(layerDets.begin(), layerDets.end(), layerSorter);
-  for(auto &ele: eleDets){
-    if(ele->layer() == layerDets[0] ){
-      firstEleDet = ele;
-    }
-  }
-  if(!firstEleDet){
-    std::fprintf(stderr, "error: assign first element");
-  }
 
   const auto &js_targets = js_geo["targets"];
-  std::vector<std::shared_ptr<TelActs::TelElement>> eleTargets;
   for(const auto& js_target: js_targets.GetArray()){
-    auto ele = std::make_shared<TelActs::TelElement>(js_target);
-    eleTargets.push_back(ele);
-  }
-
-  std::vector<std::shared_ptr<TelActs::TelElement>> eleDetsAndTargets;
-  for(auto &e: eleDets){
-    eleDetsAndTargets.push_back(e);
-  }
-  for(auto &e: eleTargets){
-    eleDetsAndTargets.push_back(e);
+    auto [detId, planeLayer] = TelActs::createPlaneLayer(js_target);
+    layerTargets.push_back(planeLayer);
+    mapDetId2PlaneLayer[detId] = planeLayer;
   }
 
   std::fprintf(stdout, "elementN = %d, detN = %d, targetN = %d\n",
-               eleDetsAndTargets.size(), eleDets.size(), eleTargets.size());
+               mapDetId2PlaneLayer.size(), layerDets.size(), layerTargets.size());
 
-  std::shared_ptr<const Acts::TrackingGeometry> worldGeo =
-    TelActs::TelElement::buildWorld(gctx, 11.0_m, 0.1_m, 0.1_m,  eleDetsAndTargets); //include collimator at -5_m
-  std::map<Acts::GeometryIdentifier, size_t> mapSurId2DetId;
-  std::map<size_t, Acts::GeometryIdentifier> mapDetId2SurId;
-  for(auto &ele: eleDetsAndTargets){
-    size_t detId = ele->id();
-    Acts::GeometryIdentifier surId = ele->surface().geometryId();
-    mapDetId2SurId[detId] = surId;
-    mapSurId2DetId[surId] = detId;
+  for(auto& [detId, aPlaneLayer]: mapDetId2PlaneLayer){
+    allPlaneLayers.push_back(aPlaneLayer);
   }
 
+  std::shared_ptr<const Acts::TrackingGeometry> worldGeo =
+    TelActs::createWorld(gctx, 11.0_m, 0.1_m, 0.1_m,  allPlaneLayers); //include collimator at -5_m
+  // geometry closed, geometry ID only valid after geometry closing
 
-  std::shared_ptr<const Acts::Surface> firstSurfaceDet = firstEleDet->surface().getSharedPtr();
+  std::map<Acts::GeometryIdentifier, size_t> mapGeoId2DetId;
+  for(auto& [detId, aPlaneLayer]: mapDetId2PlaneLayer){
+    Acts::GeometryIdentifier geoId = aPlaneLayer->geometryId();
+    mapGeoId2DetId[geoId] = detId;
+  }
 
   ///////////// trackfind conf
   auto trackFindFun = TelActs::makeTrackFinderFunction(worldGeo, magneticField);
 
   std::vector<Acts::CKFSourceLinkSelector::Config::InputElement> ckfConfigEle_vec;
-  for(auto& e: eleDetsAndTargets){
-    if(e==firstEleDet){
-      ckfConfigEle_vec.push_back({e->surface().geometryId(), {20,10}}); //first layer can have multi-branches
+  for(auto& [detId, aPlaneLayer]: mapDetId2PlaneLayer){
+    if(aPlaneLayer==layerDets[0]){// x sorted layers
+      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {20,10}}); //first layer can have multi-branches
     }
     else{
-      ckfConfigEle_vec.push_back({e->surface().geometryId(), {20,1}}); //chi2, max branches
+      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {20,1}}); //chi2, max branches
     }
   }
   Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg(ckfConfigEle_vec);
@@ -319,7 +302,11 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    auto sourcelinks = TelActs::TelSourceLink::CreateSourceLinks(evpack, eleDets);
+    size_t runN = 0;
+    size_t setupN = 0;
+    std::shared_ptr<TelActs::TelEvent> detEvent  = TelActs::createTelEvent(evpack, layerDets,  mapGeoId2DetId, runN, eventNum, setupN);
+    std::vector<TelActs::TelSourceLink> sourcelinks  = TelActs::createSourceLink(mapGeoId2DetId, layerDets, detEvent);
+
     if(sourcelinks.empty()) {
       emptyEventNum ++;
       eventNum ++;
@@ -341,11 +328,12 @@ int main(int argc, char *argv[]) {
       throw;
     }
 
-    auto sourcelinksTargets = TelActs::TelSourceLink::CreateSourceLinks(evpack, eleTargets);
+    std::shared_ptr<TelActs::TelEvent> targetEvent  = TelActs::createTelEvent(evpack, layerTargets,  mapGeoId2DetId,
+                                                                              runN, eventNum, setupN);
+    std::vector<TelActs::TelSourceLink> sourcelinksTargets  = TelActs::createSourceLink(mapGeoId2DetId, layerTargets, targetEvent);
 
-    uint32_t runN =0;
-    uint32_t setupN = 0;
-    std::shared_ptr<TelActs::TelEvent> telEvent = TelActs::createTelEvent(gctx, result.value(), mapSurId2DetId, runN, eventNum, setupN);
+    std::shared_ptr<TelActs::TelEvent> telEvent = TelActs::createTelEvent(gctx, result.value(), mapGeoId2DetId,
+                                                                          runN, eventNum, setupN);
 
     for(auto &telTraj: telEvent->Ts){
       size_t fittedHitNum = telTraj->numberHitFitByMeas();
@@ -356,7 +344,8 @@ int main(int argc, char *argv[]) {
       }
       trackNum ++;
     }
-    TelActs::matchAddExtraHitMeas(gctx, mapSurId2DetId, telEvent, sourcelinksTargets);
+    TelActs::matchAddExtraHitMeas(gctx, mapGeoId2DetId, telEvent, sourcelinksTargets);
+    // todo: match targetEvent directly
     ttreeWriter.fill(telEvent);
     eventNum ++;
   }

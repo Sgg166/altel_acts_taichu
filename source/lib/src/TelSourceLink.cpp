@@ -3,6 +3,51 @@
 
 using namespace Acts::UnitLiterals;
 
+
+TelActs::TelSourceLink::TelSourceLink(const Acts::PlaneLayer &planeLayer, std::shared_ptr<TelActs::TelHitMeasure> hitMeas)
+  : m_hitMeas(hitMeas), m_cov(Acts::BoundMatrix::Zero()), m_surface(&planeLayer){
+  if(!hitMeas){
+    std::fprintf(stderr, "very wrong\n");
+    throw;
+  }
+  m_values << m_hitMeas->PLs[0], m_hitMeas->PLs[1];
+
+  double resX = 6_um;
+  double resY = 6_um;
+  m_cov(0, 0) = resX * resX;
+  m_cov(1, 1) = resY * resY;
+
+}
+
+
+TelActs::TelSourceLink::TelSourceLink(std::shared_ptr<TelActs::TelHitMeasure> hitMeas,
+                                      const std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer)
+  :m_hitMeas(hitMeas), m_cov(Acts::BoundMatrix::Zero()){
+  if(!hitMeas){
+    std::fprintf(stderr, "very wrong\n");
+    throw;
+  }
+  size_t detId = hitMeas->DN;
+  auto it = mapDetId2PlaneLayer.find(detId);
+  if(it==mapDetId2PlaneLayer.end()){
+    std::fprintf(stderr, "very wrong\n");
+    throw;
+  }
+  m_surface = it->second.get();
+
+  m_values << hitMeas->PLs[0], hitMeas->PLs[1];
+
+  double resX = 6_um;
+  double resY = 6_um;
+  m_cov(0, 0) = resX * resX;
+  m_cov(1, 1) = resY * resY;
+
+  m_hitMeas = hitMeas;
+
+}
+
+
+
 std::vector<TelActs::TelSourceLink> TelActs::TelSourceLink::CreateSourceLinks(
   const JsonValue &js,
   const std::vector<std::shared_ptr<TelActs::TelElement>> eles)
@@ -50,3 +95,5 @@ std::vector<TelActs::TelSourceLink> TelActs::TelSourceLink::CreateSourceLinks(
   }
   return sourcelinks;
 }
+
+

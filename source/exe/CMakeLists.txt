@@ -9,8 +9,17 @@ list(APPEND EXE_TARGET_LIST TelTrackFind)
 target_link_libraries(TelTrackFind
   altel-acts ActsAlignment mycommon)
 
-
 find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
+
+set(ROOT_FEATURE_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+get_target_property(ROOT_CXX_COMPILE_FEATURES ROOT::Core INTERFACE_COMPILE_FEATURES)
+if(ROOT_CXX_COMPILE_FEATURES STREQUAL "cxx_std_11" )
+  set(ROOT_FEATURE_CXX_STANDARD 11)
+endif()
+if( ROOT_CXX_COMPILE_FEATURES STREQUAL "cxx_std_14" )
+  set(ROOT_FEATURE_CXX_STANDARD 14)
+endif()
+
 
 add_executable(TelTrackResidual TelTrackResidual.cpp)
 list(APPEND EXE_TARGET_LIST TelTrackResidual)
@@ -18,7 +27,6 @@ target_link_libraries(TelTrackResidual
   altel-acts ActsAlignment mycommon
   ROOT::Core ROOT::RIO ROOT::Tree
   )
-
 
 add_executable(TelDetectorResidual TelDetectorResidual.cpp)
 list(APPEND EXE_TARGET_LIST TelDetectorResidual)

@@ -41,30 +41,33 @@ namespace TelActs{
   freeToCurvilinearJacobian(const Acts::Vector3D &direction);
 
 
-  std::unique_ptr<TelEvent> createTelEvent(
-    Acts::GeometryContext& gctx,
-    const Acts::CombinatorialKalmanFilterResult<TelActs::TelSourceLink>& ckfResult,
-    const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-    size_t runN, size_t eventN, size_t detSetupN);
+  std::unique_ptr<TelEvent>
+  createTelEvent(Acts::GeometryContext& gctx,
+                 const Acts::CombinatorialKalmanFilterResult<TelActs::TelSourceLink>& ckfResult,
+                 const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
+                 size_t runN, size_t eventN, size_t detSetupN);
 
+  void matchAddExtraHitMeas(Acts::GeometryContext& gctx,
+                            const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
+                            std::shared_ptr<TelEvent> telEvent,
+                            const std::vector<TelSourceLink>& sourcelinksTargets);
 
-  std::unique_ptr<TelActs::TelEvent> createTelEvent(
-    const JsonValue& js,
-    std::vector<std::shared_ptr<Acts::PlaneLayer>>& planeLayers,
-    const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-    size_t runN, size_t eventN, size_t detSetupN);
+  std::unique_ptr<TelActs::TelEvent>
+  createTelEvent(const JsonValue& js,
+                 std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers,
+                 const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
+                 size_t runN, size_t eventN, size_t detSetupN);
 
-  void matchAddExtraHitMeas(
-    Acts::GeometryContext& gctx,
-    const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-    std::shared_ptr<TelEvent> telEvent,
-    const std::vector<TelSourceLink>& sourcelinksTargets
-    );
+  std::vector<TelActs::TelSourceLink>
+  createSourceLink(const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
+                   std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers,
+                   std::shared_ptr<TelActs::TelEvent> telEvent);
 
+  std::pair<size_t, std::shared_ptr<Acts::PlaneLayer>>
+  createPlaneLayer(const JsonValue& js_det);
 
-  std::vector<TelActs::TelSourceLink> createSourceLink(
-    const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-    std::vector<std::shared_ptr<Acts::PlaneLayer>>& planeLayers,
-    std::shared_ptr<TelActs::TelEvent> telEvent);
+  std::shared_ptr<Acts::TrackingGeometry>
+  createWorld(Acts::GeometryContext &gctx, double sizex, double sizey, double sizez,
+              const std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers);
 
 };

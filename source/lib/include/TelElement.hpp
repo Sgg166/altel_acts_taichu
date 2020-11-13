@@ -6,6 +6,7 @@
 #include "Acts/Utilities/Helpers.hpp"
 #include "Acts/Utilities/BinningType.hpp"
 #include "Acts/Geometry/GeometryObjectSorter.hpp"
+#include "Acts/Geometry/PlaneLayer.hpp"
 
 #include "myrapidjson.h"
 
@@ -47,7 +48,7 @@ public:
   nominalTransform(const Acts::GeometryContext &gctx) const;
   void addAlignedTransform(std::unique_ptr<Acts::Transform3D> alignedTransform);
 
-  std::shared_ptr<const Acts::Layer> layer() const { return m_layer;}
+  std::shared_ptr<const Acts::PlaneLayer> layer() const { return m_layer;}
   size_t id() const { return m_tel_det_id; }
 
 
@@ -65,7 +66,7 @@ private:
   double m_elementThickness;
 
   std::unique_ptr<Acts::Transform3D> m_alignedTransforms;
-  std::shared_ptr<Acts::Layer> m_layer;
+  std::shared_ptr<Acts::PlaneLayer> m_layer;
   size_t m_tel_det_id;
 
 };

@@ -3,6 +3,7 @@
 #include "Acts/EventData/Measurement.hpp"
 
 #include "TelElement.hpp"
+#include "TelEvent.hpp"
 
 #include "myrapidjson.h"
 namespace TelActs {
@@ -14,9 +15,13 @@ class TelSourceLink {
 public:
 
   TelSourceLink(const Acts::Surface &surface, Acts::Vector2D values,
-                  Acts::BoundMatrix cov)
+                Acts::BoundMatrix cov)
       : m_values(values), m_cov(cov), m_surface(&surface) {
   }
+
+  TelSourceLink(const Acts::PlaneLayer &planeLayer, std::shared_ptr<TelHitMeasure> hitMeas);
+  TelSourceLink(std::shared_ptr<TelHitMeasure> hitMeas,
+                const std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> &mapDetId2PlaneLayer);
 
   /// Must be default_constructible to satisfy SourceLinkConcept.
   TelSourceLink() = default;
@@ -60,6 +65,7 @@ public:
 
   static std::vector<TelSourceLink> CreateSourceLinks(const JsonValue &js, const std::vector<std::shared_ptr<TelElement>> eles);
 private:
+  std::shared_ptr<TelHitMeasure> m_hitMeas;
   Acts::Vector2D m_values;
   size_t m_detId;
   Acts::BoundMatrix m_cov;

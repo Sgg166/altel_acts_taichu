@@ -1,6 +1,12 @@
 #include "TelActs.hh"
 
 
+#include "Acts/Material/HomogeneousSurfaceMaterial.hpp"
+#include "Acts/Material/Material.hpp"
+#include "Acts/Material/ProtoSurfaceMaterial.hpp"
+#include "Acts/Material/MaterialSlab.hpp"
+
+
 #include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/Geometry/CuboidVolumeBounds.hpp"
 #include "Acts/Geometry/LayerArrayCreator.hpp"
@@ -180,11 +186,11 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
 
 std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
   const JsonValue& js,
-  std::vector<std::shared_ptr<Acts::PlaneLayer>>& planeLayers,
+  std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers,
   const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
   size_t runN, size_t eventN, size_t detSetupN){
 
-  std::map<size_t, std::shared_ptr<Acts::PlaneLayer>> mapDetId2PlaneLayer;
+  std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> mapDetId2PlaneLayer;
   for(auto &aPlaneLayer: planeLayers){
     Acts::GeometryIdentifier geoId= aPlaneLayer->geometryId();
     size_t detId = mapGeoId2DetId.at(geoId);
@@ -259,10 +265,10 @@ void TelActs::matchAddExtraHitMeas(
 
 std::vector<TelActs::TelSourceLink> TelActs::createSourceLink(
   const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-  std::vector<std::shared_ptr<Acts::PlaneLayer>>& planeLayers,
+  std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers,
   std::shared_ptr<TelActs::TelEvent> telEvent){
 
-  std::map<size_t, std::shared_ptr<Acts::PlaneLayer>> mapDetId2PlaneLayer;
+  std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> mapDetId2PlaneLayer;
   for(auto &aPlaneLayer: planeLayers){
     Acts::GeometryIdentifier geoId= aPlaneLayer->geometryId();
     size_t detId = mapGeoId2DetId.at(geoId);
@@ -291,4 +297,80 @@ std::vector<TelActs::TelSourceLink> TelActs::createSourceLink(
     sourceLinks.emplace_back(*(it->second), hitLoc, hitCov);
   }
   return sourceLinks;
+}
+
+
+std::pair<size_t, std::shared_ptr<Acts::PlaneLayer>> TelActs::createPlaneLayer(const JsonValue& js_det){
+  size_t id = js_det["id"].GetUint();
+  double cx = js_det["center"]["x"].GetDouble();
+  double cy = js_det["center"]["y"].GetDouble();
+  double cz = js_det["center"]["z"].GetDouble();
+  double rx = js_det["rotation"]["x"].GetDouble();
+  double ry = js_det["rotation"]["y"].GetDouble();
+  double rz = js_det["rotation"]["z"].GetDouble();
+  double sx = js_det["size"]["x"].GetDouble();
+  double sy = js_det["size"]["y"].GetDouble();
+  double sz = js_det["size"]["z"].GetDouble();
+
+  double layerThickness = 80_um;
+
+  std::shared_ptr<Acts::PlanarBounds> pBounds(new Acts::RectangleBounds(
+                                                sx * Acts::UnitConstants::mm ,  // *0.5
+                                                sy * Acts::UnitConstants::mm)); // *0.5
+  //NOTE: workaround, enlarge sensor size x2 to prevent buggy decision of reaching end of tracker
+
+  Acts::Vector3D translation(cx, cy, cz);
+  Acts::AngleAxis3D rotZ(rz, Acts::Vector3D::UnitZ());
+  Acts::AngleAxis3D rotY(ry, Acts::Vector3D::UnitY());
+  Acts::AngleAxis3D rotX(rx, Acts::Vector3D::UnitX());
+  Acts::Rotation3D rotation = rotZ * rotY * rotX;
+
+  Acts::Transform3D xBeamRotation(Acts::Transform3D::Identity());
+  xBeamRotation.linear()<< // y-z-x
+    0, 0, 1,
+    1, 0, 0,
+    0, 1, 0;
+
+  Acts::Transform3D layerTransform = xBeamRotation * Acts::Translation3D(translation) * rotation;
+
+  std::shared_ptr<Acts::PlaneLayer> planeLayer = std::dynamic_pointer_cast<Acts::PlaneLayer>(
+    Acts::PlaneLayer::create(layerTransform, pBounds, nullptr, layerThickness));
+
+  Acts::Material silicon = Acts::Material::fromMolarDensity(
+    9.370_cm, 46.52_cm, 28.0855, 14, (2.329 / 28.0855) * 1_mol / 1_cm3);
+  auto surfaceMaterial = std::make_shared<Acts::HomogeneousSurfaceMaterial>(
+    Acts::MaterialSlab(silicon, layerThickness));
+
+  planeLayer->surfaceRepresentation().assignSurfaceMaterial(surfaceMaterial);
+
+  return {id, planeLayer};
+}
+
+
+std::shared_ptr<Acts::TrackingGeometry>
+TelActs::createWorld(Acts::GeometryContext &gctx, double sizex, double sizey, double sizez,
+                     const std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers){
+
+  auto tracker_cuboid = std::make_shared<Acts::CuboidVolumeBounds>(
+      sizex/2., sizey/2.,  sizez/2.);
+
+  std::vector<std::shared_ptr<const Acts::Layer>> layers;
+  for(auto& pl : planeLayers){
+    layers.push_back(pl);
+  }
+
+  Acts::LayerArrayCreator layerArrayCreator({});
+  auto layer_array_binned = layerArrayCreator.layerArray(
+    gctx, layers, sizex/-2, sizex/2,
+    Acts::BinningType::arbitrary, Acts::BinningValue::binX);
+
+
+  auto trackVolume = Acts::TrackingVolume::create(
+      Acts::Transform3D::Identity(), tracker_cuboid, nullptr,
+      std::move(layer_array_binned), nullptr, {}, "Tracker");
+
+  std::shared_ptr<Acts::TrackingGeometry> geo_world;
+  geo_world.reset(new Acts::TrackingGeometry(trackVolume));
+
+  return geo_world;
 }
