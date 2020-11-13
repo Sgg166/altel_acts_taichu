@@ -44,24 +44,20 @@ namespace TelActs{
   std::unique_ptr<TelEvent>
   createTelEvent(Acts::GeometryContext& gctx,
                  const Acts::CombinatorialKalmanFilterResult<TelActs::TelSourceLink>& ckfResult,
-                 const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-                 size_t runN, size_t eventN, size_t detSetupN);
+                 size_t runN, size_t eventN, size_t detSetupN,
+                 const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId);
 
-  void matchAddExtraHitMeas(Acts::GeometryContext& gctx,
-                            const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-                            std::shared_ptr<TelEvent> telEvent,
-                            const std::vector<TelSourceLink>& sourcelinksTargets);
+  void matchAddExtraHitMeas(std::shared_ptr<TelEvent> telEvent,
+                            const std::vector<TelSourceLink>& sourcelinksTargets,
+                            const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId);
 
   std::unique_ptr<TelActs::TelEvent>
-  createTelEvent(const JsonValue& js,
-                 std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers,
-                 const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-                 size_t runN, size_t eventN, size_t detSetupN);
+  createTelEvent(const JsonValue& js, size_t runN, size_t eventN, size_t detSetupN,
+                 std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer);
 
   std::vector<TelActs::TelSourceLink>
-  createSourceLink(const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-                   std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers,
-                   std::shared_ptr<TelActs::TelEvent> telEvent);
+  createSourceLinks(std::shared_ptr<TelActs::TelEvent> telEvent,
+                   std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer);
 
   std::pair<size_t, std::shared_ptr<Acts::PlaneLayer>>
   createPlaneLayer(const JsonValue& js_det);

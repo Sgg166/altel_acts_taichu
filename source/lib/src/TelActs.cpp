@@ -95,8 +95,8 @@ TelActs::freeToCurvilinearJacobian(const Acts::Vector3D &direction) {
 std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
   Acts::GeometryContext& gctx,
   const Acts::CombinatorialKalmanFilterResult<TelActs::TelSourceLink>& ckfResult,
-  const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId,
-  size_t runN, size_t eventN, size_t detSetupN) {
+  size_t runN, size_t eventN, size_t detSetupN,
+  const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId) {
 
   auto& fittedStates = ckfResult.fittedStates;
   auto& trackTips = ckfResult.trackTips;
@@ -186,16 +186,9 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
 
 std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
   const JsonValue& js,
-  std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers,
-  const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-  size_t runN, size_t eventN, size_t detSetupN){
-
-  std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> mapDetId2PlaneLayer;
-  for(auto &aPlaneLayer: planeLayers){
-    Acts::GeometryIdentifier geoId= aPlaneLayer->geometryId();
-    size_t detId = mapGeoId2DetId.at(geoId);
-    mapDetId2PlaneLayer[detId] = aPlaneLayer;
-  }
+  size_t runN, size_t eventN, size_t detSetupN,
+  std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer
+){
 
   std::unique_ptr<TelActs::TelEvent> telEvent(new TelActs::TelEvent{runN, eventN, detSetupN, {}, {}, {}});
 
@@ -232,10 +225,9 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
 using namespace Acts::UnitLiterals;
 
 void TelActs::matchAddExtraHitMeas(
-  Acts::GeometryContext& gctx,
-  const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId,
   std::shared_ptr<TelActs::TelEvent> telEvent,
-  const std::vector<TelActs::TelSourceLink>& sourcelinksTargets
+  const std::vector<TelActs::TelSourceLink>& sourcelinksTargets,
+  const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId
   ){
     for(auto &telTraj: telEvent->Ts){
       size_t fittedHitNum = telTraj->numberHitFitByMeas();
@@ -263,17 +255,9 @@ void TelActs::matchAddExtraHitMeas(
     }
 }
 
-std::vector<TelActs::TelSourceLink> TelActs::createSourceLink(
-  const std::map<Acts::GeometryIdentifier, size_t>&  mapGeoId2DetId,
-  std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers,
-  std::shared_ptr<TelActs::TelEvent> telEvent){
-
-  std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> mapDetId2PlaneLayer;
-  for(auto &aPlaneLayer: planeLayers){
-    Acts::GeometryIdentifier geoId= aPlaneLayer->geometryId();
-    size_t detId = mapGeoId2DetId.at(geoId);
-    mapDetId2PlaneLayer[detId] = aPlaneLayer;
-  }
+std::vector<TelActs::TelSourceLink> TelActs::createSourceLinks(
+  std::shared_ptr<TelActs::TelEvent> telEvent,
+  std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer){
 
   std::vector<TelActs::TelSourceLink> sourceLinks;
   auto & hitsMeas= telEvent->HMs;
@@ -331,10 +315,13 @@ std::pair<size_t, std::shared_ptr<Acts::PlaneLayer>> TelActs::createPlaneLayer(c
     1, 0, 0,
     0, 1, 0;
 
-  Acts::Transform3D layerTransform = xBeamRotation * Acts::Translation3D(translation) * rotation;
+  auto layerTransform = std::make_shared<Acts::Transform3D>(xBeamRotation * Acts::Translation3D(translation) * rotation);
 
+  std::cout<< layerTransform->matrix()<<std::endl;
+
+  // Acts::Transform3D layerTransform = xBeamRotation * Acts::Translation3D(translation) * rotation;
   std::shared_ptr<Acts::PlaneLayer> planeLayer = std::dynamic_pointer_cast<Acts::PlaneLayer>(
-    Acts::PlaneLayer::create(layerTransform, pBounds, nullptr, layerThickness));
+    Acts::PlaneLayer::create(*layerTransform, pBounds, nullptr, 0.5_mm));
 
   Acts::Material silicon = Acts::Material::fromMolarDensity(
     9.370_cm, 46.52_cm, 28.0855, 14, (2.329 / 28.0855) * 1_mol / 1_cm3);
