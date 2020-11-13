@@ -44,8 +44,6 @@
 #include "Acts/TrackFitting/GainMatrixUpdater.hpp"
 
 
-
-
 Acts::FreeToBoundMatrix
 TelActs::freeToCurvilinearJacobian(const Acts::Vector3D &direction) {
   // Optimized trigonometry on the propagation direction
@@ -121,11 +119,6 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
 
                                  std::shared_ptr<TelActs::TelHit> telHit;
                                  auto telSurface = state.referenceSurface().getSharedPtr();
-                                 // std::cout<< "telSurface->geometryId() "<<telSurface->geometryId()<<std::endl;
-                                 // std::cout<< telSurface->center(gctx)<<std::endl;
-                                 // for(auto [aSurId, aDetId]:mapSurId2DetId){
-                                 //   std::cout<< aSurId <<" sur=det "<< aDetId<<std::endl;
-                                 // }
                                  size_t id = mapSurId2DetId.at(telSurface->geometryId());
 
                                  Acts::Vector2D fit_pos_local;
@@ -159,10 +152,8 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
                                    Acts::Vector2D residual_local;
                                    meas_pos_local = state.uncalibrated().value();
                                    residual_local = meas_pos_local -fit_pos_local;
-
-                                   telHitMeas.reset(new TelActs::TelHitMeasure{id, {meas_pos_local(0), meas_pos_local(1)}, {}});
+                                   telHitMeas = state.uncalibrated().m_hitMeas;
                                  }
-
                                  std::shared_ptr<TelActs::TelHitFit> telHitFit;
                                  telHitFit.reset(new TelActs::TelHitFit{
                                      id,
@@ -181,7 +172,6 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
   }
   return telEvent;
 }
-
 
 
 std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
@@ -209,7 +199,7 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
       for(const auto &pix :  hit["pix"].GetArray()){
         std::shared_ptr<TelActs::TelRawMeasure> rawMeas(new TelActs::TelRawMeasure);
         rawMeas->uvdcS[0] = int16_t(pix[0].GetInt());
-        rawMeas->uvdcS[1] = int16_t(pix[0].GetInt());
+        rawMeas->uvdcS[1] = int16_t(pix[1].GetInt());
         rawMeas->uvdcS[2] = int16_t(detId);
         rawMeas->uvdcS[3] = int16_t(tri);
         rawMeasCol.push_back(rawMeas);
@@ -219,7 +209,6 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
   }
   return telEvent;
 }
-
 
 
 using namespace Acts::UnitLiterals;
@@ -262,23 +251,7 @@ std::vector<TelActs::TelSourceLink> TelActs::createSourceLinks(
   std::vector<TelActs::TelSourceLink> sourceLinks;
   auto & hitsMeas= telEvent->HMs;
   for(auto &aHitMeas : hitsMeas){
-    auto detN = aHitMeas->DN;
-    auto it = mapDetId2PlaneLayer.find(detN);
-    if(it==mapDetId2PlaneLayer.end()){
-      continue;
-    }
-
-    auto u = aHitMeas->PLs[0];
-    auto v = aHitMeas->PLs[1];
-
-    Acts::Vector2D hitLoc;
-    hitLoc << u, v;
-    Acts::BoundMatrix hitCov = Acts::BoundMatrix::Zero();
-    double hitResolU = 6_um;
-    double hitResolV = 6_um;
-    hitCov(0, 0) = hitResolU * hitResolU;
-    hitCov(1, 1) = hitResolV * hitResolV;
-    sourceLinks.emplace_back(*(it->second), hitLoc, hitCov);
+    sourceLinks.emplace_back(aHitMeas, mapDetId2PlaneLayer);
   }
   return sourceLinks;
 }

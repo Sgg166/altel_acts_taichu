@@ -64,8 +64,9 @@ public:
   }
 
   static std::vector<TelSourceLink> CreateSourceLinks(const JsonValue &js, const std::vector<std::shared_ptr<TelElement>> eles);
-private:
+
   std::shared_ptr<TelHitMeasure> m_hitMeas;
+private:
   Acts::Vector2D m_values;
   size_t m_detId;
   Acts::BoundMatrix m_cov;
