@@ -9,6 +9,17 @@
 #include <TFile.h>
 #include <TTree.h>
 
+
+#include "TelGL.hh"
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
+#include "linenoise.h"
+#include "myrapidjson.h"
+
+#include "TelFW.hh"
+#include "glfw_test.hh"
+
 using namespace Acts::UnitLiterals;
 
 static const std::string help_usage = R"(
@@ -209,12 +220,13 @@ int main(int argc, char *argv[]) {
   const auto &js_geo = jsd_geo["geometry"];
   const auto &js_dets = js_geo["detectors"];
 
-
   std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> mapDetId2PlaneLayer;
+  std::map<std::shared_ptr<const Acts::PlaneLayer>, size_t> mapPlaneLayer2DetId;
   std::vector<std::shared_ptr<const Acts::PlaneLayer>> allPlaneLayers;
   for(const auto& js_det: js_dets.GetArray()){
     auto [detId, planeLayer] = TelActs::createPlaneLayer(js_det);
     mapDetId2PlaneLayer[detId] = planeLayer;
+    mapPlaneLayer2DetId[planeLayer] = detId;
     allPlaneLayers.push_back(planeLayer);
   }
   if(allPlaneLayers.size()!=mapDetId2PlaneLayer.size()){
@@ -266,10 +278,10 @@ int main(int argc, char *argv[]) {
   std::vector<Acts::CKFSourceLinkSelector::Config::InputElement> ckfConfigEle_vec;
   for(auto& [detId, aPlaneLayer]: mapDetId2PlaneLayer){
     if(aPlaneLayer==layerDets[0]){// x sorted layers
-      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {20,10}}); //first layer can have multi-branches
+      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {10,10}}); //first layer can have multi-branches
     }
     else{
-      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {20,1}}); //chi2, max branches
+      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {10,1}}); //chi2, max branches
     }
   }
   Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg(ckfConfigEle_vec);
@@ -298,6 +310,10 @@ int main(int argc, char *argv[]) {
       std::fprintf(stdout, "reach null object after skip %d event, possible end of file\n", i);
     }
   }
+
+  TelFW telfw(800, 400, "test");
+  glfw_test telfwtest(geometryFilePath);
+  telfw.startAsync<glfw_test>(&telfwtest, &glfw_test::beginHook, &glfw_test::clearHook, &glfw_test::drawHook);
 
   size_t emptyEventNum = 0;
   size_t eventNum = 0;
@@ -338,26 +354,28 @@ int main(int argc, char *argv[]) {
       throw;
     }
 
-    // mapDetId2PlaneLayer, todo: split det and target
+    TelActs::fillTelTrajectories(gctx, result.value(), detEvent, mapGeoId2DetId);
+
     std::shared_ptr<TelActs::TelEvent> targetEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_targets);
-    std::vector<TelActs::TelSourceLink> sourcelinksTargets  = TelActs::createSourceLinks(targetEvent, mapDetId2PlaneLayer_targets);
+    TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 100_um, 3);
 
-    std::shared_ptr<TelActs::TelEvent> telEvent = TelActs::createTelEvent(gctx, result.value(), runN, eventNum, setupN,
-                                                                          mapGeoId2DetId);
-
-    for(auto &telTraj: telEvent->Ts){
-      size_t fittedHitNum = telTraj->numberHitFitByMeas();
-      if(fittedHitNum<5){
+    for(auto &aTraj: detEvent->Ts){
+      size_t fittedHitNum = aTraj->numberHitFitByMeas();
+      if(fittedHitNum<3){
         if(fittedHitNum != 1)
           droppedTrackNum++;
         continue;
       }
       trackNum ++;
     }
-    TelActs::matchAddExtraHitMeas(telEvent, sourcelinksTargets, mapGeoId2DetId);
-    // todo: match targetEvent directly
-    ttreeWriter.fill(telEvent);
+
+    ttreeWriter.fill(detEvent);
     eventNum ++;
+
+    telfwtest.pushBufferEvent(detEvent);
+
+    std::cout<<"waiting, press any key to conitnue"<<std::endl;
+    std::getc(stdin);
   }
 
   auto tp_end = std::chrono::system_clock::now();
@@ -372,5 +390,9 @@ int main(int argc, char *argv[]) {
   ttreeWriter.pTree->Write();
   tfile.Close();
 
+  std::cout<<"waiting, press any key to conitnue"<<std::endl;
+  std::getc(stdin);
+
+  telfw.stopAsync();
   return 0;
 }

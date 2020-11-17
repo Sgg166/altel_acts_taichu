@@ -46,3 +46,16 @@ externalproject_add(
   )
 
 set_target_properties(external_acts PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+
+# externalproject_add(
+#   external_altel_gl
+#   SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/altel_gl
+#   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}
+#   BUILD_ALWAYS true
+#   BUILD_COMMAND make -j4
+#   INSTALL_COMMAND make install
+#   )
+# set_target_properties(external_altel_gl PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+add_subdirectory(altel_gl/source/gl)

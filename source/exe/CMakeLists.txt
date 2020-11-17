@@ -28,11 +28,14 @@ target_link_libraries(TelTrackResidual
   ROOT::Core ROOT::RIO ROOT::Tree
   )
 
+
 add_executable(TelDetectorResidual TelDetectorResidual.cpp)
 list(APPEND EXE_TARGET_LIST TelDetectorResidual)
+target_include_directories(TelDetectorResidual  PRIVATE ./ )
 target_link_libraries(TelDetectorResidual
   altel-acts ActsAlignment mycommon
   ROOT::Core ROOT::RIO ROOT::Tree
+  altel-telfw altel-telgl galogen
   )
 
 

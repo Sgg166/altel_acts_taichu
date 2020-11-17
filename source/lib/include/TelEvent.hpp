@@ -29,7 +29,6 @@ namespace TelActs{
     std::vector<std::shared_ptr<TelRawMeasure>> Ms;// measures
   };
 
-  using TelHitMeas = TelHitMeasure;
 
   struct TelHitFit{
     uint64_t DN{0};   // detector id
@@ -100,11 +99,21 @@ namespace TelActs{
 
   };
 
+
+  using TelHitMeas = TelHitMeasure;
+  using TelTraj = TelTrajectory;
+
+  using TelRawMeas = TelRawMeasure;
+  using TelMeasRaw = TelRawMeasure;
+  using TelMeasHit = TelHitMeasure;
+  using TelFitHit = TelHitFit;
+  using TelTrajHit = TelHit;
+
   struct TelEvent{
     uint64_t RN{0}; // run id
     uint64_t EN{0}; // event id
     uint64_t DN{0}; // detector/setup id
-    std::vector<std::shared_ptr<TelRawMeasure>> Ms;// measures
+    std::vector<std::shared_ptr<TelRawMeasure>> Ms;// measures raw
     std::vector<std::shared_ptr<TelHitMeasure>> HMs;// measure hit
     std::vector<std::shared_ptr<TelTrajectory>> Ts; // trajectories
 

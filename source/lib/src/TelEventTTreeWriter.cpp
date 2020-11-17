@@ -142,9 +142,9 @@ void TelActs::TelEventTTreeWriter::fill(std::shared_ptr<TelActs::TelEvent> telEv
     rNumTraj_PerEvent = 0;
     for(auto &aTraj: telEvent->Ts){
       size_t fittedHitNum = aTraj->numberHitFitByMeas();
-      if(fittedHitNum<5){
-        continue;
-      }
+      // if(fittedHitNum<5){
+      //   continue;
+      // }
 
       rNumTraj_PerEvent ++;
       rTrajVec_Index_To_HitFit.push_back(-1);//traj: -1 {M-N} -1 {M-N}

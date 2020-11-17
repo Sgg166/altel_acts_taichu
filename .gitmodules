@@ -2,3 +2,7 @@
 	path = external/acts-core
 	url = https://github.com/eyiliu/acts-core
         branch = add_alignment
+[submodule "external/altel_gl"]
+	path = external/altel_gl
+	url = https://github.com/eyiliu/altel_gl.git
+	branch = master
