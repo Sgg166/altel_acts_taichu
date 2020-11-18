@@ -142,11 +142,6 @@ public:
 
   JsonValue createJsonValue(JsonAllocator& jsa, Acts::GeometryContext& gctx) const;
 
-  std::unique_ptr<TelEvent> createTelEvent(
-    Acts::GeometryContext& gctx,
-    const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId,
-    size_t runN, size_t eventN, size_t detSetupN)const;
-
 /// @brief Evaluate the projection Jacobian from free to curvilinear parameters
 ///
 /// @param [in] direction Normalised direction vector

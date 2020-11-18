@@ -8,11 +8,13 @@
 class TFile;
 class TTree;
 
-namespace TelActs{
+namespace altel{
   struct TelEventTTreeWriter{
     uint32_t rRunN;
     uint32_t rEventN;
     int16_t rConfigN;
+    uint64_t rClock; // timestamp / trigger id;
+
     int16_t rNumTraj_PerEvent;
 
     ///rawMeas
@@ -63,9 +65,8 @@ namespace TelActs{
     std::vector<double> rAnaVec_Matched_ResdU, *pAnaVec_Matched_ResdU = &rAnaVec_Matched_ResdU;
     std::vector<double> rAnaVec_Matched_ResdV, *pAnaVec_Matched_ResdV = &rAnaVec_Matched_ResdV;
 
-
     std::shared_ptr<TTree> pTree;
     void createBranch();
-    void fill(std::shared_ptr<TelActs::TelEvent> ev);
+    void fill(std::shared_ptr<altel::TelEvent> ev);
   };
 }

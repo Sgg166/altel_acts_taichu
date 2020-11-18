@@ -47,27 +47,27 @@ namespace TelActs{
   createWorld(Acts::GeometryContext &gctx, double sizex, double sizey, double sizez,
               const std::vector<std::shared_ptr<const Acts::PlaneLayer>>& planeLayers);
 
-  std::unique_ptr<TelActs::TelEvent>
+  std::unique_ptr<altel::TelEvent>
   createTelEvent(const JsonValue& js, size_t runN, size_t eventN, size_t detSetupN,
                  std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer);
 
   std::vector<TelActs::TelSourceLink>
-  createSourceLinks(std::shared_ptr<TelActs::TelEvent> telEvent,
+  createSourceLinks(std::shared_ptr<altel::TelEvent> telEvent,
                     std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer);
 
   void fillTelTrajectories(Acts::GeometryContext& gctx,
                            const Acts::CombinatorialKalmanFilterResult<TelActs::TelSourceLink>& ckfResult,
-                           std::shared_ptr<TelActs::TelEvent> telEvent,
+                           std::shared_ptr<altel::TelEvent> telEvent,
                            const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId);
 
-  void mergeAndMatchExtraTelEvent(std::shared_ptr<TelEvent> aEvent,
-                                  std::shared_ptr<TelEvent> extraEvent,
+  void mergeAndMatchExtraTelEvent(std::shared_ptr<altel::TelEvent> aEvent,
+                                  std::shared_ptr<altel::TelEvent> extraEvent,
                                   double maxHitMatchDist,
                                   double minFitHitsPerTraj=3);
 
 
-  void mergeAndMatchExtraTelEventForTraj(std::shared_ptr<TelEvent> aEvent,
-                                         std::shared_ptr<TelEvent> extraEvent,
+  void mergeAndMatchExtraTelEventForTraj(std::shared_ptr<altel::TelEvent> aEvent,
+                                         std::shared_ptr<altel::TelEvent> extraEvent,
                                          double maxMatchDist,
                                          double minFitHitsPerTraj);
 };

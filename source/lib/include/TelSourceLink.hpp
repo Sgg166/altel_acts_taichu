@@ -19,8 +19,8 @@ public:
       : m_values(values), m_cov(cov), m_surface(&surface) {
   }
 
-  TelSourceLink(const Acts::PlaneLayer &planeLayer, std::shared_ptr<TelHitMeasure> hitMeas);
-  TelSourceLink(std::shared_ptr<TelHitMeasure> hitMeas,
+  TelSourceLink(const Acts::PlaneLayer &planeLayer, std::shared_ptr<altel::TelMeasHit> hitMeas);
+  TelSourceLink(std::shared_ptr<altel::TelMeasHit> hitMeas,
                 const std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> &mapDetId2PlaneLayer);
 
   /// Must be default_constructible to satisfy SourceLinkConcept.
@@ -65,7 +65,7 @@ public:
 
   static std::vector<TelSourceLink> CreateSourceLinks(const JsonValue &js, const std::vector<std::shared_ptr<TelElement>> eles);
 
-  std::shared_ptr<TelHitMeasure> m_hitMeas;
+  std::shared_ptr<altel::TelMeasHit> m_hitMeas;
 private:
   Acts::Vector2D m_values;
   size_t m_detId;

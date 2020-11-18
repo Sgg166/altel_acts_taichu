@@ -93,7 +93,7 @@ TelActs::freeToCurvilinearJacobian(const Acts::Vector3D &direction) {
 
 void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
                                   const Acts::CombinatorialKalmanFilterResult<TelActs::TelSourceLink>& ckfResult,
-                                  std::shared_ptr<TelActs::TelEvent> telEvent,
+                                  std::shared_ptr<altel::TelEvent> telEvent,
                                   const std::map<Acts::GeometryIdentifier, size_t>&  mapSurId2DetId){
 
   auto& fittedStates = ckfResult.fittedStates;
@@ -102,7 +102,7 @@ void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
 
   // std::cout<< "================result of fitting"<<std::endl;
   for(size_t indexTrack=0; indexTrack<trackTips.size(); indexTrack++){
-    std::shared_ptr<TelActs::TelTrajectory> telTraj(new TelActs::TelTrajectory);
+    std::shared_ptr<altel::TelTrajectory> telTraj(new altel::TelTrajectory);
     telTraj->TN=indexTrack;
 
     // std::cout<< "================indexTrack"<< indexTrack <<std::endl;
@@ -115,7 +115,7 @@ void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
                                    return true;
                                  }
 
-                                 std::shared_ptr<TelActs::TelHit> telHit;
+                                 std::shared_ptr<altel::TelTrajHit> telTrajHit;
                                  auto telSurface = state.referenceSurface().getSharedPtr();
                                  size_t id = mapSurId2DetId.at(telSurface->geometryId());
 
@@ -145,41 +145,40 @@ void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
 
                                  Acts::Vector3D fit_dir_local = telSurface->transform(gctx).rotation().transpose() * fit_dir_global;
 
-                                 std::shared_ptr<TelActs::TelHitMeasure> telHitMeas;
+                                 std::shared_ptr<altel::TelMeasHit> telMeasHit;
                                  if(state.hasUncalibrated() && typeFlags.test(Acts::TrackStateFlag::MeasurementFlag) ){
                                    // do not get outlier meas
                                    Acts::Vector2D meas_pos_local;
                                    Acts::Vector2D residual_local;
                                    meas_pos_local = state.uncalibrated().value();
                                    residual_local = meas_pos_local -fit_pos_local;
-                                   telHitMeas = state.uncalibrated().m_hitMeas;
+                                   telMeasHit = state.uncalibrated().m_hitMeas;
                                  }
-                                 std::shared_ptr<TelActs::TelHitFit> telHitFit;
-                                 telHitFit.reset(new TelActs::TelHitFit{
-                                     id,
+                                 std::shared_ptr<altel::TelFitHit> telFitHit;
+                                 telFitHit.reset(new altel::TelFitHit{
+                                     uint16_t(id),
                                      {fit_pos_local(0), fit_pos_local(1)},
                                      {fit_dir_local(0), fit_dir_local(1), fit_dir_local(2)}, // local dir
                                      {fit_pos_global(0), fit_pos_global(1), fit_pos_global(2)},
                                      {fit_dir_global(0), fit_dir_global(1), fit_dir_global(2)},
-                                     telHitMeas});
+                                     telMeasHit});
 
-                                 telHit.reset(new TelActs::TelHit{id, telHitFit, nullptr});
-                                 telTraj->Hs.push_back(telHit);
+                                 telTrajHit.reset(new altel::TelTrajHit{uint16_t(id), telFitHit, nullptr});
+                                 telTraj->THs.push_back(telTrajHit);
                                  return true;
                                });
-    std::reverse(telTraj->Hs.begin(), telTraj->Hs.end());
-    telEvent->Ts.push_back(telTraj);
+    std::reverse(telTraj->THs.begin(), telTraj->THs.end());
+    telEvent->TJs.push_back(telTraj);
   }
-
 }
 
-std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
+std::unique_ptr<altel::TelEvent> TelActs::createTelEvent(
   const JsonValue& js,
   size_t runN, size_t eventN, size_t detSetupN,
   std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer
 ){
 
-  std::unique_ptr<TelActs::TelEvent> telEvent(new TelActs::TelEvent{runN, eventN, detSetupN, {}, {}, {}});
+  std::unique_ptr<altel::TelEvent> telEvent(new altel::TelEvent{uint32_t(runN), uint32_t(eventN), uint16_t(detSetupN), 0, {}, {}, {}});
 
   const auto &layers = js["layers"];
   for (const auto &layer : layers.GetArray()) {
@@ -189,6 +188,7 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
       continue;
     }
     uint16_t tri = layer["tri"].GetUint();
+    telEvent->CK=tri;
 
     for (const auto &hit : layer["hit"].GetArray()) {
       double hitMeasU = hit["pos"][0].GetDouble() - 0.02924 * 1024 / 2.0;
@@ -196,16 +196,15 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
       // if(hitMeasV>5){
       //   continue;
       // }
-      std::vector<std::shared_ptr<TelActs::TelRawMeasure>> rawMeasCol;
+      std::vector<altel::TelMeasRaw> rawMeasCol;
       for(const auto &pix :  hit["pix"].GetArray()){
-        std::shared_ptr<TelActs::TelRawMeasure> rawMeas(new TelActs::TelRawMeasure);
-        rawMeas->uvdcS[0] = int16_t(pix[0].GetInt());
-        rawMeas->uvdcS[1] = int16_t(pix[1].GetInt());
-        rawMeas->uvdcS[2] = int16_t(detId);
-        rawMeas->uvdcS[3] = int16_t(tri);
-        rawMeasCol.push_back(rawMeas);
+        altel::TelMeasRaw measRaw(uint16_t(pix[0].GetInt()),
+                                  uint16_t(pix[1].GetInt()),
+                                  uint16_t(detId),
+                                  uint16_t(tri));
+        rawMeasCol.push_back(measRaw);
       }
-      telEvent->HMs.emplace_back(new TelActs::TelHitMeasure{detId, {hitMeasU, hitMeasV}, rawMeasCol});
+      telEvent->MHs.emplace_back(new altel::TelMeasHit{uint16_t(detId), {hitMeasU, hitMeasV}, rawMeasCol});
     }
   }
   return telEvent;
@@ -215,32 +214,32 @@ std::unique_ptr<TelActs::TelEvent> TelActs::createTelEvent(
 using namespace Acts::UnitLiterals;
 
 
-void TelActs::mergeAndMatchExtraTelEvent(std::shared_ptr<TelEvent> aEvent,
-                                         std::shared_ptr<TelEvent> extraEvent,
+void TelActs::mergeAndMatchExtraTelEvent(std::shared_ptr<altel::TelEvent> aEvent,
+                                         std::shared_ptr<altel::TelEvent> extraEvent,
                                          double maxMatchDist,
                                          double minFitHitsPerTraj){
 
   // TODO: test if existing, however it does not hurt ttree write
-  aEvent->Ms.insert(aEvent->Ms.end(), extraEvent->Ms.begin(), extraEvent->Ms.end());
-  aEvent->HMs.insert(aEvent->HMs.end(), extraEvent->HMs.begin(), extraEvent->HMs.end());
+  aEvent->MRs.insert(aEvent->MRs.end(), extraEvent->MRs.begin(), extraEvent->MRs.end());
+  aEvent->MHs.insert(aEvent->MHs.end(), extraEvent->MHs.begin(), extraEvent->MHs.end());
 
-  auto &extraMeasHits = extraEvent->HMs;
+  auto &extraMeasHits = extraEvent->MHs;
 
   for(auto &aMeasHit : extraMeasHits){
     size_t id = aMeasHit->DN;
 
     double bestMatchedDist = HUGE_VAL;
-    std::shared_ptr<TelActs::TelHit> bestMatchedTrajHit;
-    for(auto &aTraj: aEvent->Ts){
-      size_t fittedHitNum = aTraj->numberHitFitByMeas();
+    std::shared_ptr<altel::TelTrajHit> bestMatchedTrajHit;
+    for(auto &aTraj: aEvent->TJs){
+      size_t fittedHitNum = aTraj->numOriginMeasHit();
       if(fittedHitNum<minFitHitsPerTraj){
         continue;
       }
-      auto aTrajHit = aTraj->hit(id);
-      if(!aTrajHit || !aTrajHit->hasHitFit() || aTrajHit->isFittedFromMeasure()){
+      auto aTrajHit = aTraj->trajHit(id);
+      if(!aTrajHit || !aTrajHit->hasFitHit() || aTrajHit->hasOriginMeasHit()){
         continue;
       }
-      Acts::Vector2D xy_fit(aTrajHit->HF->PLs[0], aTrajHit->HF->PLs[1]);
+      Acts::Vector2D xy_fit(aTrajHit->FH->PLs[0], aTrajHit->FH->PLs[1]);
       Acts::Vector2D xy_meas (aMeasHit->PLs[0], aMeasHit->PLs[1]);
       Acts::Vector2D xy_resid = xy_meas - xy_fit;
       double dist = xy_resid.norm();
@@ -253,7 +252,7 @@ void TelActs::mergeAndMatchExtraTelEvent(std::shared_ptr<TelEvent> aEvent,
     }
 
     if(bestMatchedTrajHit){
-      bestMatchedTrajHit->HM=aMeasHit;
+      bestMatchedTrajHit->MM=aMeasHit;
     }
 
   }
@@ -261,37 +260,37 @@ void TelActs::mergeAndMatchExtraTelEvent(std::shared_ptr<TelEvent> aEvent,
 
 
 
-void TelActs::mergeAndMatchExtraTelEventForTraj(std::shared_ptr<TelEvent> aEvent,
-                                                std::shared_ptr<TelEvent> extraEvent,
+void TelActs::mergeAndMatchExtraTelEventForTraj(std::shared_ptr<altel::TelEvent> aEvent,
+                                                std::shared_ptr<altel::TelEvent> extraEvent,
                                                 double maxMatchDist,
                                                 double minFitHitsPerTraj){
 
   // TODO: test if existing, however it does not hurt ttree write
-  aEvent->Ms.insert(aEvent->Ms.end(), extraEvent->Ms.begin(), extraEvent->Ms.end());
-  aEvent->HMs.insert(aEvent->HMs.end(), extraEvent->HMs.begin(), extraEvent->HMs.end());
+  aEvent->MRs.insert(aEvent->MRs.end(), extraEvent->MRs.begin(), extraEvent->MRs.end());
+  aEvent->MHs.insert(aEvent->MHs.end(), extraEvent->MHs.begin(), extraEvent->MHs.end());
 
-  auto &extraMeasHits = extraEvent->HMs;
+  auto &extraMeasHits = extraEvent->MHs;
 
-  for(auto &aTraj: aEvent->Ts){
-    size_t fittedHitNum = aTraj->numberHitFitByMeas();
+  for(auto &aTraj: aEvent->TJs){
+    size_t fittedHitNum = aTraj->numOriginMeasHit();
     if(fittedHitNum<minFitHitsPerTraj){
       continue;
     }
 
-    for(auto &aTrajHit: aTraj->Hs){
-      if(!aTrajHit || !aTrajHit->hasHitFit() || aTrajHit->isFittedFromMeasure()){
+    for(auto &aTrajHit: aTraj->THs){
+      if(!aTrajHit || !aTrajHit->hasFitHit() || aTrajHit->hasOriginMeasHit()){
         continue;
       }
       size_t aTrajHitId = aTrajHit->DN;
       double bestMatchedDist = HUGE_VAL;
-      std::shared_ptr<TelActs::TelMeasHit> bestMatchedMeasHit;
+      std::shared_ptr<altel::TelMeasHit> bestMatchedMeasHit;
 
       for(auto &aMeasHit : extraMeasHits){
         size_t aMeasHitId = aMeasHit->DN;
         if( aMeasHitId != aTrajHitId ){
           continue;
         }
-        Acts::Vector2D xy_fit(aTrajHit->HF->PLs[0], aTrajHit->HF->PLs[1]);
+        Acts::Vector2D xy_fit(aTrajHit->FH->PLs[0], aTrajHit->FH->PLs[1]);
         Acts::Vector2D xy_meas (aMeasHit->PLs[0], aMeasHit->PLs[1]);
         Acts::Vector2D xy_resid = xy_meas - xy_fit;
         double dist = xy_resid.norm();
@@ -302,7 +301,7 @@ void TelActs::mergeAndMatchExtraTelEventForTraj(std::shared_ptr<TelEvent> aEvent
         bestMatchedMeasHit = aMeasHit;
       }
       if(bestMatchedMeasHit){
-        aTrajHit->HM=bestMatchedMeasHit;
+        aTrajHit->MM=bestMatchedMeasHit;
       }
     }
   }
@@ -310,11 +309,11 @@ void TelActs::mergeAndMatchExtraTelEventForTraj(std::shared_ptr<TelEvent> aEvent
 
 
 std::vector<TelActs::TelSourceLink> TelActs::createSourceLinks(
-  std::shared_ptr<TelActs::TelEvent> telEvent,
+  std::shared_ptr<altel::TelEvent> telEvent,
   std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer){
 
   std::vector<TelActs::TelSourceLink> sourceLinks;
-  auto & hitsMeas= telEvent->HMs;
+  auto & hitsMeas= telEvent->MHs;
   for(auto &aHitMeas : hitsMeas){
     sourceLinks.emplace_back(aHitMeas, mapDetId2PlaneLayer);
   }

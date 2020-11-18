@@ -298,7 +298,7 @@ int main(int argc, char *argv[]) {
     gctx, mctx, cctx, sourcelinkSelectorCfg, Acts::LoggerWrapper{*kfLogger}, pOptions,
     refSurface.get());
 
-  TelActs::TelEventTTreeWriter ttreeWriter;
+  altel::TelEventTTreeWriter ttreeWriter;
   ttreeWriter.pTree.reset(new TTree("eventTree", "eventTree"));
   ttreeWriter.createBranch();
 
@@ -330,7 +330,7 @@ int main(int argc, char *argv[]) {
 
     size_t runN = 0;
     size_t setupN = 0;
-    std::shared_ptr<TelActs::TelEvent> detEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_dets);
+    std::shared_ptr<altel::TelEvent> detEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_dets);
     std::vector<TelActs::TelSourceLink> sourcelinks  = TelActs::createSourceLinks(detEvent, mapDetId2PlaneLayer_dets);
 
     if(sourcelinks.empty()) {
@@ -356,11 +356,11 @@ int main(int argc, char *argv[]) {
 
     TelActs::fillTelTrajectories(gctx, result.value(), detEvent, mapGeoId2DetId);
 
-    std::shared_ptr<TelActs::TelEvent> targetEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_targets);
+    std::shared_ptr<altel::TelEvent> targetEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_targets);
     TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 100_um, 3);
 
-    for(auto &aTraj: detEvent->Ts){
-      size_t fittedHitNum = aTraj->numberHitFitByMeas();
+    for(auto &aTraj: detEvent->TJs){
+      size_t fittedHitNum = aTraj->numOriginMeasHit();
       if(fittedHitNum<3){
         if(fittedHitNum != 1)
           droppedTrackNum++;

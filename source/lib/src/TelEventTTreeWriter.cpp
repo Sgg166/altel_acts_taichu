@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-void TelActs::TelEventTTreeWriter::createBranch(){
+void altel::TelEventTTreeWriter::createBranch(){
   if(!pTree){
     std::fprintf(stderr, "TTree is not yet set\n");
     throw;
@@ -14,6 +14,7 @@ void TelActs::TelEventTTreeWriter::createBranch(){
   auto bRunN = tree.Branch("RunN", &rRunN);
   auto bEventN = tree.Branch("EventN", &rEventN);
   auto bConfigN = tree.Branch("ConfigN", &rConfigN);
+  auto bClock = tree.Branch("Clock", &rClock);
   auto bNumTraj_PerEvent = tree.Branch("NumTraj_PerEvent", &rNumTraj_PerEvent);
 
   auto bRawMeasVec_DetN = tree.Branch("RawMeasVec_DetN", &pRawMeasVec_DetN);
@@ -57,7 +58,7 @@ void TelActs::TelEventTTreeWriter::createBranch(){
 }
 
 
-void TelActs::TelEventTTreeWriter::fill(std::shared_ptr<TelActs::TelEvent> telEvent){
+void altel::TelEventTTreeWriter::fill(std::shared_ptr<altel::TelEvent> telEvent){
 
 ///////////////branch vector clear////////////////////////
     ///rawMeas
@@ -101,22 +102,22 @@ void TelActs::TelEventTTreeWriter::fill(std::shared_ptr<TelActs::TelEvent> telEv
 
 
 ////////////////////////////////////////fill tree////////////////////
-    std::map<std::shared_ptr<TelActs::TelRawMeasure>, int16_t> poolMapRawMeas;
-    std::map<std::shared_ptr<TelActs::TelHitMeasure>, int16_t> poolMapHitMeas;
-    std::map<std::shared_ptr<TelActs::TelHitFit>, int16_t> poolMapHitFit;
+    std::map<altel::TelMeasRaw, int16_t> poolMapRawMeas;
+    std::map<std::shared_ptr<altel::TelMeasHit>, int16_t> poolMapHitMeas;
+    std::map<std::shared_ptr<altel::TelFitHit>, int16_t> poolMapHitFit;
 
-    for(auto &aRawMeas: telEvent->Ms){
+    for(auto &aRawMeas: telEvent->MRs){
       auto [it, inserted] = poolMapRawMeas.emplace(aRawMeas, int16_t(rRawMeasVec_DetN.size()) );
       if(inserted){
         // inserted and return true, when no exist
-        rRawMeasVec_U.push_back(aRawMeas->uvdcS[0]);
-        rRawMeasVec_V.push_back(aRawMeas->uvdcS[1]);
-        rRawMeasVec_DetN.push_back(aRawMeas->uvdcS[2]);
-        rRawMeasVec_Clk.push_back(aRawMeas->uvdcS[3]);
+        rRawMeasVec_U.push_back(aRawMeas.u());
+        rRawMeasVec_V.push_back(aRawMeas.v());
+        rRawMeasVec_DetN.push_back(aRawMeas.detN());
+        rRawMeasVec_Clk.push_back(aRawMeas.clk());
       }
     }
 
-    for(auto &aHitMeas: telEvent->HMs){
+    for(auto &aHitMeas: telEvent->MHs){
       auto [it, inserted] = poolMapHitMeas.emplace( aHitMeas, int16_t(rHitMeasVec_DetN.size()) );
       if(inserted){
         // inserted and return true, when no exist
@@ -125,23 +126,23 @@ void TelActs::TelEventTTreeWriter::fill(std::shared_ptr<TelActs::TelEvent> telEv
         rHitMeasVec_V.push_back(aHitMeas->PLs[1]);
 
         rHitMeasVec_Index_To_RawMeas.push_back(-1);//: -1 {M-N} -1 {M-N}
-        for(auto &aRawMeas: aHitMeas->Ms){
+        for(auto &aRawMeas: aHitMeas->MRs){
           auto [it, inserted] = poolMapRawMeas.emplace(aRawMeas, int16_t(rRawMeasVec_DetN.size()));
           if(inserted){
-            rRawMeasVec_U.push_back(aRawMeas->uvdcS[0]);
-            rRawMeasVec_V.push_back(aRawMeas->uvdcS[1]);
-            rRawMeasVec_DetN.push_back(aRawMeas->uvdcS[2]);
-            rRawMeasVec_Clk.push_back(aRawMeas->uvdcS[3]);
+            rRawMeasVec_U.push_back(aRawMeas.u());
+            rRawMeasVec_V.push_back(aRawMeas.v());
+            rRawMeasVec_DetN.push_back(aRawMeas.detN());
+            rRawMeasVec_Clk.push_back(aRawMeas.clk());
           }
           rHitMeasVec_Index_To_RawMeas.push_back(it->second);
         }
-        rHitMeasVec_NumRawMeas_PerHitMeas.push_back(int16_t(aHitMeas->Ms.size()));
+        rHitMeasVec_NumRawMeas_PerHitMeas.push_back(int16_t(aHitMeas->MRs.size()));
       }
     }
 
     rNumTraj_PerEvent = 0;
-    for(auto &aTraj: telEvent->Ts){
-      size_t fittedHitNum = aTraj->numberHitFitByMeas();
+    for(auto &aTraj: telEvent->TJs){
+      size_t fittedHitNum = aTraj->numOriginMeasHit();
       // if(fittedHitNum<5){
       //   continue;
       // }
@@ -153,9 +154,9 @@ void TelActs::TelEventTTreeWriter::fill(std::shared_ptr<TelActs::TelEvent> telEv
       int16_t aNumHitMeas_Origin_PerTraj = 0;
       int16_t aNumHitMeas_Matched_PerTraj = 0;
 
-      for(auto &aHit: aTraj->Hs){
+      for(auto &aHit: aTraj->THs){
         aNumHitFit_PerTraj++;
-        auto aHitFit = aHit->HF;
+        auto aHitFit = aHit->FH;
         auto [it, inserted] = poolMapHitFit.emplace( aHitFit, int16_t(rHitFitVec_DetN.size()) );
         if(!inserted){
           //TODO: handle this case for ambiguility case
@@ -176,7 +177,7 @@ void TelActs::TelEventTTreeWriter::fill(std::shared_ptr<TelActs::TelEvent> telEv
         rHitFitVec_DirZ.push_back(aHitFit->DGs[2]);
 
         int16_t indexHitMeasOri = -1;
-        auto aHitMeasOri = aHitFit->HM;
+        auto aHitMeasOri = aHitFit->OM;
         if(aHitMeasOri){
           aNumHitMeas_Origin_PerTraj ++;
           auto [it, inserted] = poolMapHitMeas.emplace( aHitMeasOri, int16_t(rHitMeasVec_DetN.size()));
@@ -186,24 +187,24 @@ void TelActs::TelEventTTreeWriter::fill(std::shared_ptr<TelActs::TelEvent> telEv
             rHitMeasVec_V.push_back(aHitMeasOri->PLs[1]);
 
             rHitMeasVec_Index_To_RawMeas.push_back(-1);//: -1 {M-N} -1 {M-N}
-            for(auto &aRawMeas: aHitMeasOri->Ms){
+            for(auto &aRawMeas: aHitMeasOri->MRs){
               auto [it, inserted] = poolMapRawMeas.emplace(aRawMeas, int16_t(rRawMeasVec_DetN.size()));
               if(inserted){
-                rRawMeasVec_U.push_back(aRawMeas->uvdcS[0]);
-                rRawMeasVec_V.push_back(aRawMeas->uvdcS[1]);
-                rRawMeasVec_DetN.push_back(aRawMeas->uvdcS[2]);
-                rRawMeasVec_Clk.push_back(aRawMeas->uvdcS[3]);
+                rRawMeasVec_U.push_back(aRawMeas.u());
+                rRawMeasVec_V.push_back(aRawMeas.v());
+                rRawMeasVec_DetN.push_back(aRawMeas.detN());
+                rRawMeasVec_Clk.push_back(aRawMeas.clk());
               }
               rHitMeasVec_Index_To_RawMeas.push_back(it->second);
             }
-            rHitMeasVec_NumRawMeas_PerHitMeas.push_back(int16_t(aHitMeasOri->Ms.size()));
+            rHitMeasVec_NumRawMeas_PerHitMeas.push_back(int16_t(aHitMeasOri->MRs.size()));
           }
           indexHitMeasOri = it->second;
         }
         rHitFitVec_Index_To_Origin_HitMeas.push_back(indexHitMeasOri);
 
         int16_t  indexHitMeasMatched = -1;
-        auto aHitMeasMatched = aHit->HM;
+        auto aHitMeasMatched = aHit->MM;
         if(aHitMeasMatched){
           aNumHitMeas_Matched_PerTraj++;
           auto [it, inserted] = poolMapHitMeas.emplace( aHitMeasMatched, int16_t(rHitMeasVec_DetN.size()));
@@ -213,17 +214,17 @@ void TelActs::TelEventTTreeWriter::fill(std::shared_ptr<TelActs::TelEvent> telEv
             rHitMeasVec_V.push_back(aHitMeasMatched->PLs[1]);
 
             rHitMeasVec_Index_To_RawMeas.push_back(-1);//: -1 {M-N} -1 {M-N}
-            for(auto &aRawMeas: aHitMeasMatched->Ms){
+            for(auto &aRawMeas: aHitMeasMatched->MRs){
               auto [it, inserted] = poolMapRawMeas.emplace(aRawMeas, int16_t(rRawMeasVec_DetN.size()));
               if(inserted){
-                rRawMeasVec_U.push_back(aRawMeas->uvdcS[0]);
-                rRawMeasVec_V.push_back(aRawMeas->uvdcS[1]);
-                rRawMeasVec_DetN.push_back(aRawMeas->uvdcS[2]);
-                rRawMeasVec_Clk.push_back(aRawMeas->uvdcS[3]);
+                rRawMeasVec_U.push_back(aRawMeas.u());
+                rRawMeasVec_V.push_back(aRawMeas.v());
+                rRawMeasVec_DetN.push_back(aRawMeas.detN());
+                rRawMeasVec_Clk.push_back(aRawMeas.clk());
               }
               rHitMeasVec_Index_To_RawMeas.push_back(it->second);
             }
-            rHitMeasVec_NumRawMeas_PerHitMeas.push_back(int16_t(aHitMeasMatched->Ms.size()));
+            rHitMeasVec_NumRawMeas_PerHitMeas.push_back(int16_t(aHitMeasMatched->MRs.size()));
             //
 
           }
@@ -246,7 +247,7 @@ void TelActs::TelEventTTreeWriter::fill(std::shared_ptr<TelActs::TelEvent> telEv
     rRunN = telEvent->RN;
     rEventN = telEvent->EN;
     rConfigN = telEvent->DN;
-
+    rClock = telEvent->CK;
     // if(!pTree){
     //   std::fprintf(stderr, "TTree is not yet set\n");
     //   throw;

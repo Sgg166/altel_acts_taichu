@@ -82,8 +82,8 @@ public:
   }
 
   uint64_t m_size_ring;
-  std::vector<std::shared_ptr<TelActs::TelEvent>> m_vec_ring_ev;
-  std::shared_ptr<TelActs::TelEvent> m_ring_end;//nullptr
+  std::vector<std::shared_ptr<altel::TelEvent>> m_vec_ring_ev;
+  std::shared_ptr<altel::TelEvent> m_ring_end;//nullptr
   std::atomic_uint64_t m_count_ring_write{1};
   std::atomic_uint64_t m_count_ring_read{1};
   std::atomic_uint64_t m_hot_p_read{0};
@@ -93,7 +93,7 @@ public:
     m_count_ring_write = count_ring_read;
   }
 
-  void pushBufferEvent(std::shared_ptr<TelActs::TelEvent> df){ //by write thread
+  void pushBufferEvent(std::shared_ptr<altel::TelEvent> df){ //by write thread
     uint64_t next_p_ring_write = m_count_ring_write % m_size_ring;
     if(next_p_ring_write == m_hot_p_read){
       // std::fprintf(stderr, "buffer full, unable to write into buffer, monitor data lose\n");
@@ -103,7 +103,7 @@ public:
     m_count_ring_write ++;
   }
 
-  std::shared_ptr<TelActs::TelEvent>& frontBufferEvent(){ //by read thread
+  std::shared_ptr<altel::TelEvent>& frontBufferEvent(){ //by read thread
 
     if(m_count_ring_write > m_count_ring_read) {
       uint64_t next_p_ring_read = m_count_ring_read % m_size_ring;
@@ -136,8 +136,8 @@ public:
 
       JsonDocument jsd_data(rapidjson::kObjectType);
       JsonValue js_MeasHits(rapidjson::kArrayType);
-      js_MeasHits.Reserve(ev->HMs.size(), jsd_data.GetAllocator());
-      for(auto &aMeasHit : ev->HMs){
+      js_MeasHits.Reserve(ev->MHs.size(), jsd_data.GetAllocator());
+      for(auto &aMeasHit : ev->MHs){
         JsonValue js_hit(rapidjson::kArrayType);
         js_hit.Reserve(4, jsd_data.GetAllocator());
         js_hit.PushBack(aMeasHit->PLs[0], jsd_data.GetAllocator());
@@ -150,19 +150,19 @@ public:
       jsd_data.AddMember("hits", std::move(js_MeasHits), jsd_data.GetAllocator());
 
       JsonValue js_trajs(rapidjson::kArrayType);
-      for(auto &aTraj : ev->Ts){
+      for(auto &aTraj : ev->TJs){
         JsonValue js_traj(rapidjson::kArrayType);
-        js_traj.Reserve(aTraj->Hs.size(), jsd_data.GetAllocator());
-        for(auto &aTrajHit : aTraj->Hs){
+        js_traj.Reserve(aTraj->THs.size(), jsd_data.GetAllocator());
+        for(auto &aTrajHit : aTraj->THs){
           JsonValue js_hit(rapidjson::kArrayType);
           js_hit.Reserve(4, jsd_data.GetAllocator());
-          // js_hit.PushBack(aTrajHit->HF->PGs[1], jsd_data.GetAllocator());
-          // js_hit.PushBack(aTrajHit->HF->PGs[2], jsd_data.GetAllocator());
-          // js_hit.PushBack(aTrajHit->HF->PGs[0], jsd_data.GetAllocator());
+          // js_hit.PushBack(aTrajHit->FH->PGs[1], jsd_data.GetAllocator());
+          // js_hit.PushBack(aTrajHit->FH->PGs[2], jsd_data.GetAllocator());
+          // js_hit.PushBack(aTrajHit->FH->PGs[0], jsd_data.GetAllocator());
           // js_hit.PushBack(0.0, jsd_data.GetAllocator()); // 1 orgin-local-center-mm, 0 global
 
-          js_hit.PushBack(aTrajHit->HF->PLs[0], jsd_data.GetAllocator());
-          js_hit.PushBack(aTrajHit->HF->PLs[1], jsd_data.GetAllocator());
+          js_hit.PushBack(aTrajHit->FH->PLs[0], jsd_data.GetAllocator());
+          js_hit.PushBack(aTrajHit->FH->PLs[1], jsd_data.GetAllocator());
           js_hit.PushBack(aTrajHit->DN, jsd_data.GetAllocator());
           js_hit.PushBack(1.0, jsd_data.GetAllocator()); // 1 orgin-local-center-mm, 0 global
 

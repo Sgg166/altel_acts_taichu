@@ -4,7 +4,7 @@
 using namespace Acts::UnitLiterals;
 
 
-TelActs::TelSourceLink::TelSourceLink(const Acts::PlaneLayer &planeLayer, std::shared_ptr<TelActs::TelHitMeasure> hitMeas)
+TelActs::TelSourceLink::TelSourceLink(const Acts::PlaneLayer &planeLayer, std::shared_ptr<altel::TelMeasHit> hitMeas)
   : m_hitMeas(hitMeas), m_cov(Acts::BoundMatrix::Zero()), m_surface(&planeLayer){
   if(!hitMeas){
     std::fprintf(stderr, "very wrong\n");
@@ -20,7 +20,7 @@ TelActs::TelSourceLink::TelSourceLink(const Acts::PlaneLayer &planeLayer, std::s
 }
 
 
-TelActs::TelSourceLink::TelSourceLink(std::shared_ptr<TelActs::TelHitMeasure> hitMeas,
+TelActs::TelSourceLink::TelSourceLink(std::shared_ptr<altel::TelMeasHit> hitMeas,
                                       const std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer)
   :m_hitMeas(hitMeas), m_cov(Acts::BoundMatrix::Zero()){
   if(!hitMeas){
