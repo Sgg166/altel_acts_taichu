@@ -178,7 +178,7 @@ std::unique_ptr<altel::TelEvent> TelActs::createTelEvent(
   std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer
 ){
 
-  std::unique_ptr<altel::TelEvent> telEvent(new altel::TelEvent{uint32_t(runN), uint32_t(eventN), uint16_t(detSetupN), 0, {}, {}, {}});
+  std::unique_ptr<altel::TelEvent> telEvent(new altel::TelEvent(runN, eventN, detSetupN, 0));
 
   const auto &layers = js["layers"];
   for (const auto &layer : layers.GetArray()) {

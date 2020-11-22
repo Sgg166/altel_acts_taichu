@@ -224,7 +224,7 @@ namespace altel{
       :RN(0), EN(0), DN(0), CK(0){};
 
     TelEvent(uint32_t rN, uint32_t eN, uint16_t detN, uint64_t clk)
-      :RN(rn), EN(en), DN(detN), CK(clk){};
+      :RN(rN), EN(eN), DN(detN), CK(clk){};
 
   };
 }
