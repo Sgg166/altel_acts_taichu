@@ -26,6 +26,7 @@ static const std::string help_usage = R"(
 Usage:
   -help                        help message
   -verbose                     verbose flag
+  -wait                        wait for user keyboard input per event
   -eventSkip      <int>        number of events to skip before start processing
   -eventMax       <int>        max number of events to process
   -geometryFile   <path>       path to geometry input file (input)
@@ -54,11 +55,13 @@ int main(int argc, char *argv[]) {
 
   double distCollimator = 5_m;
   double widthCollimator = 4_cm;
+  int do_wait = 0;
 
   int do_verbose = 0;
   {////////////getopt begin//////////////////
     struct option longopts[] = {{"help", no_argument, NULL, 'h'},//option -W is reserved by getopt
                                 {"verbose", no_argument, NULL, 'v'},//val
+                                {"wait", no_argument, NULL, 'w'},
                                 {"eventSkip", required_argument, NULL, 's'},
                                 {"eventMax", required_argument, NULL, 'm'},
                                 {"hitFile", required_argument, NULL, 'f'},
@@ -107,6 +110,9 @@ int main(int argc, char *argv[]) {
         }
         break;
       }
+      case 'w':
+        do_wait=1;
+        break;
         // help and verbose
       case 'v':
         do_verbose=1;
@@ -374,8 +380,10 @@ int main(int argc, char *argv[]) {
 
     telfwtest.pushBufferEvent(detEvent);
 
-    std::cout<<"waiting, press any key to conitnue"<<std::endl;
-    std::getc(stdin);
+    if(do_wait){
+      std::cout<<"waiting, press any key to conitnue"<<std::endl;
+      std::getc(stdin);
+    }
   }
 
   auto tp_end = std::chrono::system_clock::now();
@@ -390,8 +398,10 @@ int main(int argc, char *argv[]) {
   ttreeWriter.pTree->Write();
   tfile.Close();
 
-  std::cout<<"waiting, press any key to conitnue"<<std::endl;
-  std::getc(stdin);
+  if(do_wait){
+    std::cout<<"waiting, press any key to conitnue"<<std::endl;
+    std::getc(stdin);
+  }
 
   telfw.stopAsync();
   return 0;
