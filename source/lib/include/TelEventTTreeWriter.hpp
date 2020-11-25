@@ -65,7 +65,7 @@ namespace altel{
     std::vector<double> rAnaVec_Matched_ResdU, *pAnaVec_Matched_ResdU = &rAnaVec_Matched_ResdU;
     std::vector<double> rAnaVec_Matched_ResdV, *pAnaVec_Matched_ResdV = &rAnaVec_Matched_ResdV;
 
-    std::shared_ptr<TTree> pTree;
+    TTree* pTree;
     void createBranch();
     void fill(std::shared_ptr<altel::TelEvent> ev);
   };

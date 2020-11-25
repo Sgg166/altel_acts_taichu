@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
     refSurface.get());
 
   altel::TelEventTTreeWriter ttreeWriter;
-  ttreeWriter.pTree.reset(new TTree("eventTree", "eventTree"));
+  ttreeWriter.pTree = new TTree("eventTree", "eventTree");
   ttreeWriter.createBranch();
 
   JsonFileDeserializer jsfd(hitFilePath);

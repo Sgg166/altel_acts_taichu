@@ -54,7 +54,11 @@ namespace altel{
     inline uint16_t& detN() {return DN;}
 
     static std::vector<std::shared_ptr<TelMeasHit>>
-    clustering_UVDCus(const std::vector<TelMeasRaw>& measRaws){
+    clustering_UVDCus(const std::vector<TelMeasRaw>& measRaws,
+                      double pitchU = 0.02924,
+                      double pitchV = 0.02688,
+                      double offsetU = -0.02924 * (1024/2 - 0.5),
+                      double offsetV = -0.02688 * (512/2 - 0.5)){
       std::vector<std::shared_ptr<TelMeasHit>> measHits;
 
       auto hit_col_remain= measRaws;
@@ -136,6 +140,7 @@ namespace altel{
     std::shared_ptr<TelFitHit>  FH;  // fitted hit
     std::shared_ptr<TelMeasHit> MM; // measure hit, matched
 
+
     bool hasFitHit() const{
       if(FH){
         return true;
@@ -167,6 +172,10 @@ namespace altel{
   struct TelTrajectory{
     uint64_t TN{0};                               // trajectories id
     std::vector<std::shared_ptr<TelTrajHit>> THs; // hit
+
+    const std::vector<std::shared_ptr<TelTrajHit>>& trajectoryHits() const{return THs;}
+    std::vector<std::shared_ptr<TelTrajHit>>& trajectoryHits() {return THs;}
+
     std::shared_ptr<TelTrajHit> trajHit(size_t id){
       for(const auto& th: THs){
         if (th && th->DN == id){
@@ -226,5 +235,20 @@ namespace altel{
     TelEvent(uint32_t rN, uint32_t eN, uint16_t detN, uint64_t clk)
       :RN(rN), EN(eN), DN(detN), CK(clk){};
 
+    const uint32_t& runN() const  {return RN;}
+    const uint32_t& eventN() const  {return EN;}
+    const uint16_t& detN() const  {return DN;}
+    const uint64_t& clk() const  {return CK;}
+    const std::vector<TelMeasRaw>& measureRaws() const{return MRs;}
+    const std::vector<std::shared_ptr<TelMeasHit>>& measureHits() const{return MHs;}
+    const std::vector<std::shared_ptr<TelTrajectory>>& trajectories() const{return TJs;}
+
+    uint32_t& runN() {return RN;}
+    uint32_t& eventN() {return EN;}
+    uint16_t& detN() {return DN;}
+    uint64_t& clk() {return CK;}
+    std::vector<TelMeasRaw>& measureRaws() {return MRs;}
+    std::vector<std::shared_ptr<TelMeasHit>>& measureHits() {return MHs;}
+    std::vector<std::shared_ptr<TelTrajectory>>& trajectories(){ return TJs;}
   };
 }

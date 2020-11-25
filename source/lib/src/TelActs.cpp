@@ -128,6 +128,12 @@ void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
                                    freeParams = Acts::detail::transformBoundToFreeParameters(
                                      *telSurface, gctx, state.smoothed());
                                  }
+                                 // if(state.hasFiltered()){
+                                 //   fit_pos_local=Acts::Vector2D(state.filtered()[Acts::eBoundLoc0],
+                                 //                                state.filtered()[Acts::eBoundLoc1]);
+                                 //   freeParams = Acts::detail::transformBoundToFreeParameters(
+                                 //     *telSurface, gctx, state.filtered());
+                                 // }
                                  else{
                                    fit_pos_local=Acts::Vector2D(state.predicted()[Acts::eBoundLoc0],
                                                                 state.predicted()[Acts::eBoundLoc1]);

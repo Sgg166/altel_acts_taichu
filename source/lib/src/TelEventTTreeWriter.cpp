@@ -14,7 +14,7 @@ void altel::TelEventTTreeWriter::createBranch(){
   auto bRunN = tree.Branch("RunN", &rRunN);
   auto bEventN = tree.Branch("EventN", &rEventN);
   auto bConfigN = tree.Branch("ConfigN", &rConfigN);
-  auto bClock = tree.Branch("Clock", &rClock);
+  auto bClock = tree.Branch("Clock", (ULong64_t*)&rClock);
   auto bNumTraj_PerEvent = tree.Branch("NumTraj_PerEvent", &rNumTraj_PerEvent);
 
   auto bRawMeasVec_DetN = tree.Branch("RawMeasVec_DetN", &pRawMeasVec_DetN);
