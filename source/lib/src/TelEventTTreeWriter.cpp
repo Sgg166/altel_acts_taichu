@@ -113,7 +113,7 @@ void altel::TelEventTTreeWriter::fill(std::shared_ptr<altel::TelEvent> telEvent)
         rRawMeasVec_U.push_back(aRawMeas.u());
         rRawMeasVec_V.push_back(aRawMeas.v());
         rRawMeasVec_DetN.push_back(aRawMeas.detN());
-        rRawMeasVec_Clk.push_back(aRawMeas.clk());
+        rRawMeasVec_Clk.push_back(aRawMeas.clkN());
       }
     }
 
@@ -132,7 +132,7 @@ void altel::TelEventTTreeWriter::fill(std::shared_ptr<altel::TelEvent> telEvent)
             rRawMeasVec_U.push_back(aRawMeas.u());
             rRawMeasVec_V.push_back(aRawMeas.v());
             rRawMeasVec_DetN.push_back(aRawMeas.detN());
-            rRawMeasVec_Clk.push_back(aRawMeas.clk());
+            rRawMeasVec_Clk.push_back(aRawMeas.clkN());
           }
           rHitMeasVec_Index_To_RawMeas.push_back(it->second);
         }
@@ -193,7 +193,7 @@ void altel::TelEventTTreeWriter::fill(std::shared_ptr<altel::TelEvent> telEvent)
                 rRawMeasVec_U.push_back(aRawMeas.u());
                 rRawMeasVec_V.push_back(aRawMeas.v());
                 rRawMeasVec_DetN.push_back(aRawMeas.detN());
-                rRawMeasVec_Clk.push_back(aRawMeas.clk());
+                rRawMeasVec_Clk.push_back(aRawMeas.clkN());
               }
               rHitMeasVec_Index_To_RawMeas.push_back(it->second);
             }
@@ -220,7 +220,7 @@ void altel::TelEventTTreeWriter::fill(std::shared_ptr<altel::TelEvent> telEvent)
                 rRawMeasVec_U.push_back(aRawMeas.u());
                 rRawMeasVec_V.push_back(aRawMeas.v());
                 rRawMeasVec_DetN.push_back(aRawMeas.detN());
-                rRawMeasVec_Clk.push_back(aRawMeas.clk());
+                rRawMeasVec_Clk.push_back(aRawMeas.clkN());
               }
               rHitMeasVec_Index_To_RawMeas.push_back(it->second);
             }

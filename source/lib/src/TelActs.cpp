@@ -210,7 +210,7 @@ std::unique_ptr<altel::TelEvent> TelActs::createTelEvent(
                                   uint16_t(tri));
         rawMeasCol.push_back(measRaw);
       }
-      telEvent->MHs.emplace_back(new altel::TelMeasHit{uint16_t(detId), {hitMeasU, hitMeasV}, rawMeasCol});
+      telEvent->MHs.emplace_back(new altel::TelMeasHit(detId, hitMeasU, hitMeasV, rawMeasCol));
     }
   }
   return telEvent;
