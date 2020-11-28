@@ -39,6 +39,16 @@ target_link_libraries(TelDetectorResidual
   )
 
 
+add_executable(TelKinkAngle TelKinkAngle.cpp $<TARGET_OBJECTS:eudaq_core>)
+list(APPEND EXE_TARGET_LIST TelKinkAngle)
+target_include_directories(TelKinkAngle  PRIVATE ./ )
+target_link_libraries(TelKinkAngle
+  altel-acts ActsAlignment mycommon
+  ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist
+  altel-telfw altel-telgl galogen
+  )
+
+
 # install-tree
 install(TARGETS ${EXE_TARGET_LIST}
   EXPORT ${PROJECT_NAME}Targets
