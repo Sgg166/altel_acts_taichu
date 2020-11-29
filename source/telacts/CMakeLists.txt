@@ -9,11 +9,9 @@ target_include_directories( altel-acts
   $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
   )
 
-find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
-
 target_link_libraries(
-  altel-acts  
-  PUBLIC ActsCore ActsAlignment ROOT::Core ROOT::RIO ROOT::Tree
+  altel-acts 
+  PUBLIC ActsCore altel-data
   PRIVATE mycommon
   )
 
@@ -31,3 +29,4 @@ install(TARGETS altel-acts
   PUBLIC_HEADER DESTINATION include  COMPONENT devel
   RESOURCE      DESTINATION resource COMPONENT runtime
   )
+

@@ -1,13 +1,13 @@
 
-add_executable(TelDetectorAlign TelAlign.cpp)
-list(APPEND EXE_TARGET_LIST TelDetectorAlign)
-target_link_libraries(TelDetectorAlign
-  altel-acts ActsAlignment mycommon)
+# add_executable(TelDetectorAlign TelAlign.cpp)
+# list(APPEND EXE_TARGET_LIST TelDetectorAlign)
+# target_link_libraries(TelDetectorAlign
+#   altel-acts ActsAlignment mycommon)
 
-add_executable(TelTrackFind TelTrackFind.cpp)
-list(APPEND EXE_TARGET_LIST TelTrackFind)
-target_link_libraries(TelTrackFind
-  altel-acts ActsAlignment mycommon)
+# add_executable(TelTrackFind TelTrackFind.cpp)
+# list(APPEND EXE_TARGET_LIST TelTrackFind)
+# target_link_libraries(TelTrackFind
+#   altel-acts ActsAlignment mycommon)
 
 find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
 
@@ -21,12 +21,12 @@ if( ROOT_CXX_COMPILE_FEATURES STREQUAL "cxx_std_14" )
 endif()
 
 
-add_executable(TelTrackResidual TelTrackResidual.cpp)
-list(APPEND EXE_TARGET_LIST TelTrackResidual)
-target_link_libraries(TelTrackResidual
-  altel-acts ActsAlignment mycommon
-  ROOT::Core ROOT::RIO ROOT::Tree
-  )
+# add_executable(TelTrackResidual TelTrackResidual.cpp)
+# list(APPEND EXE_TARGET_LIST TelTrackResidual)
+# target_link_libraries(TelTrackResidual
+#   altel-acts ActsAlignment mycommon
+#   ROOT::Core ROOT::RIO ROOT::Tree
+#   )
 
 
 add_executable(TelDetectorResidual TelDetectorResidual.cpp)
