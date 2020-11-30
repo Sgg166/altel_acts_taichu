@@ -1,21 +1,31 @@
+include(FetchContent)
+
+FetchContent_Declare(
+  external_eudaq
+  GIT_REPOSITORY https://github.com/eudaq/eudaq.git
+  GIT_TAG fc77bf805509e910091917bfa4072ced3f5b3480 # 2.4.4 + 1 commit
+  # FETCHCONTENT_UPDATES_DISCONNECTED ON
+)
+
+FetchContent_Populate(external_eudaq)
 
 add_definitions("-DEUDAQ_CORE_EXPORTS")
 add_definitions("-DEUDAQ_PLATFORM=PF_LINUX")
-aux_source_directory(eudaq_src/main/lib/core/src EUDAQ_CORE_SRC)
+
+aux_source_directory(${external_eudaq_SOURCE_DIR}/main/lib/core/src EUDAQ_CORE_SRC)
 add_library(eudaq_core SHARED ${EUDAQ_CORE_SRC})
 
 target_link_libraries(eudaq_core
   PUBLIC
   $<$<AND:$<CXX_COMPILER_ID:GNU>,$<AND:$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>,$<VERSION_GREATER:$<CXX_COMPILER_VERSION>,5.3>>>:stdc++fs>
-  # $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>
   PRIVATE
   ${CMAKE_DL_LIBS}
   )
 
 target_include_directories(eudaq_core
   PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/eudaq_src/main/lib/core/include>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/eudaq_src/main/lib/core/include/eudaq>
+  $<BUILD_INTERFACE:${external_eudaq_SOURCE_DIR}/main/lib/core/include>
+  $<BUILD_INTERFACE:${external_eudaq_SOURCE_DIR}/main/lib/core/include/eudaq>
   )
 
 # install-tree

@@ -2,7 +2,7 @@
 # string (REGEX MATCH "\\.el[1-9]" os_version_suffix ${CMAKE_SYSTEM})
 # message("-- os_version_suffix:      ${os_version_suffix}")
 
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.11 FATAL_ERROR)
 project(altel_acts VERSION 1.0.0 LANGUAGES CXX Fortran C)
 
 message(STATUS "CMAKE_ROOT:                  ${CMAKE_ROOT}")
