@@ -1,10 +1,6 @@
 add_subdirectory(linenoiseng)
 add_subdirectory(getopt)
 add_subdirectory(rapidjson)
-# add_subdirectory(gte)
-# add_subdirectory(base64)
-# add_subdirectory(demangle)
-# add_subdirectory(factory)
 
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
