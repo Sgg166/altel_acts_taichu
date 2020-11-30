@@ -1,18 +1,14 @@
-add_subdirectory(event)
-add_subdirectory(root)
-add_subdirectory(eudaq)
-# add_subdirectory(json)
-
-add_library(altel-data INTERFACE)
-
-target_link_libraries(altel-data INTERFACE
-  mycommon
-  altel-data-event
-  altel-data-root
-  altel-data-eudaq
+set(LIB_SRC rbcp.cc)
+add_library(rbcp STATIC ${LIB_SRC})
+target_include_directories(rbcp
+  PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   )
 
-install(TARGETS altel-data
+set(LIB_PUBLIC_HEADERS rbcp.h)
+set_target_properties(rbcp PROPERTIES PUBLIC_HEADER "${LIB_PUBLIC_HEADERS}")
+
+install(TARGETS rbcp
   EXPORT ${PROJECT_NAME}Targets
   RUNTIME       DESTINATION bin      COMPONENT runtime
   LIBRARY       DESTINATION lib      COMPONENT runtime

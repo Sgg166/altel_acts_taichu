@@ -1,10 +1,10 @@
 add_subdirectory(linenoiseng)
 add_subdirectory(getopt)
 add_subdirectory(rapidjson)
-add_subdirectory(gte)
-add_subdirectory(base64)
-add_subdirectory(demangle)
-add_subdirectory(factory)
+# add_subdirectory(gte)
+# add_subdirectory(base64)
+# add_subdirectory(demangle)
+# add_subdirectory(factory)
 
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -18,11 +18,7 @@ target_link_libraries(mycommon INTERFACE
   linenoiseng
   getopt
   rapidjson
-  base64
-  demangle
-  factory
-  gte
-  stdc++fs
+  $<$<AND:$<CXX_COMPILER_ID:GNU>,$<AND:$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>,$<VERSION_GREATER:$<CXX_COMPILER_VERSION>,5.3>>>:stdc++fs>
   )
 
 target_include_directories(mycommon

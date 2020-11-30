@@ -1,14 +1,4 @@
 
-# add_executable(TelDetectorAlign TelAlign.cpp)
-# list(APPEND EXE_TARGET_LIST TelDetectorAlign)
-# target_link_libraries(TelDetectorAlign
-#   altel-acts ActsAlignment mycommon)
-
-# add_executable(TelTrackFind TelTrackFind.cpp)
-# list(APPEND EXE_TARGET_LIST TelTrackFind)
-# target_link_libraries(TelTrackFind
-#   altel-acts ActsAlignment mycommon)
-
 find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
 
 set(ROOT_FEATURE_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -20,15 +10,6 @@ if( ROOT_CXX_COMPILE_FEATURES STREQUAL "cxx_std_14" )
   set(ROOT_FEATURE_CXX_STANDARD 14)
 endif()
 
-
-# add_executable(TelTrackResidual TelTrackResidual.cpp)
-# list(APPEND EXE_TARGET_LIST TelTrackResidual)
-# target_link_libraries(TelTrackResidual
-#   altel-acts ActsAlignment mycommon
-#   ROOT::Core ROOT::RIO ROOT::Tree
-#   )
-
-
 add_executable(TelDetectorResidual TelDetectorResidual.cpp)
 list(APPEND EXE_TARGET_LIST TelDetectorResidual)
 target_include_directories(TelDetectorResidual  PRIVATE ./ )
@@ -39,7 +20,7 @@ target_link_libraries(TelDetectorResidual
   )
 
 
-add_executable(TelKinkAngle TelKinkAngle.cpp $<TARGET_OBJECTS:eudaq_core>)
+add_executable(TelKinkAngle TelKinkAngle.cpp)
 list(APPEND EXE_TARGET_LIST TelKinkAngle)
 target_include_directories(TelKinkAngle  PRIVATE ./ )
 target_link_libraries(TelKinkAngle

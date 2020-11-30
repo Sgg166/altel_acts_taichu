@@ -4,6 +4,9 @@
 #include <cstring>
 #include <exception>
 #include <bitset>
+#include <iostream>
+#include <vector>
+#include <algorithm>
 
 // 80 columns on 250μm pitch
 // 336 rows on 50μm pitch

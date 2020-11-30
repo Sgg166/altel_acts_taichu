@@ -59,4 +59,4 @@ set_target_properties(external_acts PROPERTIES EXCLUDE_FROM_ALL TRUE)
 # set_target_properties(external_altel_gl PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 # add_subdirectory(altel_gl/source/gl)
-add_subdirectory(eudaq)
+# add_subdirectory(eudaq)
