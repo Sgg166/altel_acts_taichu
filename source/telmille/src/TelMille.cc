@@ -197,8 +197,15 @@ void EUTelMille::FitTrack(unsigned int nMeasures,
 }
 
 void EUTelMille::setResolution(double resolX, double resolY){
-  m_xResolution = resolX;
-  m_yResolution = resolY;
+  for(auto &[id, n]: m_indexDet){
+    m_xResolution[id] = resolX;
+    m_yResolution[id] = resolY;
+  }
+}
+
+void EUTelMille::setResolution(size_t id, double resolX, double resolY){
+  m_xResolution[id] = resolX;
+  m_yResolution[id] = resolY;
 }
 
 
@@ -264,9 +271,8 @@ void EUTelMille::fillTrackXYRz(const JsonValue& js) {
   std::vector<double> yPosHit(m_nPlanes,0);
   std::vector<double> zPosHit(m_nPlanes,0);
 
-  //TODO: set
-  std::vector<double> xResolHit(m_nPlanes, m_xResolution);
-  std::vector<double> yResolHit(m_nPlanes, m_yResolution);
+  std::vector<double> xResolHit(m_nPlanes, 0);
+  std::vector<double> yResolHit(m_nPlanes, 0);
 
   std::vector<size_t> idHit(m_nPlanes,0);
 
@@ -299,6 +305,10 @@ void EUTelMille::fillTrackXYRz(const JsonValue& js) {
     xPosHit[detN]=globalPos[0];
     yPosHit[detN]=globalPos[1];
     zPosHit[detN]=globalPos[2];
+
+    //TODO: from meas UV to XY
+    xResolHit[detN]=m_xResolution.at(id);
+    yResolHit[detN]=m_yResolution.at(id);
 
     idHit[detN]=id;
   }

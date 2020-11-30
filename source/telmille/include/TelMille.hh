@@ -26,6 +26,7 @@ public:
 
   void setGeometry(const JsonValue& js);
   void setResolution(double resolX, double resolY);
+  void setResolution(size_t id, double resolX, double resolY);
 
   void startMilleBinary(const std::string& path);
   void endMilleBinary();
@@ -60,8 +61,10 @@ private:
 
   size_t m_nPlanes;
   std::map<size_t, size_t> m_indexDet;
-  double m_xResolution;
-  double m_yResolution;
+  // double m_xResolution;
+  // double m_yResolution;
+  std::map<size_t, double> m_xResolution;
+  std::map<size_t, double> m_yResolution;
 
   std::map<size_t, double> m_xPosDet;
   std::map<size_t, double> m_yPosDet;

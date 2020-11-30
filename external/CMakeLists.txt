@@ -14,8 +14,6 @@ find_package(Boost 1.69 REQUIRED
   # NO_CMAKE_SYSTEM_PATH
   )
 
-# find_package(ROOT REQUIRED HINTS $ENV{ROOTSYS}/cmake NO_CMAKE_SYSTEM_PATH)
-
 cmake_host_system_information(RESULT HOST_MEMORY_MB QUERY TOTAL_PHYSICAL_MEMORY)
 cmake_host_system_information(RESULT HOST_CPU_CORE QUERY NUMBER_OF_PHYSICAL_CORES)
 math(EXPR N_THREADS_BUILD_ACTS "${HOST_MEMORY_MB} / 1000 / 6")
@@ -46,17 +44,3 @@ externalproject_add(
   )
 
 set_target_properties(external_acts PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-
-# externalproject_add(
-#   external_altel_gl
-#   SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/altel_gl
-#   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}
-#   BUILD_ALWAYS true
-#   BUILD_COMMAND make -j4
-#   INSTALL_COMMAND make install
-#   )
-# set_target_properties(external_altel_gl PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-# add_subdirectory(altel_gl/source/gl)
-# add_subdirectory(eudaq)

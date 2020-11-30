@@ -30,6 +30,17 @@ target_link_libraries(TelKinkAngle
   )
 
 
+add_executable(AltelMilleAlign MilleAlign.cpp)
+list(APPEND EXE_TARGET_LIST AltelMilleAlign)
+target_include_directories(AltelMilleAlign  PRIVATE ./ )
+target_link_libraries(AltelMilleAlign
+  PRIVATE
+  altel-data-event
+  altel-data-eudaq
+  altel-mille
+  mycommon
+  )
+
 # install-tree
 install(TARGETS ${EXE_TARGET_LIST}
   EXPORT ${PROJECT_NAME}Targets
