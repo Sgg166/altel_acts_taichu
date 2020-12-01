@@ -44,7 +44,6 @@ int main(int argc, char *argv[]) {
                              {0, 0, 0, 0}};
 
   std::vector<std::string> rawFilePathCol;
-  // std::string eudaqFile_path;
   std::string inputGeometryFile_path;
   std::string pedeSteeringFile_path;
   std::string milleBinaryFile_path;

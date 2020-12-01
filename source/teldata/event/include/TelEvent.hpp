@@ -292,5 +292,17 @@ namespace altel{
     std::vector<TelMeasRaw>& measRaws() {return MRs;}
     std::vector<std::shared_ptr<TelMeasHit>>& measHits() {return MHs;}
     std::vector<std::shared_ptr<TelTrajectory>>& trajectories(){ return TJs;}
+
+    std::vector<std::shared_ptr<TelMeasHit>> measHits(const std::vector<uint16_t>& detNs){
+      std::vector<std::shared_ptr<TelMeasHit>> measHits_subset;
+      for(auto &aMeasHit: MHs){
+        if(std::find(detNs.begin(), detNs.end(), aMeasHit->detN()) != detNs.end()){
+          measHits_subset.push_back(aMeasHit);
+        }
+      }
+      return measHits_subset;
+    }
+
+
   };
 }

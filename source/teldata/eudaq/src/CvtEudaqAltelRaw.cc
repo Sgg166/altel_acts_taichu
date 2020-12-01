@@ -10,7 +10,8 @@ std::shared_ptr<altel::TelEvent> altel::createTelEvent(eudaq::EventSPC eudaqEven
   uint32_t runN = eudaqEvent->GetRunN();
   uint32_t eventN = eudaqEvent->GetEventN();
   uint32_t triggerN = eudaqEvent->GetTriggerN();
-  std::shared_ptr<altel::TelEvent> telev(new altel::TelEvent(runN, eventN, 0, triggerN));
+  uint32_t deviceN = eudaqEvent->GetDeviceN();
+  std::shared_ptr<altel::TelEvent> telev(new altel::TelEvent(runN, eventN, deviceN, triggerN));
 
   if(eudaqEvent->IsFlagPacket()){
     auto subev_col = eudaqEvent->GetSubEvents();
@@ -51,7 +52,7 @@ std::shared_ptr<altel::TelEvent> altel::createTelEvent(eudaq::EventSPC eudaqEven
                                                               -FEI4Helper::pitchU*(FEI4Helper::numPixelU-1)*0.5,
                                                               -FEI4Helper::pitchV*(FEI4Helper::numPixelV-1)*0.5);
 
-      telev->measRaws().insert(telev->measRaws().end(), feiMeasRaws.begin(), feiMeasRaws.end());
+      // telev->measRaws().insert(telev->measRaws().end(), feiMeasRaws.begin(), feiMeasRaws.end());
       telev->measHits().insert(telev->measHits().end(), feiMeasHits.begin(), feiMeasHits.end());
     }
   }
@@ -94,7 +95,7 @@ std::shared_ptr<altel::TelEvent> altel::createTelEvent(eudaq::EventSPC eudaqEven
                                                                -0.02924*(1024-1)*0.5,
                                                                -0.02688*(512-1)*0.5);
 
-    telev->measRaws().insert(telev->measRaws().end(), alpideMeasRaws.begin(), alpideMeasRaws.end());
+    // telev->measRaws().insert(telev->measRaws().end(), alpideMeasRaws.begin(), alpideMeasRaws.end());
     telev->measHits().insert(telev->measHits().end(), alpideMeasHits.begin(), alpideMeasHits.end());
   }
   return telev;

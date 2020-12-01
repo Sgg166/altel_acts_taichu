@@ -3,12 +3,14 @@
 #include "getopt.h"
 #include "myrapidjson.h"
 
+#include "eudaq/FileReader.hh"
+#include "CvtEudaqAltelRaw.hh"
+
 #include <numeric>
 #include <chrono>
 
 #include <TFile.h>
 #include <TTree.h>
-
 
 #include "TelGL.hh"
 #define GLFW_INCLUDE_NONE
@@ -24,28 +26,34 @@ using namespace Acts::UnitLiterals;
 
 static const std::string help_usage = R"(
 Usage:
-  -help                        help message
-  -verbose                     verbose flag
-  -wait                        wait for user keyboard input per event
-  -eventSkip      <int>        number of events to skip before start processing
-  -eventMax       <int>        max number of events to process
-  -geometryFile   <path>       path to geometry input file (input)
-  -hitFile        <path>       path data input file (input)
-  -rootFile       <path>       path to root file (output)
-  -particleEnergy <float>      energy of beam particle, electron, (Gev)
-  -targetId       <int>...     IDs of target detector which are complectely excluded from track fitting. Residual are caculated.
+  -help                             help message
+  -verbose                          verbose flag
+  -wait                             wait for user keyboard input per event
+  -eventSkip      <INT>             number of events to skip before start processing
+  -eventMax       <INT>             max number of events to process
+  -geometryFile   <PATH>            path to geometry input file (input)
+  -eudaqFiles  <<PATH0> [PATH1]...> paths to input eudaq raw data files (input)
+  -rootFile       <PATH>            path to root file (output)
+  -particleEnergy <FLOAT>           energy of beam particle, electron, (Gev)
+  -targetIds    <<INT0> [INT1]...>  IDs of target detector which are complectely excluded from track fitting. Residual are caculated.
 
 examples:
-./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo /work/testbeam/altel_align/runspace/test313/align_313_geo.json -r detresid.root -eventM 10
- ./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo align_313_geo.json -r detresid.root -eventM 100000 -target 5
+./bin/TelDetectorResidual -eudaqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
+
+./bin/TelDetectorResidual -eudaqFiles eudaqRaw/altel_Run069017_200824002945.raw eudaqRaw/altel_Run069018_200824003322.raw eudaqRaw/altel_Run069019_200824003522.raw eudaqRaw/altel_Run069020_200824003720.raw eudaqRaw/altel_Run069021_200824003915.raw eudaqRaw/altel_Run069022_200824004110.raw eudaqRaw/altel_Run069023_200824004322.raw eudaqRaw/altel_Run069024_200824004524.raw eudaqRaw/altel_Run069025_200824004716.raw eudaqRaw/altel_Run069026_200824004924.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5
+
+note:
+eudaqRaw/altel_Run069017_200824002945.raw eudaqRaw/altel_Run069018_200824003322.raw eudaqRaw/altel_Run069019_200824003522.raw eudaqRaw/altel_Run069020_200824003720.raw eudaqRaw/altel_Run069021_200824003915.raw eudaqRaw/altel_Run069022_200824004110.raw eudaqRaw/altel_Run069023_200824004322.raw eudaqRaw/altel_Run069024_200824004524.raw eudaqRaw/altel_Run069025_200824004716.raw eudaqRaw/altel_Run069026_200824004924.raw
+
 )";
 
 
 int main(int argc, char *argv[]) {
-  int64_t eventMaxNum = -1;
+  int64_t eventMaxNum = 0;
   int64_t eventSkipNum = 0;
   std::vector<int64_t> targetDetId;
-  std::string hitFilePath;
+
+  std::vector<std::string> rawFilePathCol;
   std::string geometryFilePath;
   std::string rootFilePath;
 
@@ -64,11 +72,11 @@ int main(int argc, char *argv[]) {
                                 {"wait", no_argument, NULL, 'w'},
                                 {"eventSkip", required_argument, NULL, 's'},
                                 {"eventMax", required_argument, NULL, 'm'},
-                                {"hitFile", required_argument, NULL, 'f'},
+                                {"eudaqFiles", required_argument, NULL, 'f'},
                                 {"rootFile", required_argument, NULL, 'b'},
                                 {"geometryFile", required_argument, NULL, 'g'},
                                 {"particleEnergy", required_argument, NULL, 'e'},
-                                {"targetId", required_argument, NULL, 'd'},
+                                {"targetIds", required_argument, NULL, 'd'},
                                 {0, 0, 0, 0}};
 
     if(argc == 1){
@@ -90,9 +98,14 @@ int main(int argc, char *argv[]) {
       case 'm':
         eventMaxNum = std::stoul(optarg);
         break;
-      case 'f':
-        hitFilePath = optarg;
+      case 'f':{
+        optind--;
+        for( ;optind < argc && *argv[optind] != '-'; optind++){
+          const char* fileStr = argv[optind];
+          rawFilePathCol.push_back(std::string(fileStr));
+        }
         break;
+      }
       case 'b':
         rootFilePath = optarg;
         break;
@@ -159,14 +172,17 @@ int main(int argc, char *argv[]) {
     }
   }/////////getopt end////////////////
 
-
   std::fprintf(stdout, "\n");
-  std::fprintf(stdout, "hitFileFile:   %s\n", hitFilePath.c_str());
+  std::fprintf(stdout, "%d eudaqFiles:\n", rawFilePathCol.size());
+  for(auto &rawfilepath: rawFilePathCol){
+    std::fprintf(stdout, "  %s\n", rawfilepath.c_str());
+  }
   std::fprintf(stdout, "geometryFile:  %s\n", geometryFilePath.c_str());
   std::fprintf(stdout, "rootFile:      %s\n", rootFilePath.c_str());
   std::fprintf(stdout, "\n");
 
-  if (hitFilePath.empty() || rootFilePath.empty() ||
+  if (rawFilePathCol.empty() ||
+      rootFilePath.empty() ||
       geometryFilePath.empty()) {
     std::fprintf(stderr, "%s\n", help_usage.c_str());
     std::exit(1);
@@ -217,7 +233,7 @@ int main(int argc, char *argv[]) {
     std::fprintf(stderr, "Geometry file <%s> does not contain any json objects.\n", geometryFilePath.c_str() );
     throw;
   }
-  JsonUtils::printJsonValue(jsd_geo, true);
+  // JsonUtils::printJsonValue(jsd_geo, true);
 
   std::printf("--------create acts geo object-----\n");
   if (!jsd_geo.HasMember("geometry")) {
@@ -245,6 +261,7 @@ int main(int argc, char *argv[]) {
   std::vector<std::shared_ptr<const Acts::PlaneLayer>> layerDets;
   std::vector<std::shared_ptr<const Acts::PlaneLayer>> layerTargets;
 
+
   for(auto &[detId, planeLayer] :mapDetId2PlaneLayer){
     auto it = find (targetDetId.begin(), targetDetId.end(), detId);
     if(it == targetDetId.end()){
@@ -256,6 +273,16 @@ int main(int argc, char *argv[]) {
       mapDetId2PlaneLayer_targets[detId] = planeLayer;
     }
   }
+
+  std::vector<uint16_t> detId_dets;
+  for(const auto& [detId, layer]: mapDetId2PlaneLayer_dets){
+    detId_dets.push_back(detId);
+  }
+  std::vector<uint16_t> detId_targets;
+  for(const auto& [detId, layer]: mapDetId2PlaneLayer_targets){
+    detId_targets.push_back(detId);
+  }
+
 
   if(layerDets.size()<3){
     std::fprintf(stdout, "error: number of detector elements is only %d.", layerDets.size());
@@ -308,48 +335,63 @@ int main(int argc, char *argv[]) {
   ttreeWriter.pTree = new TTree("eventTree", "eventTree");
   ttreeWriter.createBranch();
 
-  JsonFileDeserializer jsfd(hitFilePath);
-
-  for(size_t i=0; i< eventSkipNum; i++){
-    auto evpack = jsfd.getNextJsonDocument();
-    if(evpack.IsNull()){
-      std::fprintf(stdout, "reach null object after skip %d event, possible end of file\n", i);
-    }
-  }
-
   TelFW telfw(800, 400, "test");
   glfw_test telfwtest(geometryFilePath);
   telfw.startAsync<glfw_test>(&telfwtest, &glfw_test::beginHook, &glfw_test::clearHook, &glfw_test::drawHook);
 
+  uint32_t rawFileNum=0;
+  size_t readEventNum = 0;
   size_t emptyEventNum = 0;
   size_t eventNum = 0;
   size_t trackNum = 0;
   size_t droppedTrackNum = 0;
   auto tp_start = std::chrono::system_clock::now();
-  while(jsfd && (eventNum< eventMaxNum || eventMaxNum<0)){
 
-    auto evpack = jsfd.getNextJsonDocument();
-    if(evpack.IsNull()){
-      std::fprintf(stdout, "reach null object, possible end of file\n");
+  eudaq::FileReaderUP reader;
+
+  while(1){
+    if(eventNum> eventMaxNum && eventMaxNum>0){
       break;
     }
+    if(!reader){
+      if(rawFileNum<rawFilePathCol.size()){
+        std::fprintf(stdout, "processing raw file: %s\n", rawFilePathCol[rawFileNum].c_str());
+        reader = eudaq::Factory<eudaq::FileReader>::MakeUnique(eudaq::str2hash("native"), rawFilePathCol[rawFileNum]);
+        rawFileNum++;
+      }
+      else{
+        std::fprintf(stdout, "processed %d raw files, quit\n", rawFileNum);
+        break;
+      }
+    }
+    auto eudaqEvent = reader->GetNextEvent();
+    if(!eudaqEvent){
+      reader.reset();
+      continue; // goto for next raw file
+    }
+    // std::cout<<"reading"<<std::endl;
 
-    size_t runN = 0;
-    size_t setupN = 0;
-    std::shared_ptr<altel::TelEvent> detEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_dets);
+    readEventNum++;
+    if(readEventNum<=eventSkipNum){
+      continue;
+    }
+    eventNum++;
+
+    std::shared_ptr<altel::TelEvent> fullEvent  = altel::createTelEvent(eudaqEvent);
+    // TODO test nullptr
+    std::shared_ptr<altel::TelEvent> detEvent(new altel::TelEvent(fullEvent->runN(),
+                                                                  fullEvent->eveN(),
+                                                                  fullEvent->detN(),
+                                                                  fullEvent->clkN()));
+    detEvent->measHits()=fullEvent->measHits(detId_dets);
+    // std::shared_ptr<altel::TelEvent> detEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_dets);
     std::vector<TelActs::TelSourceLink> sourcelinks  = TelActs::createSourceLinks(detEvent, mapDetId2PlaneLayer_dets);
 
     if(sourcelinks.empty()) {
       emptyEventNum ++;
       eventNum ++;
+      // std::cout<<"empty"<<std::endl;
       continue;
-    }
-
-    if(do_verbose){
-      std::fprintf(stdout, "\n\n\n");
-      for(const auto& l: evpack["layers"].GetArray()){
-        JsonUtils::printJsonValue(l, false);
-      }
     }
 
     ////////////////////////////////
@@ -362,8 +404,13 @@ int main(int argc, char *argv[]) {
 
     TelActs::fillTelTrajectories(gctx, result.value(), detEvent, mapGeoId2DetId);
 
-    std::shared_ptr<altel::TelEvent> targetEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_targets);
-    TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 100_um, 3);
+    std::shared_ptr<altel::TelEvent> targetEvent(new altel::TelEvent(fullEvent->runN(),
+                                                                     fullEvent->eveN(),
+                                                                     fullEvent->detN(),
+                                                                     fullEvent->clkN()));
+    targetEvent->measHits()=fullEvent->measHits(detId_targets);
+
+    TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 400_um, 3);
 
     for(auto &aTraj: detEvent->TJs){
       size_t fittedHitNum = aTraj->numOriginMeasHit();
