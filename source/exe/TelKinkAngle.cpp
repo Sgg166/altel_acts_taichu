@@ -35,7 +35,7 @@ Usage:
 
 examples:
 ./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo /work/testbeam/altel_align/runspace/test313/align_313_geo.json -r detresid.root -eventM 10
- ./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo align_313_geo.json -r detresid.root -eventM 100000 -target 5
+./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo align_313_geo.json -r detresid.root -eventM 100000 -target 5
 )";
 
 
@@ -308,8 +308,8 @@ int main(int argc, char *argv[]) {
 
   TFile tfile(rootFilePath.c_str(),"recreate");
   altel::TelEventTTreeWriter ttreeWriter;
-  ttreeWriter.pTree = new TTree("eventTree", "eventTree");
-  ttreeWriter.createBranch();
+  TTree *pTree = new TTree("eventTree", "eventTree");
+  ttreeWriter.setTTree(pTree);
 
   TProfile2D *tp2Kink=new TProfile2D("tp2Kink","tp2Kink", 300, -15.0, 15.0 , 150, -7.5, 7.5);
 
@@ -377,7 +377,7 @@ int main(int argc, char *argv[]) {
       trackNum ++;
     }
 
-    ttreeWriter.fill(detEvent);
+    ttreeWriter.fillTelEvent(detEvent);
 
     {
       for(const auto& aTraj: detEvent->trajectories()){
@@ -430,10 +430,9 @@ int main(int argc, char *argv[]) {
   std::fprintf(stdout, "event rate: %.0fhz, non-empty event rate: %.0fhz, empty event rate: %.0fhz, track rate: %.0fhz\n",
                eventNum/time_s, (eventNum-emptyEventNum)/time_s, emptyEventNum/time_s, trackNum/time_s);
 
-  ttreeWriter.pTree->Write();
+  pTree->Write();
   tp2Kink->Write();
 
-  // ttreeWriter.pTree.release();
   tfile.Close();
   return 0;
 }

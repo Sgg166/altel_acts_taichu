@@ -4,12 +4,13 @@
 
 #include <iostream>
 
-void altel::TelEventTTreeWriter::createBranch(){
-  if(!pTree){
+void altel::TelEventTTreeWriter::setTTree(TTree* pTTree){
+  if(!pTTree){
     std::fprintf(stderr, "TTree is not yet set\n");
     throw;
   }
-  TTree &tree = *pTree;
+  m_pTTree = pTTree;
+  TTree &tree = *m_pTTree;
 
   auto bRunN = tree.Branch("RunN", &rRunN);
   auto bEventN = tree.Branch("EventN", &rEventN);
@@ -58,7 +59,7 @@ void altel::TelEventTTreeWriter::createBranch(){
 }
 
 
-void altel::TelEventTTreeWriter::fill(std::shared_ptr<altel::TelEvent> telEvent){
+void altel::TelEventTTreeWriter::fillTelEvent(std::shared_ptr<altel::TelEvent> telEvent){
 
 ///////////////branch vector clear////////////////////////
     ///rawMeas
@@ -248,11 +249,5 @@ void altel::TelEventTTreeWriter::fill(std::shared_ptr<altel::TelEvent> telEvent)
     rEventN = telEvent->EN;
     rConfigN = telEvent->DN;
     rClock = telEvent->CK;
-    // if(!pTree){
-    //   std::fprintf(stderr, "TTree is not yet set\n");
-    //   throw;
-    // }
-    // TTree &tree = *pTree;
-    pTree->Fill();
-    // std::cout<<"reach ptree->fill"<<std::endl;
+    m_pTTree->Fill();
 }

@@ -3,21 +3,20 @@
 #include "TelEvent.hpp"
 
 
-//TODO TTree::MakeClass  https://root.cern.ch/doc/master/classTTree.html#ac4ceaf4ae0b87412acf94093043cc2de
 
 class TFile;
 class TTree;
 
 namespace altel{
-  class TelEventTTreeWriter{
-  public:
-    void setTTree(TTree* pTTree);
-    void fillTelEvent(std::shared_ptr<altel::TelEvent> ev);
+  class TelEventTTreeReader{
+    void setTTree(TTree* pTree);
+    std::shared_ptr<altel::TelEvent> createTelEvent(size_t n);
+    size_t numEvents() const;
 
   private:
-    TTree *m_pTTree{0};
+    TTree* m_pTTree{0};
+    size_t m_numEvents{0};
   private:
-
     uint32_t rRunN;
     uint32_t rEventN;
     int16_t rConfigN;

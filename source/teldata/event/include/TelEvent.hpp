@@ -140,12 +140,20 @@ namespace altel{
   struct TelFitHit{
     uint16_t DN{0};   // detector id
     double PLs[2]{0.0, 0.0}; // local pos
-    double DLs[3]{0.0, 0.0, 0.0}; // local dir
+    double DLs[3]{0.0, 0.0, 0.0}; // local dir // todo remove
 
     double PGs[3]{0.0, 0.0, 0.0}; // global pos
     double DGs[3]{0.0, 0.0, 0.0}; // global dir
 
     std::shared_ptr<TelMeasHit> OM; // origin measure hit
+
+    TelFitHit(uint16_t detN,
+              double u, double v,
+              double x, double y, double z,
+              double dx, double dy, double dz,
+              std::shared_ptr<TelMeasHit> originMeasHit=nullptr)
+      :DN(detN), PLs{u, v}, PGs{x, y, z}, DGs{dx, dy, dz}, OM(originMeasHit){};
+
 
     inline uint16_t& detN() {return DN;}
     inline double& u() {return PLs[0];}
@@ -174,6 +182,11 @@ namespace altel{
     uint16_t DN{0}; // detector id
     std::shared_ptr<TelFitHit>  FH;  // fitted hit
     std::shared_ptr<TelMeasHit> MM; // measure hit, matched
+
+    TelTrajHit(uint16_t detN,
+               std::shared_ptr<TelFitHit> fitHit=nullptr,
+               std::shared_ptr<TelMeasHit> matchedMeasHit=nullptr)
+      :DN(detN), FH(fitHit), MM(matchedMeasHit){};
 
     inline uint16_t& detN() {return DN;}
     inline std::shared_ptr<TelFitHit>& fitHit() {return FH;}
@@ -215,6 +228,7 @@ namespace altel{
     uint64_t TN{0};                               // trajectories id
     std::vector<std::shared_ptr<TelTrajHit>> THs; // hit
 
+    
     const std::vector<std::shared_ptr<TelTrajHit>>& trajectoryHits() const{return THs;}
     std::vector<std::shared_ptr<TelTrajHit>>& trajectoryHits() {return THs;}
 
@@ -302,7 +316,6 @@ namespace altel{
       }
       return measHits_subset;
     }
-
 
   };
 }

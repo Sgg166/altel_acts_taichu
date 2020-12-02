@@ -332,8 +332,8 @@ int main(int argc, char *argv[]) {
     refSurface.get());
 
   altel::TelEventTTreeWriter ttreeWriter;
-  ttreeWriter.pTree = new TTree("eventTree", "eventTree");
-  ttreeWriter.createBranch();
+  TTree *pTree = new TTree("eventTree", "eventTree");
+  ttreeWriter.setTTree(pTree);
 
   TelFW telfw(800, 400, "test");
   glfw_test telfwtest(geometryFilePath);
@@ -422,7 +422,7 @@ int main(int argc, char *argv[]) {
       trackNum ++;
     }
 
-    ttreeWriter.fill(detEvent);
+    ttreeWriter.fillTelEvent(detEvent);
     eventNum ++;
 
     telfwtest.pushBufferEvent(detEvent);
@@ -442,7 +442,7 @@ int main(int argc, char *argv[]) {
                eventNum/time_s, (eventNum-emptyEventNum)/time_s, emptyEventNum/time_s, trackNum/time_s);
 
   TFile tfile(rootFilePath.c_str(),"recreate");
-  ttreeWriter.pTree->Write();
+  pTree->Write();
   tfile.Close();
 
   if(do_wait){
