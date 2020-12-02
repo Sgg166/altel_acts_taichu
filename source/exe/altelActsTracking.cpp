@@ -3,12 +3,14 @@
 #include "getopt.h"
 #include "myrapidjson.h"
 
+#include "eudaq/FileReader.hh"
+#include "CvtEudaqAltelRaw.hh"
+
 #include <numeric>
 #include <chrono>
 
 #include <TFile.h>
 #include <TTree.h>
-#include <TProfile2D.h>
 
 #include "TelGL.hh"
 #define GLFW_INCLUDE_NONE
@@ -17,33 +19,34 @@
 #include "linenoise.h"
 #include "myrapidjson.h"
 
+#include "TelFW.hh"
+#include "glfw_test.hh"
 
 using namespace Acts::UnitLiterals;
 
 static const std::string help_usage = R"(
 Usage:
-  -help                        help message
-  -verbose                     verbose flag
-  -wait                        wait for user keyboard input per event
-  -eventSkip      <int>        number of events to skip before start processing
-  -eventMax       <int>        max number of events to process
-  -geometryFile   <path>       path to geometry input file (input)
-  -hitFile        <path>       path data input file (input)
-  -rootFile       <path>       path to root file (output)
-  -particleEnergy <float>      energy of beam particle, electron, (Gev)
-  -targetId       <int>...     IDs of target detector which are complectely excluded from track fitting. Residual are caculated.
+  -help                             help message
+  -verbose                          verbose flag
+  -wait                             wait for user keyboard input per event
+  -eventSkip      <INT>             number of events to skip before start processing
+  -eventMax       <INT>             max number of events to process
+  -geometryFile   <PATH>            path to geometry input file (input)
+  -eudaqFiles  <<PATH0> [PATH1]...> paths to input eudaq raw data files (input)
+  -rootFile       <PATH>            path to root file (output)
+  -particleEnergy <FLOAT>           energy of beam particle, electron, (Gev)
+  -targetIds    <<INT0> [INT1]...>  IDs of target detector which are complectely excluded from track fitting. Residual are caculated.
 
 examples:
-./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo /work/testbeam/altel_align/runspace/test313/align_313_geo.json -r detresid.root -eventM 10
-./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo align_313_geo.json -r detresid.root -eventM 100000 -target 5
+./bin/TelDetectorResidual -eudaqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
 )";
 
-
 int main(int argc, char *argv[]) {
-  int64_t eventMaxNum = -1;
+  int64_t eventMaxNum = 0;
   int64_t eventSkipNum = 0;
   std::vector<int64_t> targetDetId;
-  std::string hitFilePath;
+
+  std::vector<std::string> rawFilePathCol;
   std::string geometryFilePath;
   std::string rootFilePath;
 
@@ -62,11 +65,11 @@ int main(int argc, char *argv[]) {
                                 {"wait", no_argument, NULL, 'w'},
                                 {"eventSkip", required_argument, NULL, 's'},
                                 {"eventMax", required_argument, NULL, 'm'},
-                                {"hitFile", required_argument, NULL, 'f'},
+                                {"eudaqFiles", required_argument, NULL, 'f'},
                                 {"rootFile", required_argument, NULL, 'b'},
                                 {"geometryFile", required_argument, NULL, 'g'},
                                 {"particleEnergy", required_argument, NULL, 'e'},
-                                {"targetId", required_argument, NULL, 'd'},
+                                {"targetIds", required_argument, NULL, 'd'},
                                 {0, 0, 0, 0}};
 
     if(argc == 1){
@@ -88,9 +91,14 @@ int main(int argc, char *argv[]) {
       case 'm':
         eventMaxNum = std::stoul(optarg);
         break;
-      case 'f':
-        hitFilePath = optarg;
+      case 'f':{
+        optind--;
+        for( ;optind < argc && *argv[optind] != '-'; optind++){
+          const char* fileStr = argv[optind];
+          rawFilePathCol.push_back(std::string(fileStr));
+        }
         break;
+      }
       case 'b':
         rootFilePath = optarg;
         break;
@@ -157,14 +165,17 @@ int main(int argc, char *argv[]) {
     }
   }/////////getopt end////////////////
 
-
   std::fprintf(stdout, "\n");
-  std::fprintf(stdout, "hitFileFile:   %s\n", hitFilePath.c_str());
+  std::fprintf(stdout, "%d eudaqFiles:\n", rawFilePathCol.size());
+  for(auto &rawfilepath: rawFilePathCol){
+    std::fprintf(stdout, "  %s\n", rawfilepath.c_str());
+  }
   std::fprintf(stdout, "geometryFile:  %s\n", geometryFilePath.c_str());
   std::fprintf(stdout, "rootFile:      %s\n", rootFilePath.c_str());
   std::fprintf(stdout, "\n");
 
-  if (hitFilePath.empty() || rootFilePath.empty() ||
+  if (rawFilePathCol.empty() ||
+      rootFilePath.empty() ||
       geometryFilePath.empty()) {
     std::fprintf(stderr, "%s\n", help_usage.c_str());
     std::exit(1);
@@ -215,7 +226,7 @@ int main(int argc, char *argv[]) {
     std::fprintf(stderr, "Geometry file <%s> does not contain any json objects.\n", geometryFilePath.c_str() );
     throw;
   }
-  JsonUtils::printJsonValue(jsd_geo, true);
+  // JsonUtils::printJsonValue(jsd_geo, true);
 
   std::printf("--------create acts geo object-----\n");
   if (!jsd_geo.HasMember("geometry")) {
@@ -243,6 +254,7 @@ int main(int argc, char *argv[]) {
   std::vector<std::shared_ptr<const Acts::PlaneLayer>> layerDets;
   std::vector<std::shared_ptr<const Acts::PlaneLayer>> layerTargets;
 
+
   for(auto &[detId, planeLayer] :mapDetId2PlaneLayer){
     auto it = find (targetDetId.begin(), targetDetId.end(), detId);
     if(it == targetDetId.end()){
@@ -254,6 +266,16 @@ int main(int argc, char *argv[]) {
       mapDetId2PlaneLayer_targets[detId] = planeLayer;
     }
   }
+
+  std::vector<uint16_t> detId_dets;
+  for(const auto& [detId, layer]: mapDetId2PlaneLayer_dets){
+    detId_dets.push_back(detId);
+  }
+  std::vector<uint16_t> detId_targets;
+  for(const auto& [detId, layer]: mapDetId2PlaneLayer_targets){
+    detId_targets.push_back(detId);
+  }
+
 
   if(layerDets.size()<3){
     std::fprintf(stdout, "error: number of detector elements is only %d.", layerDets.size());
@@ -284,9 +306,6 @@ int main(int argc, char *argv[]) {
     if(aPlaneLayer==layerDets[0]){// x sorted layers
       ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {10,10}}); //first layer can have multi-branches
     }
-    else if(mapGeoId2DetId.at(aPlaneLayer->geometryId()) == 3 ){
-      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {50,1}}); //chi2, max branches
-    }
     else{
       ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {10,1}}); //chi2, max branches
     }
@@ -305,52 +324,67 @@ int main(int argc, char *argv[]) {
     gctx, mctx, cctx, sourcelinkSelectorCfg, Acts::LoggerWrapper{*kfLogger}, pOptions,
     refSurface.get());
 
-  TFile tfile(rootFilePath.c_str(),"recreate");
   altel::TelEventTTreeWriter ttreeWriter;
   TTree *pTree = new TTree("eventTree", "eventTree");
   ttreeWriter.setTTree(pTree);
 
-  TProfile2D *tp2Kink=new TProfile2D("tp2Kink","tp2Kink", 300, -15.0, 15.0 , 150, -7.5, 7.5);
+  TelFW telfw(800, 400, "test");
+  glfw_test telfwtest(geometryFilePath);
+  telfw.startAsync<glfw_test>(&telfwtest, &glfw_test::beginHook, &glfw_test::clearHook, &glfw_test::drawHook);
 
-  JsonFileDeserializer jsfd(hitFilePath);
-
-  for(size_t i=0; i< eventSkipNum; i++){
-    auto evpack = jsfd.getNextJsonDocument();
-    if(evpack.IsNull()){
-      std::fprintf(stdout, "reach null object after skip %d event, possible end of file\n", i);
-    }
-  }
-
-
+  uint32_t rawFileNum=0;
+  size_t readEventNum = 0;
   size_t emptyEventNum = 0;
   size_t eventNum = 0;
   size_t trackNum = 0;
   size_t droppedTrackNum = 0;
   auto tp_start = std::chrono::system_clock::now();
-  while(jsfd && (eventNum< eventMaxNum || eventMaxNum<0)){
 
-    auto evpack = jsfd.getNextJsonDocument();
-    if(evpack.IsNull()){
-      std::fprintf(stdout, "reach null object, possible end of file\n");
+  eudaq::FileReaderUP reader;
+
+  while(1){
+    if(eventNum> eventMaxNum && eventMaxNum>0){
       break;
     }
+    if(!reader){
+      if(rawFileNum<rawFilePathCol.size()){
+        std::fprintf(stdout, "processing raw file: %s\n", rawFilePathCol[rawFileNum].c_str());
+        reader = eudaq::Factory<eudaq::FileReader>::MakeUnique(eudaq::str2hash("native"), rawFilePathCol[rawFileNum]);
+        rawFileNum++;
+      }
+      else{
+        std::fprintf(stdout, "processed %d raw files, quit\n", rawFileNum);
+        break;
+      }
+    }
+    auto eudaqEvent = reader->GetNextEvent();
+    if(!eudaqEvent){
+      reader.reset();
+      continue; // goto for next raw file
+    }
+    // std::cout<<"reading"<<std::endl;
 
-    size_t runN = 0;
-    size_t setupN = 0;
-    std::shared_ptr<altel::TelEvent> detEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_dets);
+    readEventNum++;
+    if(readEventNum<=eventSkipNum){
+      continue;
+    }
+    eventNum++;
+
+    std::shared_ptr<altel::TelEvent> fullEvent  = altel::createTelEvent(eudaqEvent);
+    // TODO test nullptr
+    std::shared_ptr<altel::TelEvent> detEvent(new altel::TelEvent(fullEvent->runN(),
+                                                                  fullEvent->eveN(),
+                                                                  fullEvent->detN(),
+                                                                  fullEvent->clkN()));
+    detEvent->measHits()=fullEvent->measHits(detId_dets);
+    // std::shared_ptr<altel::TelEvent> detEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_dets);
     std::vector<TelActs::TelSourceLink> sourcelinks  = TelActs::createSourceLinks(detEvent, mapDetId2PlaneLayer_dets);
 
     if(sourcelinks.empty()) {
       emptyEventNum ++;
       eventNum ++;
+      // std::cout<<"empty"<<std::endl;
       continue;
-    }
-
-    if(do_verbose){
-      std::fprintf(stdout, "\n\n\n");
-      for(const auto& l: evpack["layers"].GetArray()){
-        JsonUtils::printJsonValue(l, false);
-      }
     }
 
     ////////////////////////////////
@@ -363,8 +397,13 @@ int main(int argc, char *argv[]) {
 
     TelActs::fillTelTrajectories(gctx, result.value(), detEvent, mapGeoId2DetId);
 
-    std::shared_ptr<altel::TelEvent> targetEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_targets);
-    TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 100_um, 3);
+    std::shared_ptr<altel::TelEvent> targetEvent(new altel::TelEvent(fullEvent->runN(),
+                                                                     fullEvent->eveN(),
+                                                                     fullEvent->detN(),
+                                                                     fullEvent->clkN()));
+    targetEvent->measHits()=fullEvent->measHits(detId_targets);
+
+    TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 400_um, 3);
 
     for(auto &aTraj: detEvent->TJs){
       size_t fittedHitNum = aTraj->numOriginMeasHit();
@@ -377,43 +416,10 @@ int main(int argc, char *argv[]) {
     }
 
     ttreeWriter.fillTelEvent(detEvent);
-
-    {
-      for(const auto& aTraj: detEvent->trajs()){
-        if(aTraj->numOriginMeasHit()<3){
-          continue;
-        }
-
-        uint16_t id_before = 2;
-        uint16_t id_after = 4;
-        auto trajHit_before = aTraj->trajHit(id_before);
-        auto trajHit_after = aTraj->trajHit(id_after);
-        if(!trajHit_before || !trajHit_after){
-          continue;
-        }
-
-        auto fitHit_before = trajHit_before->FH;
-        auto fitHit_after = trajHit_after->FH;
-        if(!fitHit_before || !fitHit_after){
-          continue;
-        }
-
-        if(!fitHit_before->OM || !fitHit_after->OM){
-          continue;
-        }
-
-        Acts::Vector3D dir_before(fitHit_before->DGs[0], fitHit_before->DGs[1], fitHit_before->DGs[2]);
-        Acts::Vector3D dir_after(fitHit_after->DGs[0], fitHit_after->DGs[1], fitHit_after->DGs[2]);
-
-        double kinkAngle = (dir_after-dir_before).norm();
-        double u = fitHit_before->PLs[0];
-        double v = fitHit_before->PLs[1];
-
-        tp2Kink->Fill(u,v, kinkAngle);
-      }
-    }
-
     eventNum ++;
+
+    telfwtest.pushBufferEvent(detEvent);
+
     if(do_wait){
       std::cout<<"waiting, press any key to conitnue"<<std::endl;
       std::getc(stdin);
@@ -428,9 +434,15 @@ int main(int argc, char *argv[]) {
   std::fprintf(stdout, "event rate: %.0fhz, non-empty event rate: %.0fhz, empty event rate: %.0fhz, track rate: %.0fhz\n",
                eventNum/time_s, (eventNum-emptyEventNum)/time_s, emptyEventNum/time_s, trackNum/time_s);
 
+  TFile tfile(rootFilePath.c_str(),"recreate");
   pTree->Write();
-  tp2Kink->Write();
-
   tfile.Close();
+
+  if(do_wait){
+    std::cout<<"waiting, press any key to conitnue"<<std::endl;
+    std::getc(stdin);
+  }
+
+  telfw.stopAsync();
   return 0;
 }

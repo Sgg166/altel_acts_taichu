@@ -24,6 +24,7 @@ namespace altel{
     uint64_t rClock; // timestamp / trigger id;
 
     int16_t rNumTraj_PerEvent;
+    int16_t rNumMeasHits_PerEvent;
 
     ///rawMeas
     std::vector<int16_t> rRawMeasVec_DetN, *pRawMeasVec_DetN = &rRawMeasVec_DetN;

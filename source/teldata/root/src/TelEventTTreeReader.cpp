@@ -15,44 +15,45 @@ void altel::TelEventTTreeReader::setTTree(TTree *pTTree){
   tree.ResetBranchAddresses();
 
   tree.SetBranchAddress("RunN", &rRunN);
-  tree.SetBranchAddress("EventN", &rEventN);
-  tree.SetBranchAddress("ConfigN", &rConfigN);
-  tree.SetBranchAddress("Clock", (ULong64_t*)&rClock);
-  tree.SetBranchAddress("NumTraj_PerEvent", &rNumTraj_PerEvent);
+  tree.SetBranchAddress("EveN", &rEventN);
+  tree.SetBranchAddress("DetN", &rConfigN);
+  tree.SetBranchAddress("ClkN", (ULong64_t*)&rClock);
+  tree.SetBranchAddress("NumTrajs_PerEvent", &rNumTraj_PerEvent);
+  tree.SetBranchAddress("NumMeasHits_PerEvent", &rNumMeasHits_PerEvent);
 
-  tree.SetBranchAddress("RawMeasVec_DetN", &pRawMeasVec_DetN);
-  tree.SetBranchAddress("RawMeasVec_U", &pRawMeasVec_U);
-  tree.SetBranchAddress("RawMeasVec_V", &pRawMeasVec_V);
-  tree.SetBranchAddress("RawMeasVec_Clk", &pRawMeasVec_Clk);
+  tree.SetBranchAddress("MeasRawVec_DetN", &pRawMeasVec_DetN);
+  tree.SetBranchAddress("MeasRawVec_U", &pRawMeasVec_U);
+  tree.SetBranchAddress("MeasRawVec_V", &pRawMeasVec_V);
+  tree.SetBranchAddress("MeasRawVec_Clk", &pRawMeasVec_Clk);
 
-  tree.SetBranchAddress("HitMeasVec_DetN", &pHitMeasVec_DetN);
-  tree.SetBranchAddress("HitMeasVec_U", &pHitMeasVec_U);
-  tree.SetBranchAddress("HitMeasVec_V", &pHitMeasVec_V);
-  tree.SetBranchAddress("HitMeasVec_NumRawMeas_PerHitMeas", &pHitMeasVec_NumRawMeas_PerHitMeas);
-  tree.SetBranchAddress("HitMeasVec_Index_To_RawMeas", &pHitMeasVec_Index_To_RawMeas);
+  tree.SetBranchAddress("MeasHitVec_DetN", &pHitMeasVec_DetN);
+  tree.SetBranchAddress("MeasHitVec_U", &pHitMeasVec_U);
+  tree.SetBranchAddress("MeasHitVec_V", &pHitMeasVec_V);
+  tree.SetBranchAddress("MeasHitVec_NumMeasRaws_PerMeasHit", &pHitMeasVec_NumRawMeas_PerHitMeas);
+  tree.SetBranchAddress("MeasHitVec_MeasRaw_Index", &pHitMeasVec_Index_To_RawMeas);
 
-  tree.SetBranchAddress("HitFitVec_DetN", &pHitFitVec_DetN);
-  tree.SetBranchAddress("HitFitVec_U", &pHitFitVec_U);
-  tree.SetBranchAddress("HitFitVec_V", &pHitFitVec_V);
-  tree.SetBranchAddress("HitFitVec_X", &pHitFitVec_X);
-  tree.SetBranchAddress("HitFitVec_Y", &pHitFitVec_Y);
-  tree.SetBranchAddress("HitFitVec_Z", &pHitFitVec_Z);
-  tree.SetBranchAddress("HitFitVec_DirX", &pHitFitVec_DirX);
-  tree.SetBranchAddress("HitFitVec_DirY", &pHitFitVec_DirY);
-  tree.SetBranchAddress("HitFitVec_DirZ", &pHitFitVec_DirZ);
-  tree.SetBranchAddress("HitFitVec_Index_To_Origin_HitMeas", &pHitFitVec_Index_To_Origin_HitMeas);
-  tree.SetBranchAddress("HitFitVec_Index_To_Matched_HitMeas", &pHitFitVec_Index_To_Matched_HitMeas);
+  tree.SetBranchAddress("TrajHitVec_DetN", &pHitFitVec_DetN);
+  tree.SetBranchAddress("TrajHitVec_U", &pHitFitVec_U);
+  tree.SetBranchAddress("TrajHitVec_V", &pHitFitVec_V);
+  tree.SetBranchAddress("TrajHitVec_X", &pHitFitVec_X);
+  tree.SetBranchAddress("TrajHitVec_Y", &pHitFitVec_Y);
+  tree.SetBranchAddress("TrajHitVec_Z", &pHitFitVec_Z);
+  tree.SetBranchAddress("TrajHitVec_DirX", &pHitFitVec_DirX);
+  tree.SetBranchAddress("TrajHitVec_DirY", &pHitFitVec_DirY);
+  tree.SetBranchAddress("TrajHitVec_DirZ", &pHitFitVec_DirZ);
+  tree.SetBranchAddress("TrajHitVec_OriginMeasHit_Index", &pHitFitVec_Index_To_Origin_HitMeas);
+  tree.SetBranchAddress("TrajHitVec_MatchedMeasHit_Index", &pHitFitVec_Index_To_Matched_HitMeas);
 
-  tree.SetBranchAddress("TrajVec_NumHitFit_PerTraj", &pTrajVec_NumHitFit_PerTraj);
-  tree.SetBranchAddress("TrajVec_NumHitMeas_Origin_PerTraj", &pTrajVec_NumHitMeas_Origin_PerTraj);
-  tree.SetBranchAddress("TrajVec_NumHitMeas_Matched_PerTraj", &pTrajVec_NumHitMeas_Matched_PerTraj);
+  tree.SetBranchAddress("TrajVec_NumTrajHits_PerTraj", &pTrajVec_NumHitFit_PerTraj);
+  tree.SetBranchAddress("TrajVec_NumOriginMeasHits_PerTraj", &pTrajVec_NumHitMeas_Origin_PerTraj);
+  tree.SetBranchAddress("TrajVec_NumMatchedMeasHits_PerTraj", &pTrajVec_NumHitMeas_Matched_PerTraj);
 
-  tree.SetBranchAddress("TrajVec_Index_To_HitFit", &pTrajVec_Index_To_HitFit);
+  tree.SetBranchAddress("TrajVec_TrajHit_Index", &pTrajVec_Index_To_HitFit);
 
   // ana
   tree.SetBranchAddress("AnaVec_Matched_DetN", &pAnaVec_Matched_DetN);
-  tree.SetBranchAddress("AnaVec_Matched_ResdU", &pAnaVec_Matched_ResdU);
-  tree.SetBranchAddress("AnaVec_Matched_ResdV", &pAnaVec_Matched_ResdV);
+  tree.SetBranchAddress("AnaVec_Matched_ResidU", &pAnaVec_Matched_ResdU);
+  tree.SetBranchAddress("AnaVec_Matched_ResidV", &pAnaVec_Matched_ResdV);
 }
 
 size_t altel::TelEventTTreeReader::numEvents() const{
