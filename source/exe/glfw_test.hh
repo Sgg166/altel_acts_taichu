@@ -136,13 +136,13 @@ public:
 
       JsonDocument jsd_data(rapidjson::kObjectType);
       JsonValue js_MeasHits(rapidjson::kArrayType);
-      js_MeasHits.Reserve(ev->MHs.size(), jsd_data.GetAllocator());
-      for(auto &aMeasHit : ev->MHs){
+      js_MeasHits.Reserve(ev->measHits().size(), jsd_data.GetAllocator());
+      for(auto &aMeasHit : ev->measHits()){
         JsonValue js_hit(rapidjson::kArrayType);
         js_hit.Reserve(4, jsd_data.GetAllocator());
-        js_hit.PushBack(aMeasHit->PLs[0], jsd_data.GetAllocator());
-        js_hit.PushBack(aMeasHit->PLs[1], jsd_data.GetAllocator());
-        js_hit.PushBack(aMeasHit->DN, jsd_data.GetAllocator());
+        js_hit.PushBack(aMeasHit->u(), jsd_data.GetAllocator());
+        js_hit.PushBack(aMeasHit->v(), jsd_data.GetAllocator());
+        js_hit.PushBack(aMeasHit->detN(), jsd_data.GetAllocator());
         js_hit.PushBack(1.0, jsd_data.GetAllocator()); // orgin-local-center-mm
         js_MeasHits.PushBack(std::move(js_hit), jsd_data.GetAllocator());
       }
@@ -152,18 +152,14 @@ public:
       JsonValue js_trajs(rapidjson::kArrayType);
       for(auto &aTraj : ev->TJs){
         JsonValue js_traj(rapidjson::kArrayType);
-        js_traj.Reserve(aTraj->THs.size(), jsd_data.GetAllocator());
-        for(auto &aTrajHit : aTraj->THs){
+        js_traj.Reserve(aTraj->trajHits().size(), jsd_data.GetAllocator());
+        for(auto &aTrajHit : aTraj->trajHits()){
           JsonValue js_hit(rapidjson::kArrayType);
           js_hit.Reserve(4, jsd_data.GetAllocator());
-          // js_hit.PushBack(aTrajHit->FH->PGs[1], jsd_data.GetAllocator());
-          // js_hit.PushBack(aTrajHit->FH->PGs[2], jsd_data.GetAllocator());
-          // js_hit.PushBack(aTrajHit->FH->PGs[0], jsd_data.GetAllocator());
-          // js_hit.PushBack(0.0, jsd_data.GetAllocator()); // 1 orgin-local-center-mm, 0 global
 
-          js_hit.PushBack(aTrajHit->FH->PLs[0], jsd_data.GetAllocator());
-          js_hit.PushBack(aTrajHit->FH->PLs[1], jsd_data.GetAllocator());
-          js_hit.PushBack(aTrajHit->DN, jsd_data.GetAllocator());
+          js_hit.PushBack(aTrajHit->fitHit()->u(), jsd_data.GetAllocator());
+          js_hit.PushBack(aTrajHit->fitHit()->v(), jsd_data.GetAllocator());
+          js_hit.PushBack(aTrajHit->detN(), jsd_data.GetAllocator());
           js_hit.PushBack(1.0, jsd_data.GetAllocator()); // 1 orgin-local-center-mm, 0 global
 
           js_traj.PushBack(std::move(js_hit), jsd_data.GetAllocator());
@@ -202,7 +198,6 @@ public:
       }
 
     }
-
     return 1;
   }
 };

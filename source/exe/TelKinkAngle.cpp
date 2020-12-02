@@ -305,7 +305,6 @@ int main(int argc, char *argv[]) {
     gctx, mctx, cctx, sourcelinkSelectorCfg, Acts::LoggerWrapper{*kfLogger}, pOptions,
     refSurface.get());
 
-
   TFile tfile(rootFilePath.c_str(),"recreate");
   altel::TelEventTTreeWriter ttreeWriter;
   TTree *pTree = new TTree("eventTree", "eventTree");
@@ -413,7 +412,6 @@ int main(int argc, char *argv[]) {
         tp2Kink->Fill(u,v, kinkAngle);
       }
     }
-
 
     eventNum ++;
     if(do_wait){

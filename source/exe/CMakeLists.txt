@@ -10,6 +10,18 @@ if( ROOT_CXX_COMPILE_FEATURES STREQUAL "cxx_std_14" )
   set(ROOT_FEATURE_CXX_STANDARD 14)
 endif()
 
+
+
+add_executable(altelTelEventViewer altelTelEventViewer.cpp)
+list(APPEND EXE_TARGET_LIST altelTelEventViewer)
+target_include_directories(altelTelEventViewer  PRIVATE ./ )
+target_link_libraries(altelTelEventViewer
+  altel-data-event altel-data-root
+  mycommon
+  ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist
+  altel-telfw altel-telgl galogen
+  )
+
 add_executable(TelDetectorResidual TelDetectorResidual.cpp)
 list(APPEND EXE_TARGET_LIST TelDetectorResidual)
 target_include_directories(TelDetectorResidual  PRIVATE ./ )
@@ -30,10 +42,10 @@ target_link_libraries(TelKinkAngle
   )
 
 
-add_executable(AltelMilleAlign MilleAlign.cpp)
-list(APPEND EXE_TARGET_LIST AltelMilleAlign)
-target_include_directories(AltelMilleAlign  PRIVATE ./ )
-target_link_libraries(AltelMilleAlign
+add_executable(altelMilleAlign altelMilleAlign.cpp)
+list(APPEND EXE_TARGET_LIST altelMilleAlign)
+target_include_directories(altelMilleAlign  PRIVATE ./ )
+target_link_libraries(altelMilleAlign
   PRIVATE
   altel-data-event
   altel-data-eudaq

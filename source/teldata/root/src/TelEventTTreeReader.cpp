@@ -61,11 +61,19 @@ size_t altel::TelEventTTreeReader::numEvents() const{
 
 std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size_t n){
   if(n>=m_numEvents){
-    std::fprintf(stderr, "no more entries in ttree");
+    std::fprintf(stderr, "no more entries in ttree\n");
     return nullptr;
   }
 
   m_pTTree->GetEntry(n);
+  // std::printf("GetEntry %d\n", n);
+  // std::printf("rRunN %d, rEventN %d, rConfigN %d, rClock %d\n", rRunN, rEventN, rConfigN, rClock);
+  // std::printf("measHit IDsize %d Usize %d Vsize %d\n", rHitMeasVec_DetN.size(), rHitMeasVec_U.size(), rHitMeasVec_V.size());
+  // std::printf("fitHit IDsize %d Usize %d Vsize %d Xsize %d Ysize %d Zsize %d DXsize %d DYsize %d DZsize %d\n",
+  //             rHitFitVec_DetN.size(), rHitFitVec_U.size(), rHitFitVec_V.size(),
+  //             rHitFitVec_X.size(), rHitFitVec_Y.size(), rHitFitVec_Z.size(),
+  //             rHitFitVec_DirX.size(), rHitFitVec_DirY.size(), rHitFitVec_DirZ.size());
+
   std::shared_ptr<altel::TelEvent> telEvent(new altel::TelEvent(rRunN, rEventN, rConfigN, rClock));
 
   size_t numMeasHit = rHitMeasVec_DetN.size();
@@ -77,6 +85,8 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
   auto it_measHitVec_U = rHitMeasVec_U.begin();
   auto it_measHitVec_V = rHitMeasVec_V.begin();
   auto it_measHitVec_detN_end = rHitMeasVec_DetN.end();
+
+  // std::cout<<"loop measHit"<<std::endl;
   while(it_measHitVec_detN !=it_measHitVec_detN_end){
     measHits.emplace_back(new altel::TelMeasHit(*it_measHitVec_detN,
                                                 *it_measHitVec_U,
@@ -105,9 +115,12 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
 
   auto it_fitHitVec_detN_end = rHitFitVec_DetN.end();
 
+  // std::cout<<"loop fitHit"<<std::endl;
   while(it_fitHitVec_detN !=it_fitHitVec_detN_end){
-    uint16_t originMeasHitIndex = *it_fitHitVec_OriginMeasHit_index;
+    // std::cout<<"fitHitVec_detN "<< *it_fitHitVec_detN <<std::endl;
+    int16_t originMeasHitIndex = *it_fitHitVec_OriginMeasHit_index;
     std::shared_ptr<altel::TelMeasHit> originMeasHit;
+    // std::cout<< "originMeasHitIndex"<< originMeasHitIndex<<std::endl;
     if(originMeasHitIndex!=int16_t(-1)){
       assert( originMeasHitIndex<measHits.size() );
       originMeasHit = measHits[originMeasHitIndex];
@@ -125,8 +138,9 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
                                                      originMeasHit);
 
 
-    uint16_t matchedMeasHitIndex = *it_fitHitVec_MatchedMeasHit_index;
+    int16_t matchedMeasHitIndex = *it_fitHitVec_MatchedMeasHit_index;
     std::shared_ptr<altel::TelMeasHit> matchedMeasHit;
+    // std::cout<< "matchedMeasHitIndex"<< matchedMeasHitIndex<<std::endl;
     if(matchedMeasHitIndex!= int16_t(-1)){
       assert( matchedMeasHitIndex<measHits.size() );
       matchedMeasHit = measHits[matchedMeasHitIndex];
@@ -156,6 +170,7 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
   auto it_fitHit_index = rTrajVec_Index_To_HitFit.begin();
   auto it_fitHit_index_end = rTrajVec_Index_To_HitFit.end();
 
+  // std::cout<<"loop traj"<<std::endl;
   while(it_numFitHit_PerTraj != it_numFitHit_PerTraj_end){
     auto traj = std::make_shared<altel::TelTrajectory>();
     size_t numFitHits_got = 0;
@@ -163,7 +178,7 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
       int16_t fitHitIndex = *it_fitHit_index;
       if(fitHitIndex!=int16_t(-1)){
         auto trajHit = trajHits[fitHitIndex];
-        traj->trajectoryHits().push_back(trajHit);
+        traj->trajHits().push_back(trajHit);
         numFitHits_got++;
       }
       it_fitHit_index++;
@@ -173,7 +188,7 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
   }
 
   telEvent->measHits() = std::move(measHits);
-  telEvent->trajectories() = std::move(trajs);
+  telEvent->trajs() = std::move(trajs);
 
   return telEvent;
 }

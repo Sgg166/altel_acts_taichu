@@ -9,6 +9,7 @@ class TTree;
 
 namespace altel{
   class TelEventTTreeReader{
+  public:
     void setTTree(TTree* pTree);
     std::shared_ptr<altel::TelEvent> createTelEvent(size_t n);
     size_t numEvents() const;
