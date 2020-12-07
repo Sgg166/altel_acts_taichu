@@ -30,7 +30,7 @@ Usage:
   -rootFile       <PATH>            path to root file (input)
 
 examples:
-
+ ./bin/altelTelEventViewer -w -geo calice_geo_align4.json  -r  detresid.root
 )";
 
 
