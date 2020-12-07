@@ -19,12 +19,12 @@
 
 using namespace std;
 
-EUTelMille::EUTelMille(){
+altel::TelMille::TelMille(){
 
 }
 
 
-EUTelMille::~EUTelMille(){
+altel::TelMille::~TelMille(){
 };
 
 
@@ -45,9 +45,9 @@ EUTelMille::~EUTelMille(){
  * \param [in] vAngle     angle of v-direction in XY plane
  * \param [in] vRes       resolution in v-direction
  */
-std::unique_ptr<gbl::GblDetectorLayer> EUTelMille::CreateLayerSit(const std::string& aName, unsigned int layer,
-                                                                  double xPos, double yPos, double zPos, double thickness,
-                                                                  double uAngle, double uRes, double vAngle, double vRes) {
+std::unique_ptr<GblDetectorLayer> altel::TelMille::CreateLayerSit_UVonXY(const std::string& aName, unsigned int layer,
+                                                                       double xPos, double yPos, double zPos, double thickness,
+                                                                       double uAngle, double uRes, double vAngle, double vRes) {
   Eigen::Vector3d aCenter(xPos, yPos, zPos);
   Eigen::Vector2d aResolution(uRes, vRes);
   Eigen::Vector2d aPrecision(1. / (uRes * uRes), 1. / (vRes * vRes));
@@ -59,14 +59,60 @@ std::unique_ptr<gbl::GblDetectorLayer> EUTelMille::CreateLayerSit(const std::str
   const double cosV = cos(vAngle / 180. * M_PI);
   const double sinV = sin(vAngle / 180. * M_PI);
 
-  measTrafo << cosU, sinU, 0.,   cosV, sinV, 0.,     0., 0., 1.; // U,V,N
+  measTrafo <<
+    cosU, sinU, 0.,
+    cosV, sinV, 0.,
+    0., 0., 1.; // U,V,N
   Eigen::Matrix3d alignTrafo;
-  alignTrafo << 1., 0., 0.,      0., 1., 0.,         0., 0., 1.; // X,Y,Z
-  return std::make_unique<gbl::GblDetectorLayer>(aName, layer, 2, thickness, aCenter, aResolution,
+  alignTrafo <<
+    1., 0., 0.,
+    0., 1., 0.,
+    0., 0., 1.; // X,Y,Z
+  return std::make_unique<GblDetectorLayer>(aName, layer, 2, thickness, aCenter, aResolution,
                                                  aPrecision, measTrafo, alignTrafo);
 }
 
 
+/// Create a silicon layer with 2D measurement.
+/**
+ * Create silicon layer with 2D measurement (u,v) at fixed X-position.
+ * The measurement directions in the YZ plane can be orthogonal or non-orthogonal
+ * (but must be different).
+ *
+ * \param [in] aName      name
+ * \param [in] layer      layer ID
+ * \param [in] xPos       X-position (of center)
+ * \param [in] yPos       Y-position (of center)
+ * \param [in] zPos       Z-position (of center)
+ * \param [in] thickness  thickness / radiation_length
+ * \param [in] uAngle     angle of u-direction in YZ plane
+ * \param [in] uRes       resolution in u-direction
+ * \param [in] vAngle     angle of v-direction in YZ plane
+ * \param [in] vRes       resolution in v-direction
+ */
+std::unique_ptr<GblDetectorLayer> altel::TelMille::CreateLayerSit_UVonYZ(const std::string aName, unsigned int layer,
+                                                                    double xPos, double yPos, double zPos, double thickness, double uAngle,
+                                                                    double uRes, double vAngle, double vRes) {
+  Eigen::Vector3d aCenter(xPos, yPos, zPos);
+  Eigen::Vector2d aResolution(uRes, vRes);
+  Eigen::Vector2d aPrecision(1. / (uRes * uRes), 1. / (vRes * vRes));
+  Eigen::Matrix3d measTrafo;
+  const double cosU = cos(uAngle / 180. * M_PI);
+  const double sinU = sin(uAngle / 180. * M_PI);
+  const double cosV = cos(vAngle / 180. * M_PI);
+  const double sinV = sin(vAngle / 180. * M_PI);
+  measTrafo <<
+    0., cosU, sinU,
+    0., cosV, sinV,
+    1., 0., 0.; // U,V,N
+  Eigen::Matrix3d alignTrafo;
+  alignTrafo <<
+    0., 1., 0.,
+    0., 0., 1.,
+    1., 0., 0.; // Y,Z,X
+  return std::make_unique<GblDetectorLayer>(aName, layer, 2, thickness, aCenter, aResolution,
+                                                 aPrecision, measTrafo, alignTrafo);
+}
 
 
 /*! Performs analytic straight line fit.
@@ -77,7 +123,7 @@ std::unique_ptr<gbl::GblDetectorLayer> EUTelMille::CreateLayerSit(const std::str
  * @see http://www.desy.de/~blobel/eBuch.pdf page 162
  *
  */
-void EUTelMille::FitTrack(unsigned int nMeasures,
+void altel::TelMille::FitTrack(unsigned int nMeasures,
                           const std::vector<double>& xPosMeasure,
                           const std::vector<double>& yPosMeasure,
                           const std::vector<double>& zPosMeasure,
@@ -196,20 +242,20 @@ void EUTelMille::FitTrack(unsigned int nMeasures,
   yOriginLine = Ybar[1] - Xbar[1]*A2[1];
 }
 
-void EUTelMille::setResolution(double resolX, double resolY){
+void altel::TelMille::setResolution(double resolX, double resolY){
   for(auto &[id, n]: m_indexDet){
     m_xResolution[id] = resolX;
     m_yResolution[id] = resolY;
   }
 }
 
-void EUTelMille::setResolution(size_t id, double resolX, double resolY){
+void altel::TelMille::setResolution(size_t id, double resolX, double resolY){
   m_xResolution[id] = resolX;
   m_yResolution[id] = resolY;
 }
 
 
-void EUTelMille::setGeometry(const JsonValue& js) {
+void altel::TelMille::setGeometry(const JsonValue& js) {
   if(!js.HasMember("geometry")){
     std::fprintf(stderr, "unable to find \"geomerty\" key for detector geomerty from JS\n");
     throw;
@@ -244,27 +290,26 @@ void EUTelMille::setGeometry(const JsonValue& js) {
         m_betaPosDet[id]=ry;
         m_gammaPosDet[id]=rz;
         m_indexDet[id] = n;
-        m_dets[id]=CreateLayerSit("PIX"+std::to_string(id), id,
-                                  cx, cy, cz, 0.001,
-                                  rz, 0.02, rz+90., 0.02);
-
+        m_dets[id]=CreateLayerSit_UVonXY("PIX"+std::to_string(id), id,
+                                         cx, cy, cz, 0.001,
+                                         rz, 0.02, rz+90., 0.02);
         n++;
       }
     }
   }
 }
 
-void EUTelMille::startMilleBinary(const std::string& path){
+void altel::TelMille::startMilleBinary(const std::string& path){
   m_mille.reset(new Mille(path.c_str()));
   m_binPath=path;
 }
 
 
-void EUTelMille::endMilleBinary(){
+void altel::TelMille::endMilleBinary(){
   m_mille.reset();
 }
 
-void EUTelMille::fillTrackXYRz(const JsonValue& js) {
+void altel::TelMille::fillTrackXYRz(const JsonValue& js) {
   double stdevFact = 0.09;
 
   std::vector<double> xPosHit(m_nPlanes,0);
@@ -440,7 +485,7 @@ void EUTelMille::fillTrackXYRz(const JsonValue& js) {
 }
 
 
-void EUTelMille::createPedeStreeringModeXYRz(const std::string& path){
+void altel::TelMille::createPedeStreeringModeXYRz(const std::string& path){
   ofstream steerFile;
   steerFile.open(path.c_str());
 

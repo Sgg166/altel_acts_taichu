@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
   }
   // JsonUtils::printJsonValue(jsd_geo, true);
 
-  EUTelMille telmille;
+  altel::TelMille telmille;
   telmille.setGeometry(jsd_geo);
   telmille.setResolution(hitResX, hitResY);
   telmille.startMilleBinary(milleBinaryFile_path);

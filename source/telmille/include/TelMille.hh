@@ -1,12 +1,10 @@
-// from: Igor Rubinskiy
-#ifndef EUTELMULTILINEFIT_H
-#define EUTELMULTILINEFIT_H
+// origin from: Igor Rubinskiy
+#pragma once
 
 #include <string>
 #include <vector>
 #include <map>
 #include "myrapidjson.h"
-
 
 using IntVec = std::vector<int>;
 using FloatVec = std::vector<float>;
@@ -14,15 +12,16 @@ using DoubleVec = std::vector<double>;
 using StringVec = std::vector<std::string>;
 
 
-namespace gbl{
-   class GblDetectorLayer;
-}
+class GblDetectorLayer;
 
 class Mille;
-class EUTelMille{
+
+namespace altel{
+
+class TelMille{
 public:
-  EUTelMille();
-  ~EUTelMille();
+  TelMille();
+  ~TelMille();
 
   void setGeometry(const JsonValue& js);
   void setResolution(double resolX, double resolY);
@@ -49,11 +48,18 @@ public:
                        std::vector<double>& residXFit,
                        std::vector<double>& residYFit);
 
-  static std::unique_ptr<gbl::GblDetectorLayer> CreateLayerSit(const std::string& aName, unsigned int layer,
-                                                               double xPos, double yPos,
-                                                               double zPos, double thickness,
-                                                               double uAngle, double uRes,
-                                                               double vAngle, double vRes);
+  static std::unique_ptr<GblDetectorLayer> CreateLayerSit_UVonXY(const std::string& aName, unsigned int layer,
+                                                                     double xPos, double yPos,
+                                                                     double zPos, double thickness,
+                                                                     double uAngle, double uRes,
+                                                                     double vAngle, double vRes);
+
+  static std::unique_ptr<GblDetectorLayer> CreateLayerSit_UVonYZ(const std::string aName, unsigned int layer,
+                                                                    double xPos, double yPos,
+                                                                    double zPos, double thickness,
+                                                                    double uAngle, double uRes,
+                                                                    double vAngle, double vRes);
+
 private:
 
   std::unique_ptr<Mille> m_mille;
@@ -61,8 +67,6 @@ private:
 
   size_t m_nPlanes;
   std::map<size_t, size_t> m_indexDet;
-  // double m_xResolution;
-  // double m_yResolution;
   std::map<size_t, double> m_xResolution;
   std::map<size_t, double> m_yResolution;
 
@@ -74,9 +78,8 @@ private:
   std::map<size_t, double> m_betaPosDet;
   std::map<size_t, double> m_gammaPosDet;
 
-  std::map<size_t, std::unique_ptr<gbl::GblDetectorLayer>> m_dets;
+  std::map<size_t, std::unique_ptr<GblDetectorLayer>> m_dets;
 };
+}
 
-
-#endif
-
+using EUTelMille = altel::TelMille;

@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
   }
 
 
-  EUTelMille telmille;
+  altel::TelMille telmille;
   telmille.setGeometry(jsd_geo);
   for(auto& [detN, resolUV ]: mapResolDet){
     telmille.setResolution(detN, resolUV.first, resolUV.second);
