@@ -12,15 +12,15 @@
 #include <TFile.h>
 #include <TTree.h>
 
-#include "TelGL.hh"
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+// #include "TelGL.hh"
+// #define GLFW_INCLUDE_NONE
+// #include <GLFW/glfw3.h>
 
 #include "linenoise.h"
 #include "myrapidjson.h"
 
-#include "TelFW.hh"
-#include "glfw_test.hh"
+// #include "TelFW.hh"
+// #include "glfw_test.hh"
 
 using namespace Acts::UnitLiterals;
 
@@ -328,9 +328,9 @@ int main(int argc, char *argv[]) {
   TTree *pTree = new TTree("eventTree", "eventTree");
   ttreeWriter.setTTree(pTree);
 
-  TelFW telfw(800, 400, "test");
-  glfw_test telfwtest(geometryFilePath);
-  telfw.startAsync<glfw_test>(&telfwtest, &glfw_test::beginHook, &glfw_test::clearHook, &glfw_test::drawHook);
+  // TelFW telfw(800, 400, "test");
+  // glfw_test telfwtest(geometryFilePath);
+  // telfw.startAsync<glfw_test>(&telfwtest, &glfw_test::beginHook, &glfw_test::clearHook, &glfw_test::drawHook);
 
   uint32_t rawFileNum=0;
   size_t readEventNum = 0;
@@ -418,7 +418,7 @@ int main(int argc, char *argv[]) {
     ttreeWriter.fillTelEvent(detEvent);
     eventNum ++;
 
-    telfwtest.pushBufferEvent(detEvent);
+    // telfwtest.pushBufferEvent(detEvent);
 
     if(do_wait){
       std::cout<<"waiting, press any key to conitnue"<<std::endl;
@@ -443,6 +443,6 @@ int main(int argc, char *argv[]) {
     std::getc(stdin);
   }
 
-  telfw.stopAsync();
+  // telfw.stopAsync();
   return 0;
 }

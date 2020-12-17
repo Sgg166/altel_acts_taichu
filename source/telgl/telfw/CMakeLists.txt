@@ -1,6 +1,9 @@
 add_library(altel-telfw SHARED src/TelFW.cc)
 
-find_package(glfw3 3.3 REQUIRED)
+find_package(glfw3 3.3 REQUIRED
+  HINTS
+  ${CMAKE_INSTALL_PREFIX}/lib64/cmake/glfw3
+)
 target_link_libraries(altel-telfw
   PUBLIC glfw altel-telgl
   PRIVATE mycommon

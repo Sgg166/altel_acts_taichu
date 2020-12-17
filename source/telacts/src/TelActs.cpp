@@ -161,13 +161,12 @@ void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
                                    telMeasHit = state.uncalibrated().m_hitMeas;
                                  }
                                  std::shared_ptr<altel::TelFitHit> telFitHit;
-                                 telFitHit.reset(new altel::TelFitHit{
+                                 telFitHit.reset(new altel::TelFitHit(
                                      uint16_t(id),
-                                     {fit_pos_local(0), fit_pos_local(1)},
-                                     {fit_dir_local(0), fit_dir_local(1), fit_dir_local(2)}, // local dir
-                                     {fit_pos_global(0), fit_pos_global(1), fit_pos_global(2)},
-                                     {fit_dir_global(0), fit_dir_global(1), fit_dir_global(2)},
-                                     telMeasHit});
+                                     fit_pos_local(0), fit_pos_local(1),
+                                     fit_pos_global(0), fit_pos_global(1), fit_pos_global(2),
+                                     fit_dir_global(0), fit_dir_global(1), fit_dir_global(2),
+                                     telMeasHit));
 
                                  telTrajHit.reset(new altel::TelTrajHit{uint16_t(id), telFitHit, nullptr});
                                  telTraj->THs.push_back(telTrajHit);

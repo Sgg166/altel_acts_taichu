@@ -1,9 +1,13 @@
 #pragma once
 
 #include "Acts/EventData/Measurement.hpp"
+#include "Acts/Geometry/DetectorElementBase.hpp"
+#include "Acts/Geometry/TrackingGeometry.hpp"
+#include "Acts/Geometry/GeometryObjectSorter.hpp"
+#include "Acts/Geometry/PlaneLayer.hpp"
 
-#include "TelElement.hpp"
 #include "TelEvent.hpp"
+
 
 #include "myrapidjson.h"
 namespace TelActs {
@@ -63,7 +67,7 @@ public:
     return global;
   }
 
-  static std::vector<TelSourceLink> CreateSourceLinks(const JsonValue &js, const std::vector<std::shared_ptr<TelElement>> eles);
+  // static std::vector<TelSourceLink> CreateSourceLinks(const JsonValue &js, const std::vector<std::shared_ptr<TelElement>> eles);
 
   std::shared_ptr<altel::TelMeasHit> m_hitMeas;
 private:

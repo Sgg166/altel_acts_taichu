@@ -47,7 +47,7 @@ TelActs::TelSourceLink::TelSourceLink(std::shared_ptr<altel::TelMeasHit> hitMeas
 }
 
 
-
+/*
 std::vector<TelActs::TelSourceLink> TelActs::TelSourceLink::CreateSourceLinks(
   const JsonValue &js,
   const std::vector<std::shared_ptr<TelActs::TelElement>> eles)
@@ -95,5 +95,5 @@ std::vector<TelActs::TelSourceLink> TelActs::TelSourceLink::CreateSourceLinks(
   }
   return sourcelinks;
 }
-
+*/
 

@@ -8,7 +8,6 @@
 
 #include "ActsAlignment/Kernel/Alignment.hpp"
 
-#include "TelElement.hpp"
 #include "TelEvent.hpp"
 #include "TelSourceLink.hpp"
 #include "myrapidjson.h"

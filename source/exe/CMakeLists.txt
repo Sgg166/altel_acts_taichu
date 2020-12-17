@@ -11,34 +11,44 @@ if( ROOT_CXX_COMPILE_FEATURES STREQUAL "cxx_std_14" )
 endif()
 
 
+if(TARGET altel-telfw)
+  add_executable(TelDetectorResidual TelDetectorResidual.cpp)
+  list(APPEND EXE_TARGET_LIST TelDetectorResidual)
+  target_include_directories(TelDetectorResidual  PRIVATE ./ )
+  target_link_libraries(TelDetectorResidual
+    altel-acts ActsAlignment mycommon
+    ROOT::Core ROOT::RIO ROOT::Tree
+    altel-telfw altel-telgl galogen
+    )
 
-add_executable(altelTelEventViewer altelTelEventViewer.cpp)
-list(APPEND EXE_TARGET_LIST altelTelEventViewer)
-target_include_directories(altelTelEventViewer  PRIVATE ./ )
-target_link_libraries(altelTelEventViewer
-  altel-data-event altel-data-root
+
+  add_executable(TelKinkAngle TelKinkAngle.cpp)
+  list(APPEND EXE_TARGET_LIST TelKinkAngle)
+  target_include_directories(TelKinkAngle  PRIVATE ./ )
+  target_link_libraries(TelKinkAngle
+    altel-acts ActsAlignment mycommon
+    ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist
+    altel-telfw altel-telgl galogen
+    )
+
+  add_executable(altelTelEventViewer altelTelEventViewer.cpp)
+  list(APPEND EXE_TARGET_LIST altelTelEventViewer)
+  target_include_directories(altelTelEventViewer  PRIVATE ./ )
+  target_link_libraries(altelTelEventViewer
+    altel-data-event altel-data-root
+    mycommon
+    ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  
+    )
+
+endif()
+
+
+add_executable(altelActsTracking altelActsTracking.cpp)
+list(APPEND EXE_TARGET_LIST altelActsTracking)
+target_link_libraries(altelActsTracking
+  altel-acts altel-data-event altel-data-root
   mycommon
-  ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist
-  altel-telfw altel-telgl galogen
-  )
-
-add_executable(TelDetectorResidual TelDetectorResidual.cpp)
-list(APPEND EXE_TARGET_LIST TelDetectorResidual)
-target_include_directories(TelDetectorResidual  PRIVATE ./ )
-target_link_libraries(TelDetectorResidual
-  altel-acts ActsAlignment mycommon
-  ROOT::Core ROOT::RIO ROOT::Tree
-  altel-telfw altel-telgl galogen
-  )
-
-
-add_executable(TelKinkAngle TelKinkAngle.cpp)
-list(APPEND EXE_TARGET_LIST TelKinkAngle)
-target_include_directories(TelKinkAngle  PRIVATE ./ )
-target_link_libraries(TelKinkAngle
-  altel-acts ActsAlignment mycommon
-  ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist
-  altel-telfw altel-telgl galogen
+  ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  
   )
 
 

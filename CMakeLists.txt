@@ -61,24 +61,82 @@ set(CMAKE_FIND_USE_PACKAGE_REGISTRY        OFF)  # 6. user registery: /home/user
 set(CMAKE_FIND_USE_CMAKE_SYSTEM_PATH       ON)   # 7. system CMAKE_SYSTEM_PREFIX_PATH
 set(CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY OFF)  # 8. system registery: somewhere
 #                                                # 9. find_package option PATHS
-                                                  
+
+## thread                                          
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+## boost
+if(EXISTS /usr/include/boost169)
+  set(BOOST_INCLUDEDIR /usr/include/boost169)
+endif()
+if(EXISTS /usr/lib64/boost169)
+  set(BOOST_LIBRARYDIR /usr/lib64/boost169)
+endif()
+set(Boost_NO_BOOST_CMAKE ON) # disable new cmake features from Boost 1.70 on
+find_package(Boost 1.69 REQUIRED
+  COMPONENTS
+  system thread filesystem chrono regex program_options unit_test_framework
+  # NO_CMAKE_SYSTEM_PATH
+  )
 
+
+## root
+find_package(ROOT REQUIRED
+  HINTS $ENV{ROOTSYS}/cmake
+  NO_CMAKE_SYSTEM_PATH
+)
+
+
+## external acts glfw
 add_subdirectory(external)
 
 
-include(cmake/ActsExamples.cmake)
-# if(NOT Acts_FOUND_CACHE)
-#   message("ACTS package is not found.")
-#   message("To build ACTS package, use command:  make external_acts")
-#   return()
-# endif()  
+
+find_package(glfw3 3.3
+  HINTS
+  ${CMAKE_INSTALL_PREFIX}/lib64/cmake/glfw3
+)
+
+if(NOT glfw3_FOUND)
+  message("")
+  message("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+  message("!!!Missing glfw in system, please build glfw package by run command (AND then re-run cmake to complete config):")
+  message("!!!>> make external_glfw")
+  message("!!!>> cmake ..")
+  message("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+  message("")
+  message("")
+  return()
+endif()
+
+find_package(Acts
+  COMPONENTS Core Fatras Alignment
+  HINTS
+  ${CMAKE_INSTALL_PREFIX}/share/cmake/Acts
+  )
+
+if(NOT Acts_FOUND)
+  message("")
+  message("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+  message("!!!Missing Acts dependency, please build Acts package by run command (AND then re-run cmake to complete config): ")
+  message("!!!>> make external_acts")
+  message("!!!>> cmake ..")
+  message("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+  message("")
+  message("")
+  return()
+endif()
 
 
-#include_directories(/opt/root/root-6.18.04/building/include)
+get_filename_component(ACTS_INSTALL_DIR ${Acts_DIR}/../../.. ABSOLUTE)
+set(ACTS_INSTALL_LIB_DIR  ${ACTS_INSTALL_DIR}/lib64)
+message(STATUS "FOUND acts install cmake folder <Acts_DIR>:  ${Acts_DIR}")
+message(STATUS "FOUND acts install folder <ACTS_INSTALL_DIR>:  ${ACTS_INSTALL_DIR}")
+
+include_directories(${ACTS_INSTALL_DIR}/include/ActsFatras)
+
 add_subdirectory(source)
 
 # install-tree
