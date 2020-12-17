@@ -43,25 +43,28 @@ if(TARGET altel-telfw)
 endif()
 
 
-add_executable(altelActsTracking altelActsTracking.cpp)
-list(APPEND EXE_TARGET_LIST altelActsTracking)
-target_link_libraries(altelActsTracking
+add_executable(altelActsTrack altelActsTracking.cpp)
+list(APPEND EXE_TARGET_LIST altelActsTrack)
+target_link_libraries(altelActsTrack
   altel-acts altel-data-event altel-data-root
   mycommon
   ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  
   )
 
-
-add_executable(altelMilleAlign altelMilleAlign.cpp)
-list(APPEND EXE_TARGET_LIST altelMilleAlign)
-target_include_directories(altelMilleAlign  PRIVATE ./ )
-target_link_libraries(altelMilleAlign
+add_executable(altelMilleBin altelMilleAlign.cpp)
+list(APPEND EXE_TARGET_LIST altelMilleBin)
+target_include_directories(altelMilleBin  PRIVATE ./ )
+target_link_libraries(altelMilleBin
   PRIVATE
   altel-data-event
   altel-data-eudaq
   altel-mille
   mycommon
   )
+
+
+
+install(FILES altelTTreeExampleReader.C DESTINATION bin)
 
 # install-tree
 install(TARGETS ${EXE_TARGET_LIST}

@@ -21,10 +21,9 @@ Usage:
 
 example:
 
-../bin/TelMille_main  -hitFile /work/data/TB2008_CALICE/jsondata/altel_Run069000.json  -pede pede.txt -mille mille.bin -input ../init_geo.json -maxE 100000 -hitResX 0.1 -hitResY 0.1
-../bin/TelMille_main  -hitFile /work/data/TB2006/alpide_200629033515.json -pede pede.txt -mille mille.bin -input ../init_313_geo.json -maxE 1000000 -hitResX 0.014 -hitResY 0.014
-
-../bin/TelMille_main  -hitFile /work/data/TB2008_CALICE/test/altel_Run069001.json -pede steerfile -mille mille.bin -input out2_91.json -maxE 100000 -hitResX 0.027 -hitResY 0.027
+./altelMilleBin  -hitFile /work/data/TB2008_CALICE/jsondata/altel_Run069000.json  -pede pede.txt -mille mille.bin -input ../init_geo.json -maxE 100000 -hitResX 0.1 -hitResY 0.1
+./altelMilleBin  -hitFile /work/data/TB2006/alpide_200629033515.json -pede pede.txt -mille mille.bin -input ../init_313_geo.json -maxE 1000000 -hitResX 0.014 -hitResY 0.014
+./altelMilleBin  -hitFile /work/data/TB2008_CALICE/test/altel_Run069001.json -pede steerfile -mille mille.bin -input out2_91.json -maxE 100000 -hitResX 0.027 -hitResY 0.027
 
 )";
 

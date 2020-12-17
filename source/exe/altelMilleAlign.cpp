@@ -25,7 +25,7 @@ Usage:
                                     U/V resolution(s) for a specific detector by int_ID
 
 example:
-../bin/AltelMilleAlign -pede pede.txt -mille mille.bin  -eudaqFiles  eudaqRaw/altel_Run069017_200824002945.raw eudaqRaw/altel_Run069018_200824003322.raw -input ../init_geo.json -maxE 1000000 -resolDefault 0.04 -resolDet 1 0.1 0.09
+./altelMilleBin -pede pede.txt -mille mille.bin  -eudaqFiles  eudaqRaw/altel_Run069017_200824002945.raw eudaqRaw/altel_Run069018_200824003322.raw -input ../init_geo.json -maxE 1000000 -resolDefault 0.04 -resolDet 1 0.1 0.09
 )";
 
 int main(int argc, char *argv[]) {

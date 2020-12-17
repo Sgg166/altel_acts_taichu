@@ -16,7 +16,7 @@ Usage:
   -pedeResultFile   [PATH]   path to pede result file (input)
 
 examples:
-../bin/GeometryFileUpdate_main -o xx.json -i ../init_313_geo.json -p millepede.res
+./altelGeoUpdate -p millepede.res -i oldGeo.json -o newGeo.json
 )";
 
 int main(int argc, char *argv[]) {

@@ -1,6 +1,9 @@
-# project(millepede LANGUAGES Fortran C)
+enable_language(Fortran)
+enable_language(C)
 
-# project(millepede LANGUAGES Fortran C)
+add_library(objreadc OBJECT readc.c)
+target_include_directories(objreadc PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_compile_options(objreadc PRIVATE "-Df2cFortran")
 
 set(PEDE_SRC 
   Dbandmatrix.f90
@@ -26,27 +29,13 @@ set(PEDE_SRC
   vertpr.f90
   )
 
-add_library(objpede OBJECT ${PEDE_SRC})
-target_compile_options(objpede PRIVATE "-DREAD_C_FILES")  
-set_target_properties(objpede PROPERTIES COMPILE_FLAGS "-fautomatic -fno-backslash -cpp")
 
-add_library(objpede_fmain OBJECT pede_main.f90)
-target_compile_options(objpede_fmain PRIVATE "-DREAD_C_FILES")  
-set_target_properties(objpede_fmain PROPERTIES COMPILE_FLAGS "-fautomatic -fno-backslash -cpp")
+add_executable(pede pede_main.f90 ${PEDE_SRC} $<TARGET_OBJECTS:objreadc>)
+target_compile_options(pede PRIVATE "-DREAD_C_FILES")  
+set_target_properties(pede PROPERTIES COMPILE_FLAGS "-fautomatic -fno-backslash -cpp")
 
-add_library(objreadc OBJECT readc.c)
-target_include_directories(objreadc PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
-target_compile_options(objreadc PRIVATE "-Df2cFortran")
 
-add_library(pedelib SHARED $<TARGET_OBJECTS:objpede> $<TARGET_OBJECTS:objreadc>)
-
-add_executable(pede $<TARGET_OBJECTS:objpede_fmain>)
-target_link_libraries(pede pedelib)
-
-# add_executable(pede_cmain pede_main.cc)
-# target_link_libraries(pede_cmain pedelib)
-
-install(TARGETS pedelib pede
+install(TARGETS pede
   EXPORT ${PROJECT_NAME}Targets
   RUNTIME       DESTINATION bin      COMPONENT runtime
   LIBRARY       DESTINATION lib      COMPONENT runtime

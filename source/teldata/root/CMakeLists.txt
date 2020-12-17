@@ -30,6 +30,8 @@ file(GLOB LIB_ALL_HEADERS "include/*.hpp")
 set(LIB_PUBLIC_HEADERS "${LIB_ALL_HEADERS}" )
 set_target_properties(altel-data-root PROPERTIES PUBLIC_HEADER "${LIB_PUBLIC_HEADERS}")
 
+install(FILES macro/rootlogon.C  DESTINATION bin)
+
 # install-tree
 install(TARGETS altel-data-root
   EXPORT ${PROJECT_NAME}Targets

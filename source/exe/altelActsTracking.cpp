@@ -38,7 +38,7 @@ Usage:
   -targetIds    <<INT0> [INT1]...>  IDs of target detector which are complectely excluded from track fitting. Residual are caculated.
 
 examples:
-./bin/altelActsTracking -eudaqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
+./altelActsTrack -eudaqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
 )";
 
 int main(int argc, char *argv[]) {
