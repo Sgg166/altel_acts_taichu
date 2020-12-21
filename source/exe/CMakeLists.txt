@@ -38,6 +38,7 @@ if(TARGET altel-telfw)
     altel-data-event altel-data-root
     mycommon
     ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  
+    altel-telfw altel-telgl galogen
     )
 
 endif()

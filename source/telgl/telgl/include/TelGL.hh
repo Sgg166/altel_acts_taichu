@@ -3,7 +3,6 @@
 #include <vector>
 #include <memory>
 
-#include <glm/glm.hpp>
 #include "gl.h"
 
 #include "myrapidjson.h"
@@ -12,7 +11,7 @@ namespace altel{
   class TelGL{
   public:
     struct GeoDataGL{
-      GLint   id[4]  {0,0,0,0}; //int, pad
+      GLint   id[4]   {0,0,0,0}; //int, pad
       GLfloat pos[4]  {0,0,0,0}; //vec3, pad
       GLfloat size[4] {30,15,1,0}; //vec3, pad
       GLfloat color[4]{0,1,0,0}; //vec3, pad
@@ -25,9 +24,9 @@ namespace altel{
     };
 
     struct TransformDataGL{
-      glm::mat4 model;
-      glm::mat4 view;
-      glm::mat4 proj;
+      GLfloat model[16];
+      GLfloat view[16];
+      GLfloat proj[16];
     };
 
     constexpr static GLuint MAX_ID_SIZE{20};
@@ -91,11 +90,6 @@ namespace altel{
 
     void updateGeometry(const JsonValue& js);
     void updateTransform(const JsonValue& js);
-    void updateTransform(float cameraX, float cameraY, float cameraZ,
-                         float centerX, float centerY, float centerZ,
-                         float upvectX, float upvectY, float upvectZ,
-                         float povHoriz, float nearDist, float farDist,
-                         float ratioWidthHeigh);
 
     void drawDetectors(const JsonValue& js);
     void drawDetectors();

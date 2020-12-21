@@ -3,8 +3,10 @@ add_library(altel-telgl SHARED src/TelGL.cc)
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 
+find_package (Eigen3 REQUIRED NO_MODULE)
+
 target_link_libraries(altel-telgl
-  PUBLIC galogen  OpenGL::GL
+  PUBLIC galogen  OpenGL::GL Eigen3::Eigen
   PRIVATE altel-glsl mycommon
   )
 
@@ -18,6 +20,7 @@ target_include_directories(altel-telgl
   PRIVATE
   $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
   )
+
 
 install(TARGETS altel-telgl
   EXPORT ${PROJECT_NAME}Targets

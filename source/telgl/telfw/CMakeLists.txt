@@ -29,4 +29,4 @@ install(TARGETS altel-telfw
   RESOURCE      DESTINATION resource COMPONENT runtime
   )
 
-add_subdirectory(exe)
+# add_subdirectory(exe)

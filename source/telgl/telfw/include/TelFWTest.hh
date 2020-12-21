@@ -12,9 +12,9 @@ public:
   std::string data_path;
   JsonDocument jsd_trans;
   std::unique_ptr<altel::TelGL> telgl;
-  glm::vec3 cameraPos;
-  glm::vec3 worldCenter;
-  glm::vec3 cameraUp;
+  Eigen::Vector3f cameraPos;
+  Eigen::Vector3f worldCenter;
+  Eigen::Vector3f cameraUp;
   float deltaTime = 0.0f; // time between current frame and last frame
   float lastFrame = 0.0f;
 
@@ -33,9 +33,9 @@ public:
     telgl.reset(new altel::TelGL(JsonValue()));
     telgl->updateGeometry(jsd_geo);
 
-    cameraPos   = glm::vec3(0.0f, 0.0f,  -1000.0f);
-    worldCenter = glm::vec3(0.0f, 0.0f,  0.0f);
-    cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+    cameraPos  << 0.0f, 0.0f,  -1000.0f;
+    worldCenter << 0.0f, 0.0f,  0.0f;
+    cameraUp   <<0.0f, 1.0f,  0.0f;
     return 0;
   }
   int clearHook(GLFWwindow* window){
@@ -55,13 +55,13 @@ public:
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
       cameraPos += (cameraPos - worldCenter) * (deltaTime * 1.0f);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-      cameraPos -= glm::cross((cameraPos - worldCenter), glm::vec3(0.0f, 1.0f,  0.0f)) * (deltaTime * 2.0f);
+      cameraPos -= (cameraPos - worldCenter).corss( Eigen::Vector3f(0.0f, 1.0f,  0.0f) ) * (deltaTime * 2.0f);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-      cameraPos += glm::cross((cameraPos - worldCenter), glm::vec3(0.0f, 1.0f,  0.0f)) * (deltaTime * 2.0f);
+      cameraPos += (cameraPos - worldCenter).cross( Eigen::Vector3f(0.0f, 1.0f,  0.0f) ) * (deltaTime * 2.0f);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-      cameraPos -= glm::cross((cameraPos - worldCenter), glm::vec3(1.0f, 0.0f,  0.0f)) * (deltaTime * 2.0f);
+      cameraPos -= (cameraPos - worldCenter).cross( Eigen::Vector3f(1.0f, 0.0f,  0.0f)) * (deltaTime * 2.0f);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-      cameraPos += glm::cross((cameraPos - worldCenter), glm::vec3(1.0f, 0.0f,  0.0f)) * (deltaTime * 2.0f);
+      cameraPos += (cameraPos - worldCenter).cross( Eigen::Vector3f(1.0f, 0.0f,  0.0f)) * (deltaTime * 2.0f);
 
     jsd_trans["trans"]["lookat"]["eye"]["x"]= cameraPos[0];
     jsd_trans["trans"]["lookat"]["eye"]["y"]= cameraPos[1];
