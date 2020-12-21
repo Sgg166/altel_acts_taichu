@@ -67,20 +67,19 @@ set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-## boost
-if(EXISTS /usr/include/boost169)
-  set(BOOST_INCLUDEDIR /usr/include/boost169)
-endif()
-if(EXISTS /usr/lib64/boost169)
-  set(BOOST_LIBRARYDIR /usr/lib64/boost169)
-endif()
-set(Boost_NO_BOOST_CMAKE ON) # disable new cmake features from Boost 1.70 on
-find_package(Boost 1.69 REQUIRED
-  COMPONENTS
-  system thread filesystem chrono regex program_options unit_test_framework
-  # NO_CMAKE_SYSTEM_PATH
-  )
-
+# ## boost
+# if(EXISTS /usr/include/boost169)
+#   set(BOOST_INCLUDEDIR /usr/include/boost169)
+# endif()
+# if(EXISTS /usr/lib64/boost169)
+#   set(BOOST_LIBRARYDIR /usr/lib64/boost169)
+# endif()
+# set(Boost_NO_BOOST_CMAKE ON) # disable new cmake features from Boost 1.70 on
+# find_package(Boost 1.69 REQUIRED
+#   COMPONENTS
+#   system thread filesystem chrono regex program_options unit_test_framework
+#   # NO_CMAKE_SYSTEM_PATH
+#   )
 
 ## root
 find_package(ROOT REQUIRED
@@ -114,7 +113,7 @@ endif()
 find_package(Acts
   COMPONENTS Core Fatras Alignment
   HINTS
-  ${CMAKE_INSTALL_PREFIX}/share/cmake/Acts
+  ${CMAKE_INSTALL_PREFIX}/cmake/Acts
   )
 
 if(NOT Acts_FOUND)

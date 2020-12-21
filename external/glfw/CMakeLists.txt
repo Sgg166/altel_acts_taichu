@@ -17,6 +17,10 @@ externalproject_add(
   INSTALL_COMMAND make install
   COMMAND   echo ""
   COMMAND   echo ""
+  COMMAND   echo ">>>>>>>External project glfw is built and installed<<<<<<<<"
+  COMMAND   echo "!!!!Please run cmake again for main project to get the updated glfw installation!!!!"
+  COMMAND   echo "eg. cmake .."
+  COMMAND   echo ""
   )
 
 set_target_properties(external_glfw PROPERTIES EXCLUDE_FROM_ALL TRUE)
