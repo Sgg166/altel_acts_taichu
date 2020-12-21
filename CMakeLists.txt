@@ -68,18 +68,18 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 # ## boost
-# if(EXISTS /usr/include/boost169)
-#   set(BOOST_INCLUDEDIR /usr/include/boost169)
-# endif()
-# if(EXISTS /usr/lib64/boost169)
-#   set(BOOST_LIBRARYDIR /usr/lib64/boost169)
-# endif()
-# set(Boost_NO_BOOST_CMAKE ON) # disable new cmake features from Boost 1.70 on
-# find_package(Boost 1.69 REQUIRED
-#   COMPONENTS
-#   system thread filesystem chrono regex program_options unit_test_framework
-#   # NO_CMAKE_SYSTEM_PATH
-#   )
+if(EXISTS /usr/include/boost169)
+  set(BOOST_INCLUDEDIR /usr/include/boost169)
+endif()
+if(EXISTS /usr/lib64/boost169)
+  set(BOOST_LIBRARYDIR /usr/lib64/boost169)
+endif()
+set(Boost_NO_BOOST_CMAKE ON) # disable new cmake features from Boost 1.70 on
+find_package(Boost 1.69 REQUIRED
+  COMPONENTS
+  filesystem program_options unit_test_framework
+  # NO_CMAKE_SYSTEM_PATH
+  )
 
 ## root
 find_package(ROOT REQUIRED
@@ -111,7 +111,7 @@ if(NOT glfw3_FOUND)
 endif()
 
 find_package(Acts
-  COMPONENTS Core Fatras Alignment
+  COMPONENTS Core Alignment
   HINTS
   ${CMAKE_INSTALL_PREFIX}/cmake/Acts
   )
@@ -134,7 +134,7 @@ set(ACTS_INSTALL_LIB_DIR  ${ACTS_INSTALL_DIR}/lib64)
 message(STATUS "FOUND acts install cmake folder <Acts_DIR>:  ${Acts_DIR}")
 message(STATUS "FOUND acts install folder <ACTS_INSTALL_DIR>:  ${ACTS_INSTALL_DIR}")
 
-include_directories(${ACTS_INSTALL_DIR}/include/ActsFatras)
+# include_directories(${ACTS_INSTALL_DIR}/include/ActsFatras)
 
 add_subdirectory(source)
 

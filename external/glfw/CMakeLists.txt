@@ -17,9 +17,12 @@ externalproject_add(
   INSTALL_COMMAND make install
   COMMAND   echo ""
   COMMAND   echo ""
-  COMMAND   echo ">>>>>>>External project glfw is built and installed<<<<<<<<"
-  COMMAND   echo "!!!!Please run cmake again for main project to get the updated glfw installation!!!!"
-  COMMAND   echo "eg. cmake .."
+  COMMAND   echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  COMMAND   echo "!!!External project <glfw> have been built and installed."
+  COMMAND   echo "!!!Please run cmake again for main project to get the updated glfw installation!!!!"
+  COMMAND   echo "!!! cmake .."
+  COMMAND   echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  COMMAND   echo ""
   COMMAND   echo ""
   )
 

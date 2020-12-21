@@ -26,15 +26,18 @@ FetchContent_Populate(external_acts)
 externalproject_add(
   external_acts
   SOURCE_DIR ${external_acts_SOURCE_DIR}
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX} -DACTS_BUILD_FATRAS=ON -DACTS_BUILD_ALIGNMENT=ON
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}  -DBOOST_INCLUDEDIR=${Boost_INCLUDE_DIR} -DBOOST_LIBRARYDIR=${Boost_LIBRARY_DIR_RELEASE} -DACTS_BUILD_ALIGNMENT=ON
   BUILD_ALWAYS true
   BUILD_COMMAND make -j${N_THREADS_BUILD_ACTS}
   INSTALL_COMMAND make install
   COMMAND   echo ""
   COMMAND   echo ""
-  COMMAND   echo ">>>>>>>External project ACTS is built and installed<<<<<<<<"
-  COMMAND   echo "!!!!Please run cmake again for main project to get the updated ACTS installation!!!!"
-  COMMAND   echo "eg. cmake .."
+  COMMAND   echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  COMMAND   echo "!!!External project <ACTS> have been built and installed."
+  COMMAND   echo "!!!Please run cmake again for main project to get the updated ACTS installation."
+  COMMAND   echo "!!!>> cmake .."
+  COMMAND   echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  COMMAND   echo ""
   COMMAND   echo ""
   )
 
