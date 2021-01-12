@@ -10,7 +10,7 @@ target_include_directories( altel-data-eudaq
 
 target_link_libraries(
   altel-data-eudaq 
-  PUBLIC altel-data-event eudaq_core
+  PUBLIC altel-data-event eudaq_core_only
   PRIVATE mycommon
   )
 
