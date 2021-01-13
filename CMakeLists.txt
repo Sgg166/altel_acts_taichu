@@ -92,7 +92,26 @@ find_package(ROOT REQUIRED
 add_subdirectory(external)
 
 
-
+if(ALTEL_EXTERNAL_CONFIG_ONLY)
+  message("")
+  message("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+  message("!!!option ALTEL_EXTERNAL_CONFIG_ONLY is temporarily enabled,  (by -DALTEL_EXTERNAL_CONFIG_ONLY=ON)") 
+  message("!!!cmake is now configured to build external packages only")
+  message("!!!To build acts:")  
+  message("!!!>> make external_acts")
+  message("!!!To build eudaq:")  
+  message("!!!>> make external_eudaq")
+  message("!!!To build glfw:")  
+  message("!!!>> make external_glfw")
+  message("!!!Re-run cmake configuration will disable ALTEL_EXTERNAL_CONFIG_ONLY. Then you can continue to build the main software")
+  message("!!!>> cmake ..")
+  message("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+  message("")
+  message("")
+  unset(ALTEL_EXTERNAL_CONFIG_ONLY CACHE)
+  return()
+endif()
+  
 find_package(glfw3 3.3
   HINTS
   ${CMAKE_INSTALL_PREFIX}/lib64/cmake/glfw3
