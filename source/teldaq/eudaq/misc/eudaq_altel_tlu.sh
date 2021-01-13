@@ -3,7 +3,7 @@
 SOURCE_DIR=/home/teleuser/tmp/altel_eudaq
 BIN_DIR=/home/teleuser/tmp/INSTALL/bin
 
-MY_IP=192.168.21.1
+MY_IP=localhost
 
 #cp  $SOURCE_DIR/source/eudaq/misc/* /tmp
 #cp  $SOURCE_DIR/source/lib/misc/*   /tmp

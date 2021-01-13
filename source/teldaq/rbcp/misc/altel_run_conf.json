@@ -350,7 +350,7 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.21.170",
+                    "ip":"192.168.22.170",
                     "port":24
                 }
             },
@@ -360,7 +360,7 @@
                 "description":"ALPIDE plane UDP ctrl",
                 "options":{
                     "path":"builtin",
-                    "ip":"192.168.21.170",
+                    "ip":"192.168.22.170",
                     "port":4660
                 }
             }
@@ -373,7 +373,7 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.21.171",
+                    "ip":"192.168.22.171",
                     "port":24
                 }
             },
@@ -383,7 +383,7 @@
                 "description":"ALPIDE plane UDP ctrl",
                 "options":{
                     "path":"builtin",
-                    "ip":"192.168.21.171",
+                    "ip":"192.168.22.171",
                     "port":4660
                 }
             }
@@ -396,7 +396,7 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.21.172",
+                    "ip":"192.168.22.172",
                     "port":24
                 }
             },
@@ -406,7 +406,7 @@
                 "description":"ALPIDE plane UDP ctrl",
                 "options":{
                     "path":"builtin",
-                    "ip":"192.168.21.172",
+                    "ip":"192.168.22.172",
                     "port":4660
                 }
             }
@@ -419,7 +419,7 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.21.173",
+                    "ip":"192.168.22.173",
                     "port":24
                 }
             },
@@ -429,7 +429,7 @@
                 "description":"ALPIDE plane UDP ctrl",
                 "options":{
                     "path":"builtin",
-                    "ip":"192.168.21.173",
+                    "ip":"192.168.22.173",
                     "port":4660
                 }
             }
@@ -442,7 +442,7 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.21.174",
+                    "ip":"192.168.22.174",
                     "port":24
                 }
             },
@@ -452,7 +452,7 @@
                 "description":"ALPIDE plane UDP ctrl",
                 "options":{
                     "path":"builtin",
-                    "ip":"192.168.21.174",
+                    "ip":"192.168.22.174",
                     "port":4660
                 }
             }
@@ -465,7 +465,7 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.21.175",
+                    "ip":"192.168.22.175",
                     "port":24
                 }
             },
@@ -475,7 +475,7 @@
                 "description":"ALPIDE plane UDP ctrl",
                 "options":{
                     "path":"builtin",
-                    "ip":"192.168.21.175",
+                    "ip":"192.168.22.175",
                     "port":4660
                 }
             }

@@ -1,3 +1,12 @@
+#include "eudaq/Producer.hh"
+#include "Telescope.hh"
+
+#include <list>
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include <csignal>
+
 #include "getopt.h"
 
 #include <numeric>
@@ -34,42 +43,41 @@ static const std::string default_geometry = R"(
 )";
 
 
+static const std::string default_rbcpconf =
+#include "altel_run_conf.hh"
+  ;
+
 static const std::string help_usage = R"(
 Usage:
   -help                             help message
   -verbose                          verbose flag
-  -wait                             wait for user keyboard input per event
-  -eventSkip      <INT>             number of events to skip before start processing
-  -eventMax       <INT>             max number of events to process
   -geometryFile   <PATH>            path to geometry input file (input)
-  -eudaqRawFile   <PATH>            path to eudaq raw file (input)
+  -rbcpConfFile   <PATH>            path to eudaq rbcp configure file (input)
 
 examples:
- ./bin/altelEudaqRawViewer -w -geo calice_geo_align4.json  -eudaq eudaqRaw/altel_Run069017_200824002945.raw
+ ./bin/altelDataTaking -geo calice_geo_align4.json
 )";
 
+
+static sig_atomic_t g_done = 0;
 int main(int argc, char *argv[]) {
-  int64_t eventMaxNum = 0;
-  int64_t eventSkipNum = 0;
+  signal(SIGINT, [](int){g_done+=1;});
   std::string geometryFilePath;
-  std::string eudaqRawFilePath;
+  std::string rbcpConfFilePath;
 
   int do_wait = 0;
   int do_verbose = 0;
   {////////////getopt begin//////////////////
     struct option longopts[] = {{"help", no_argument, NULL, 'h'},//option -W is reserved by getopt
                                 {"verbose", no_argument, NULL, 'v'},//val
-                                {"wait", no_argument, NULL, 'w'},
-                                {"eventSkip", required_argument, NULL, 's'},
-                                {"eventMax", required_argument, NULL, 'm'},
-                                {"eudaqRawFile", required_argument, NULL, 'e'},
+                                {"rbcpConfFile", required_argument, NULL, 'e'},
                                 {"geometryFile", required_argument, NULL, 'g'},
                                 {0, 0, 0, 0}};
 
-    if(argc == 1){
-      std::fprintf(stderr, "%s\n", help_usage.c_str());
-      std::exit(1);
-    }
+    // if(argc == 1){
+    //   std::fprintf(stderr, "%s\n", help_usage.c_str());
+    //   std::exit(1);
+    // }
     int c;
     int longindex;
     opterr = 1;
@@ -79,14 +87,8 @@ int main(int argc, char *argv[]) {
       //   std::fprintf(stdout, "opt:%s,\targ:%s\n", longopts[longindex].name, optarg);;
       // }
       switch (c) {
-      case 's':
-        eventSkipNum = std::stoul(optarg);
-        break;
-      case 'm':
-        eventMaxNum = std::stoul(optarg);
-        break;
       case 'e':
-        eudaqRawFilePath = optarg;
+        rbcpConfFilePath = optarg;
         break;
       case 'g':
         geometryFilePath = optarg;
@@ -142,7 +144,7 @@ int main(int argc, char *argv[]) {
 
   std::fprintf(stdout, "\n");
   std::fprintf(stdout, "geometryFile:  <%s>\n", geometryFilePath.c_str());
-  std::fprintf(stdout, "eudaqRawFile:  <%s>\n", eudaqRawFilePath.c_str());
+  std::fprintf(stdout, "rbcpConfFileFile:  <%s>\n", rbcpConfFilePath.c_str());
   std::fprintf(stdout, "\n");
 
   //////////// geometry
@@ -163,57 +165,79 @@ int main(int argc, char *argv[]) {
   if (!jsd_geo.HasMember("geometry")) {
     throw;
   }
-
-  auto reader = eudaq::Factory<eudaq::FileReader>::MakeUnique(eudaq::str2hash("native"), eudaqRawFilePath);
-
-  if(!reader){
-    std::fprintf(stderr, "raw file is not open\n");
-    throw;
-  }
-
   TelFW telfw(800, 400, "test");
   glfw_test telfwtest(str_geo, true);
   telfw.startAsync<glfw_test>(&telfwtest, &glfw_test::beginHook, &glfw_test::clearHook, &glfw_test::drawHook);
 
-  for(size_t eventNum = 0;;eventNum++){
-    auto eudaqEvent = reader->GetNextEvent();
-    if(!eudaqEvent){
-      std::fprintf(stdout, "reach end of data file\n");
-      break;
-    }
-    if(eventNum> eventMaxNum && eventMaxNum>0){
-      std::fprintf(stdout, "reach to eventMaxNum set by option\n");
-      break;
-    }
-    if(eventNum < eventSkipNum){
+  std::string str_rbcpconf;
+  if(rbcpConfFilePath.empty()){
+    str_rbcpconf = default_rbcpconf;
+  }
+  else{
+    str_rbcpconf = JsonUtils::readFile(rbcpConfFilePath);
+  }
+
+  std::unique_ptr<altel::Telescope> m_tel;
+  m_tel.reset(new altel::Telescope(str_rbcpconf)); // todo
+  m_tel->Init();
+
+  while(!g_done){
+    auto ev_tel = m_tel->ReadEvent();
+    if(ev_tel.empty()){
+      std::this_thread::sleep_for(std::chrono::microseconds(100));
       continue;
+    }
+    std::shared_ptr<eudaq::Event> eudaqEvent = eudaq::Event::MakeUnique("AltelRaw");
+    uint64_t trigger_n = ev_tel.front()->GetTrigger();
+    eudaqEvent->SetTriggerN(trigger_n);
+
+    std::map<uint32_t, uint32_t> map_layer_clusterN;
+
+    for(auto& e: ev_tel){
+      uint32_t word32_count  = 2; // layerID_uint32, cluster_n_uint32
+      for(auto &ch : e->m_clusters){
+        word32_count += 3; // x_float, y_float , pixel_n_uint32
+        word32_count += ch.pixelHits.size(); // pixel_xy_uint32,
+      }
+      std::vector<uint32_t> layer_block(word32_count);
+      uint32_t* p_block = layer_block.data();
+      uint32_t layerID = e->GetExtension();
+      *p_block =  layerID;
+      p_block++;
+      uint32_t clusters_size = e->m_clusters.size();
+      *p_block = e->m_clusters.size();
+      p_block ++;
+      for(auto &ch : e->m_clusters){
+        *(reinterpret_cast<float*>(p_block)) = ch.x();
+        p_block ++;
+        *(reinterpret_cast<float*>(p_block)) = ch.y();
+        p_block ++;
+        *p_block = ch.pixelHits.size();
+        p_block ++;
+        for(auto &ph : ch.pixelHits){
+          // Y<< 16 + X
+          *p_block =  uint32_t(ph.x()) + (uint32_t(ph.y())<<16);
+          p_block ++;
+        }
+      }
+      if(p_block - layer_block.data() != layer_block.size()){
+        std::cerr<<"error altel data block"<<std::endl;
+        throw;
+      }
+      map_layer_clusterN[layerID]= clusters_size;
+      eudaqEvent->AddBlock(layerID, layer_block);
     }
     std::shared_ptr<altel::TelEvent> telEvent = altel::createTelEvent(eudaqEvent);
     if(!telEvent){
-      std::fprintf(stdout, "FileEvent #%d, invalid event, skipped\n", eventNum);
       continue;
     }
-
     if(telEvent->measRaws().empty() && telEvent->measHits().empty() && telEvent->trajs().empty()){
-      std::fprintf(stdout, "FileEvent #%d, empty event, skipped\n", eventNum);
       continue;
     }
-
-    std::fprintf(stdout, "FileEvent #%d, event #%d, clock/trigger #%d\n", eventNum, telEvent->eveN(), telEvent->clkN());
     telfwtest.pushBufferEvent(telEvent);
-
-    if(do_wait){
-      std::fprintf(stdout, "waiting, press any key to next event\n");
-      std::getc(stdin);
-    }
   }
-
-  reader.reset();
-  if(do_wait){
-    std::fprintf(stdout, "finished, press any key to exit\n");
-    std::getc(stdin);
-  }
-
+  m_tel->Stop();
+  m_tel.reset();
   telfw.stopAsync();
   return 0;
 }
