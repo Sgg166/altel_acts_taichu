@@ -8,9 +8,17 @@ target_include_directories( altel-data-eudaq
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   )
 
+
+find_package(eudaq REQUIRED
+  COMPONENTS eudaq::core
+  CONFIG
+  PATHS ${CMAKE_INSTALL_PREFIX}
+  NO_DEFAULT_PATH
+  )
+
 target_link_libraries(
   altel-data-eudaq 
-  PUBLIC altel-data-event eudaq_core_only
+  PUBLIC altel-data-event eudaq::core
   PRIVATE mycommon
   )
 

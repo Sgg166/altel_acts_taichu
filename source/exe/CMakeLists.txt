@@ -41,6 +41,14 @@ if(TARGET altel-telfw)
     altel-telfw altel-telgl galogen
     )
 
+  add_executable(altelEudaqRawViewer altelEudaqRawViewer.cpp)
+  list(APPEND EXE_TARGET_LIST altelEudaqRawViewer)
+  target_include_directories(altelEudaqRawViewer  PRIVATE ./ )
+  target_link_libraries(altelEudaqRawViewer
+    altel-data-event altel-data-eudaq
+    mycommon
+    altel-telfw altel-telgl galogen
+    )
 endif()
 
 

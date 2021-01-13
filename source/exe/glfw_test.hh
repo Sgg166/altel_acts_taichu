@@ -10,7 +10,7 @@
 
 class glfw_test{
 public:
-  std::string geometry_path;
+  std::string geometry_string;
   JsonDocument jsd_trans;
   std::unique_ptr<altel::TelGL> telgl;
   Eigen::Vector3f cameraPos;
@@ -20,14 +20,21 @@ public:
   float lastFrame = 0.0f;
 
   glfw_test(const std::string& path_geometry)
-    :geometry_path(path_geometry), telgl(nullptr),
+    :telgl(nullptr),
+     m_size_ring(10), m_vec_ring_ev(m_size_ring)
+  {
+    geometry_string = altel::TelGL::readFile(path_geometry);
+  }
+
+  glfw_test(const std::string& geometry_str, bool)
+    :geometry_string(geometry_str), telgl(nullptr),
      m_size_ring(10), m_vec_ring_ev(m_size_ring)
   {
 
   }
 
   int beginHook(GLFWwindow* window){
-    std::string jsstr_geo = altel::TelGL::readFile(geometry_path);
+    std::string jsstr_geo = geometry_string;
     JsonDocument jsd_geo;
     jsd_geo = altel::TelGL::createJsonDocument(jsstr_geo);
     jsd_trans = altel::TelGL::createTransformExample();
