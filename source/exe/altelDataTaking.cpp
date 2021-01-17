@@ -181,6 +181,8 @@ int main(int argc, char *argv[]) {
   m_tel.reset(new altel::Telescope(str_rbcpconf)); // todo
   m_tel->Init();
 
+  m_tel->Start_no_tel_reading();
+
   while(!g_done){
     auto ev_tel = m_tel->ReadEvent();
     if(ev_tel.empty()){
@@ -234,6 +236,10 @@ int main(int argc, char *argv[]) {
     if(telEvent->measRaws().empty() && telEvent->measHits().empty() && telEvent->trajs().empty()){
       continue;
     }
+    if(telEvent->measHits().size()<4){
+      continue;
+    }
+    
     telfwtest.pushBufferEvent(telEvent);
   }
   m_tel->Stop();
