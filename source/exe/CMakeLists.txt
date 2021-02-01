@@ -1,6 +1,6 @@
 
+unset(EXE_TARGET_LIST)
 find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
-
 
 
 function(create_cpp_raw_string)

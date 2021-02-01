@@ -8,6 +8,7 @@
 
 #include <numeric>
 #include <chrono>
+#include <regex>
 
 #include <TFile.h>
 #include <TTree.h>
@@ -341,36 +342,62 @@ int main(int argc, char *argv[]) {
   auto tp_start = std::chrono::system_clock::now();
 
   eudaq::FileReaderUP reader;
+  std::unique_ptr<JsonFileDeserializer> jsreader;
 
+  bool is_eudaq_raw = true;
+  if(std::regex_match(rawFilePathCol.front(), std::regex("\\S+.json")) ){
+    is_eudaq_raw= false;
+  }
   while(1){
     if(eventNum> eventMaxNum && eventMaxNum>0){
       break;
     }
-    if(!reader){
-      if(rawFileNum<rawFilePathCol.size()){
-        std::fprintf(stdout, "processing raw file: %s\n", rawFilePathCol[rawFileNum].c_str());
-        reader = eudaq::Factory<eudaq::FileReader>::MakeUnique(eudaq::str2hash("native"), rawFilePathCol[rawFileNum]);
-        rawFileNum++;
+    std::shared_ptr<altel::TelEvent> fullEvent;
+    if(is_eudaq_raw){
+      if(!reader){
+        if(rawFileNum<rawFilePathCol.size()){
+          std::fprintf(stdout, "processing raw file: %s\n", rawFilePathCol[rawFileNum].c_str());
+          reader = eudaq::Factory<eudaq::FileReader>::MakeUnique(eudaq::str2hash("native"), rawFilePathCol[rawFileNum]);
+          rawFileNum++;
+        }
+        else{
+          std::fprintf(stdout, "processed %d raw files, quit\n", rawFileNum);
+          break;
+        }
       }
-      else{
-        std::fprintf(stdout, "processed %d raw files, quit\n", rawFileNum);
-        break;
+      auto eudaqEvent = reader->GetNextEvent();
+      if(!eudaqEvent){
+        reader.reset();
+        continue; // goto for next raw file
       }
+      readEventNum++;
+      if(readEventNum<=eventSkipNum){
+        continue;
+      }
+      eventNum++;
+      fullEvent  = altel::createTelEvent(eudaqEvent);
     }
-    auto eudaqEvent = reader->GetNextEvent();
-    if(!eudaqEvent){
-      reader.reset();
-      continue; // goto for next raw file
+    else{
+      if(!jsreader){
+        if(rawFileNum<rawFilePathCol.size()){
+          std::fprintf(stdout, "processing js file: %s\n", rawFilePathCol[rawFileNum].c_str());
+          jsreader.reset(new JsonFileDeserializer(rawFilePathCol[rawFileNum]));
+          rawFileNum++;
+        }
+        else{
+          std::fprintf(stdout, "processed %d raw files, quit\n", rawFileNum);
+          break;
+        }
+      }
+      auto evpack = jsreader->getNextJsonDocument();
+      if(evpack.IsNull()){
+        jsreader.reset();
+        continue;
+      }
+      eventNum++;
+      fullEvent  = TelActs::createTelEvent(evpack, 0, eventNum, 0);
     }
-    // std::cout<<"reading"<<std::endl;
 
-    readEventNum++;
-    if(readEventNum<=eventSkipNum){
-      continue;
-    }
-    eventNum++;
-
-    std::shared_ptr<altel::TelEvent> fullEvent  = altel::createTelEvent(eudaqEvent);
     // TODO test nullptr
     std::shared_ptr<altel::TelEvent> detEvent(new altel::TelEvent(fullEvent->runN(),
                                                                   fullEvent->eveN(),

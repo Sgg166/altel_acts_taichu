@@ -216,6 +216,39 @@ std::unique_ptr<altel::TelEvent> TelActs::createTelEvent(
 }
 
 
+std::unique_ptr<altel::TelEvent> TelActs::createTelEvent(
+  const JsonValue& js,
+  size_t runN, size_t eventN, size_t detSetupN
+){
+
+  std::unique_ptr<altel::TelEvent> telEvent(new altel::TelEvent(runN, eventN, detSetupN, 0));
+
+  const auto &layers = js["layers"];
+  for (const auto &layer : layers.GetArray()) {
+    size_t detId = layer["ext"].GetUint();
+    uint16_t tri = layer["tri"].GetUint();
+    telEvent->CK=tri;
+
+    for (const auto &hit : layer["hit"].GetArray()) {
+      double hitMeasU = hit["pos"][0].GetDouble() - 0.02924 * 1024 / 2.0;
+      double hitMeasV = hit["pos"][1].GetDouble() - 0.02688 * 512 / 2.0;
+      std::vector<altel::TelMeasRaw> rawMeasCol;
+      for(const auto &pix :  hit["pix"].GetArray()){
+        altel::TelMeasRaw measRaw(uint16_t(pix[0].GetInt()),
+                                  uint16_t(pix[1].GetInt()),
+                                  uint16_t(detId),
+                                  uint16_t(tri));
+        rawMeasCol.push_back(measRaw);
+      }
+      telEvent->MHs.emplace_back(new altel::TelMeasHit(detId, hitMeasU, hitMeasV, rawMeasCol));
+    }
+  }
+  return telEvent;
+}
+
+
+
+
 using namespace Acts::UnitLiterals;
 
 

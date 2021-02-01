@@ -69,4 +69,7 @@ namespace TelActs{
                                          std::shared_ptr<altel::TelEvent> extraEvent,
                                          double maxMatchDist,
                                          double minFitHitsPerTraj);
+
+  std::unique_ptr<altel::TelEvent> createTelEvent(const JsonValue& js,
+                                                  size_t runN, size_t eventN, size_t detSetupN);
 };

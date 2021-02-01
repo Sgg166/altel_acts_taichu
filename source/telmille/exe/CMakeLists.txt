@@ -1,14 +1,14 @@
-# add_executable(altelMilleBin TelMille_main.cpp)
-# target_link_libraries(altelMilleBin PRIVATE mycommon altel-mille)
+unset(CURRENT_TARGETS_LIST)
+
+add_executable(altelMilleBin_json TelMille_main.cpp)
+target_link_libraries(altelMilleBin_json PRIVATE mycommon altel-mille)
+list(APPEND CURRENT_TARGETS_LIST altelMilleBin_json)
 
 add_executable(altelGeoUpdate GeometryFileUpdate_main.cpp)
 target_link_libraries(altelGeoUpdate PRIVATE mycommon altel-mille)
+list(APPEND CURRENT_TARGETS_LIST altelGeoUpdate)
 
-# find_package(ROOT REQUIRED COMPONENTS RIO Net)
-# add_executable(LineFit_main LineFit_main.cpp)
-# target_link_libraries(LineFit_main PRIVATE mycommon altel-mille ROOT::Core ROOT::Tree ROOT::RIO ROOT::Hist ROOT::Graf ROOT::Graf3d)
-
-install(TARGETS altelGeoUpdate
+install(TARGETS ${CURRENT_TARGETS_LIST}
   EXPORT ${PROJECT_NAME}Targets
   RUNTIME       DESTINATION bin      COMPONENT runtime
   LIBRARY       DESTINATION lib      COMPONENT runtime
