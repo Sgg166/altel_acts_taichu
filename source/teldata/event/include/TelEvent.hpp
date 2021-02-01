@@ -316,5 +316,14 @@ namespace altel{
       return measHits_subset;
     }
 
+    std::vector<std::shared_ptr<TelMeasHit>> measHits(const uint16_t detN){
+      std::vector<std::shared_ptr<TelMeasHit>> measHits_subset;
+      for(auto &aMeasHit: MHs){
+        if(aMeasHit->detN() == detN){
+          measHits_subset.push_back(aMeasHit);
+        }
+      }
+      return measHits_subset;
+    }
   };
 }

@@ -31,7 +31,7 @@ void altelTTreeExampleReader(const std::string& rootFilePath){
                  eventNum, telEvent->eveN(), telEvent->clkN(), telEvent->trajs().size(), telEvent->measHits().size());
     for(auto aTraj: telEvent->trajs()){
       std::fprintf(stdout, "  Traj: numOriginMeasHit %zu, numFitHit %zu\n", aTraj->numOriginMeasHit(), aTraj->numFitHit());
-      if(aTraj->numOriginMeasHit()<4){
+      if(aTraj->numOriginMeasHit()<6){
         // not so good, skip
         continue;
       }
