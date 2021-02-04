@@ -77,26 +77,76 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
 
   std::shared_ptr<altel::TelEvent> telEvent(new altel::TelEvent(rRunN, rEventN, rConfigN, rClock));
 
+
+  auto it_rawMeasVec_DetN = rRawMeasVec_DetN.begin();
+  auto it_rawMeasVec_U = rRawMeasVec_U.begin();
+  auto it_rawMeasVec_V = rRawMeasVec_V.begin();
+  auto it_rawMeasVec_Clk = rRawMeasVec_Clk.begin();
+  auto it_rawMeasVec_DetN_end = rRawMeasVec_DetN.end();
+
+  std::vector<altel::TelMeasRaw> measRaws;
+  measRaws.reserve(rRawMeasVec_DetN.size());
+  while(it_rawMeasVec_DetN !=it_rawMeasVec_DetN_end){
+    measRaws.emplace_back(*it_rawMeasVec_U, *it_rawMeasVec_V, *it_rawMeasVec_DetN, *it_rawMeasVec_Clk);
+    it_rawMeasVec_DetN++;
+    it_rawMeasVec_U++;
+    it_rawMeasVec_V++;
+    it_rawMeasVec_Clk++;
+  }
+
+  // make index cluster
+  auto it_numRawMeas_PerHitMeas = rHitMeasVec_NumRawMeas_PerHitMeas.begin();
+  auto it_rawMeas_index = rHitMeasVec_Index_To_RawMeas.begin();
+
+  auto it_numRawMeas_PerHitMeas_end = rHitMeasVec_NumRawMeas_PerHitMeas.end();
+  auto it_rawMeas_index_end = rHitMeasVec_Index_To_RawMeas.end();
+
+  std::vector<std::vector<altel::TelMeasRaw>> clusterCol;
+  clusterCol.reserve(rHitMeasVec_DetN.size());
+  while(it_numRawMeas_PerHitMeas != it_numRawMeas_PerHitMeas_end){
+    std::vector<altel::TelMeasRaw> cluster;
+    cluster.reserve(*it_numRawMeas_PerHitMeas);
+
+    size_t numRawMeas_got = 0;
+    while(it_rawMeas_index!=it_rawMeas_index_end && numRawMeas_got < *it_numRawMeas_PerHitMeas){
+      int16_t rawMeasIndex = *it_rawMeas_index;
+      if(rawMeasIndex!=int16_t(-1)){
+        auto aMeasRaw = measRaws[rawMeasIndex];
+        cluster.push_back(aMeasRaw);
+        numRawMeas_got++;
+      }
+      it_rawMeas_index++;
+    }
+    clusterCol.push_back(std::move(cluster));
+    it_numRawMeas_PerHitMeas++;
+  }
+
+  // std::cout<< "create cluster number "<<  clusterCol.size()<<std::endl;
+  auto it_clusterCol = clusterCol.begin();
+
   size_t numMeasHit = rHitMeasVec_DetN.size();
   assert(rHitMeasVec_U.size() == numMeasHit && rHitMeasVec_V.size() == numMeasHit);
-  std::vector<std::shared_ptr<altel::TelMeasHit>> measHits;
-  measHits.reserve(rHitMeasVec_DetN.size());
-
   auto it_measHitVec_detN = rHitMeasVec_DetN.begin();
   auto it_measHitVec_U = rHitMeasVec_U.begin();
   auto it_measHitVec_V = rHitMeasVec_V.begin();
   auto it_measHitVec_detN_end = rHitMeasVec_DetN.end();
 
-  // std::cout<<"loop measHit"<<std::endl;
+  std::vector<std::shared_ptr<altel::TelMeasHit>> measHits;
+  measHits.reserve(rHitMeasVec_DetN.size());
   while(it_measHitVec_detN !=it_measHitVec_detN_end){
     measHits.emplace_back(new altel::TelMeasHit(*it_measHitVec_detN,
                                                 *it_measHitVec_U,
                                                 *it_measHitVec_V,
-                                                {}));
+                                                *it_clusterCol));
+    // HitMeasVec_NumRawMeas_PerHitMeas;
     it_measHitVec_detN++;
     it_measHitVec_U++;
     it_measHitVec_V++;
+
+    it_clusterCol++;
   }
+
+  // std::cout<< "create measHits "<<  measHits.size()<<std::endl;
 
   std::vector<std::shared_ptr<altel::TelTrajHit>> trajHits;
   size_t numFitHit = rHitFitVec_DetN.size();
