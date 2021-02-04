@@ -37,6 +37,7 @@ Usage:
   -rootFile       <PATH>            path to root file (output)
   -particleEnergy <FLOAT>           energy of beam particle, electron, (Gev)
   -targetIds    <<INT0> [INT1]...>  IDs of target detector which are complectely excluded from track fitting. Residual are caculated.
+  -excludeIds   <<INT0> [INT1]...>  IDs of detector which are complectely excluded from track fitting. Passive.
 
 examples:
 ./altelActsTrack -eudaqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
@@ -46,6 +47,7 @@ int main(int argc, char *argv[]) {
   int64_t eventMaxNum = 0;
   int64_t eventSkipNum = 0;
   std::vector<int64_t> targetDetId;
+  std::vector<int64_t> excludeDetId;
 
   std::vector<std::string> rawFilePathCol;
   std::string geometryFilePath;
@@ -71,6 +73,7 @@ int main(int argc, char *argv[]) {
                                 {"geometryFile", required_argument, NULL, 'g'},
                                 {"particleEnergy", required_argument, NULL, 'e'},
                                 {"targetIds", required_argument, NULL, 'd'},
+                                {"excludeIds", required_argument, NULL, 'p'},
                                 {0, 0, 0, 0}};
 
     if(argc == 1){
@@ -113,6 +116,14 @@ int main(int argc, char *argv[]) {
         //optind is increased by 2 when option is set to required_argument
         for(int i = optind-1; i < argc && *argv[i] != '-'; i++){
           targetDetId.push_back(std::stol(argv[i]));
+          optind = i+1;
+        }
+        break;
+      }
+      case 'p':{
+        //optind is increased by 2 when option is set to required_argument
+        for(int i = optind-1; i < argc && *argv[i] != '-'; i++){
+          excludeDetId.push_back(std::stol(argv[i]));
           optind = i+1;
         }
         break;
@@ -241,6 +252,11 @@ int main(int argc, char *argv[]) {
   std::vector<std::shared_ptr<const Acts::PlaneLayer>> allPlaneLayers;
   for(const auto& js_det: js_dets.GetArray()){
     auto [detId, planeLayer] = TelActs::createPlaneLayer(js_det);
+    auto it = find (excludeDetId.begin(), excludeDetId.end(), detId);
+    if(it != excludeDetId.end()){
+      // ignored, dropped
+      continue;
+    }
     mapDetId2PlaneLayer[detId] = planeLayer;
     mapPlaneLayer2DetId[planeLayer] = detId;
     allPlaneLayers.push_back(planeLayer);
@@ -276,7 +292,6 @@ int main(int argc, char *argv[]) {
   for(const auto& [detId, layer]: mapDetId2PlaneLayer_targets){
     detId_targets.push_back(detId);
   }
-
 
   if(layerDets.size()<3){
     std::fprintf(stdout, "error: number of detector elements is only %d.", layerDets.size());
@@ -430,12 +445,12 @@ int main(int argc, char *argv[]) {
                                                                      fullEvent->clkN()));
     targetEvent->measHits()=fullEvent->measHits(detId_targets);
 
-    TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 400_um, 3);
+    TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 400_um, 2);
 
     for(auto &aTraj: detEvent->TJs){
-      size_t fittedHitNum = aTraj->numOriginMeasHit();
-      if(fittedHitNum<3){
-        if(fittedHitNum != 1)
+      size_t orginHitNum = aTraj->numOriginMeasHit();
+      if(orginHitNum<3){
+        if(orginHitNum != 1)
           droppedTrackNum++;
         continue;
       }
