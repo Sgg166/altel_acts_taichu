@@ -31,19 +31,23 @@ Usage:
   -help                             help message
   -verbose                          verbose flag
   -wait                             wait for user keyboard input per event, for debug
-  -eventSkip      <INT>             number of events to skip before start processing
-  -eventMax       <INT>             max number of events to process
+  -eventSkip      <INT>             number of events to skip before start processing (default 0, disabled)
+  -eventMax       <INT>             max number of events to process  (default -1, disabled)
   -geometryFile   <PATH>            path to geometry input file (input)
+  -beamSize       <FLOAT>           mm, size of beam collimator (default 40)
+  -beamPosition   <FLOAT>           mm, positon beam collimator (range [-5000 5000],  default -5000). Direction is toward ORIGIN point
+  -beamEnergy     <FLOAT>           energy of beam particle, electron, (Gev, default 5)
   -daqFiles  <<PATH0> [PATH1]...>   paths to input daq data files (input). old option -eudaqFiles
-  -rootFile       <PATH>            path to root file (output)
-  -particleEnergy <FLOAT>           energy of beam particle, electron, (Gev)
+  -rootFile       <PATH>            path to out root file of reconstructed trajactories (output)
   -includeIds   <<INT0> [INT1]...>  IDs of detector contrubuted to track fitting. If not set, all detector geometries are set as the geometry file.
   -excludeIds   <<INT0> [INT1]...>  IDs of detector which are complectely excluded from track fitting. Detector geometry is excluded.
   -targetIds    <<INT0> [INT1]...>  IDs of target detector which are complectely excluded from track fitting. Detector geometry is include. Residual are caculated.
   -cutProbability <FLOAT>           Probability cut of 2-DoF Chi-Squared CDF. (default 0.999 <chi2=13.816>). Override default cutChiSquared.
   -cutChiSquared  <FLOAT>           cut of 2-DoF Chi-Squared PDF (default 13.816 <cdf=0.999>). Override default cutProbability.
-  -planeSiThick  <INT_ID> <FLOAT_THICK> silicon thickness of a layer
+  -planeSiThick  <INT_ID> <FLOAT_THICK> mm, silicon thickness of a layer
   -siThick  <FLOAT>                 mm, silicon thickness when option planeSiThick does not assign the thickness to a layer. (default 0.1 , using geometry file if negetive value)
+
+
 examples:
 ./altelActsTrack -cutChiSquared 0.999 -daqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
 )";
@@ -61,7 +65,10 @@ int main(int argc, char *argv[]) {
 
   double particleQ = 1;
   double particleMass = 0.511 * Acts::UnitConstants::MeV;
-  double particleEnergy = 5.0 * Acts::UnitConstants::GeV;
+
+  double beamEnergy = 5.0 * Acts::UnitConstants::GeV;
+  double beamPosition = -5000 * Acts::UnitConstants::mm;
+  double beamSize = 40 * Acts::UnitConstants::mm;
 
   double siThick = 0.1;
   std::map<size_t, double> planeSiThick;
@@ -71,8 +78,6 @@ int main(int argc, char *argv[]) {
   double cutProbability = 0.999;
   double cutChiSquared = 13.816;
 
-  double distCollimator = 5_m;
-  double widthCollimator = 4_cm;
   int do_wait = 0;
 
   int do_verbose = 0;
@@ -86,7 +91,10 @@ int main(int argc, char *argv[]) {
                                 {"daqFiles", required_argument, NULL, 'f'},
                                 {"rootFile", required_argument, NULL, 'b'},
                                 {"geometryFile", required_argument, NULL, 'g'},
-                                {"particleEnergy", required_argument, NULL, 'e'},
+                                {"particleEnergy", required_argument, NULL, 'e'}, // old
+                                {"beamEnergy", required_argument, NULL, 'e'},
+                                {"beamSize", required_argument, NULL, 'z'},
+                                {"beamPosition", required_argument, NULL, 'n'},
                                 {"includeIds", required_argument, NULL, 'i'},
                                 {"excludeIds", required_argument, NULL, 'p'},
                                 {"targetIds", required_argument, NULL, 'd'},
@@ -158,7 +166,13 @@ int main(int argc, char *argv[]) {
         geometryFilePath = optarg;
         break;
       case 'e':
-        particleEnergy = std::stod(optarg) * Acts::UnitConstants::GeV;
+        beamEnergy = std::stod(optarg) * Acts::UnitConstants::GeV;
+        break;
+      case 'z':
+        beamSize = std::stod(optarg) * Acts::UnitConstants::mm;
+        break;
+      case 'n':
+        beamPosition = std::stod(optarg) * Acts::UnitConstants::mm;
         break;
       case 'd':{
         //optind is increased by 2 when option is set to required_argument
@@ -301,31 +315,6 @@ int main(int argc, char *argv[]) {
   // Setup the magnetic field
   auto magneticField = std::make_shared<Acts::ConstantBField>(0_T, 0_T, 0_T);
 
-  /////////////  track seed
-  double seedResX = 0.5*widthCollimator;
-  double seedResY = 0.5*widthCollimator;
-  double seedResPhi = 0.5*widthCollimator/distCollimator;
-  double seedResTheta = 0.5*widthCollimator/distCollimator;
-
-  double seedResX2 = seedResX * seedResX;
-  double seedResY2 = seedResY * seedResY;
-  double seedResPhi2 = seedResPhi * seedResPhi;
-  double seedResTheta2 = seedResTheta * seedResTheta;
-
-  Acts::BoundSymMatrix seedCov;
-  seedCov <<
-    seedResX2,0.,       0.,         0.,           0.,     0.,
-    0.,       seedResY2,0.,         0.,           0.,     0.,
-    0.,       0.,       seedResPhi2,0.,           0.,     0.,
-    0.,       0.,       0.,         seedResTheta2,0.,     0.,
-    0.,       0.,       0.,         0.,           0.0001, 0.,
-    0.,       0.,       0.,         0.,           0.,     1.;
-
-  double seedPhi = 0;
-  double seedTheta = 0.5*M_PI;
-  Acts::Vector4D seedPos4(-distCollimator, 0, 0, 0);
-  Acts::CurvilinearTrackParameters seedParameters(seedPos4, seedPhi, seedTheta,
-                                                  particleEnergy, particleQ, seedCov);
   //////////// geometry
   std::printf("--------read geo-----\n");
   std::string str_geo = JsonUtils::readFile(geometryFilePath);
@@ -334,7 +323,6 @@ int main(int argc, char *argv[]) {
     std::fprintf(stderr, "Geometry file <%s> does not contain any json objects.\n", geometryFilePath.c_str() );
     throw;
   }
-  // JsonUtils::printJsonValue(jsd_geo, true);
 
   std::printf("--------create acts geo object-----\n");
   if (!jsd_geo.HasMember("geometry")) {
@@ -418,7 +406,7 @@ int main(int argc, char *argv[]) {
                mapDetId2PlaneLayer.size(), mapDetId2PlaneLayer_dets.size(), mapDetId2PlaneLayer_targets.size());
 
   std::shared_ptr<const Acts::TrackingGeometry> worldGeo =
-    TelActs::createWorld(gctx, 11.0_m, 0.1_m, 0.1_m,  allPlaneLayers); //include collimator at -5_m
+    TelActs::createWorld(gctx, 11.0_m, 0.1_m, 0.1_m,  allPlaneLayers);
 // geometry closed, geometry ID only valid after geometry closing
 
   std::map<Acts::GeometryIdentifier, size_t> mapGeoId2DetId;
@@ -427,23 +415,49 @@ int main(int argc, char *argv[]) {
     mapGeoId2DetId[geoId] = detId;
   }
 
+
+  ///////////// beam configure
+  // TODO: get first layer from geometry , and configure Phi/theta
+  double seedPhi = beamPosition<=0? 0: M_PI;
+  double seedTheta = 0.5*M_PI;
+  Acts::Vector4D seedPos4(beamPosition, 0, 0, 0);
+
+  double seedResX = 0.5*beamSize;
+  double seedResY = 0.5*beamSize;
+  double seedResPhi = 0.01;
+  double seedResTheta = 0.01;
+
+  double seedResX2 = seedResX * seedResX;
+  double seedResY2 = seedResY * seedResY;
+  double seedResPhi2 = seedResPhi * seedResPhi;
+  double seedResTheta2 = seedResTheta * seedResTheta;
+
+  Acts::BoundSymMatrix seedCov;
+  seedCov <<
+    seedResX2,0.,       0.,         0.,           0.,     0.,
+    0.,       seedResY2,0.,         0.,           0.,     0.,
+    0.,       0.,       seedResPhi2,0.,           0.,     0.,
+    0.,       0.,       0.,         seedResTheta2,0.,     0.,
+    0.,       0.,       0.,         0.,           0.0001, 0.,
+    0.,       0.,       0.,         0.,           0.,     1.;
+
+  Acts::CurvilinearTrackParameters seedParameters(seedPos4, seedPhi, seedTheta,
+                                                  beamEnergy, particleQ, seedCov);
+
+
   ///////////// trackfind conf
   auto trackFindFun = TelActs::makeTrackFinderFunction(worldGeo, magneticField);
 
   std::vector<Acts::CKFSourceLinkSelector::Config::InputElement> ckfConfigEle_vec;
   for(auto& [detId, aPlaneLayer]: mapDetId2PlaneLayer){
-    if(aPlaneLayer==layerDets[0]){// x sorted layers
+    if( beamPosition<=0? aPlaneLayer==layerDets.front() : aPlaneLayer==layerDets.back()){ // x sorted layers
       ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {cutChiSquared,10}}); //first layer can have multi-branches
     }
     else{
-      // ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {10,1}}); //chi2, max branches
       ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {cutChiSquared,1}}); //chi2, max branches
     }
   }
   Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg(ckfConfigEle_vec);
-
-  auto refSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
-    Acts::Vector3D{-4_m, 0., 0.}, Acts::Vector3D{1., 0., 0.});
 
   Acts::PropagatorPlainOptions pOptions;
   pOptions.maxSteps = 10000;
@@ -452,7 +466,7 @@ int main(int argc, char *argv[]) {
   auto kfLogger = Acts::getDefaultLogger("CKF", logLevel);
   Acts::CombinatorialKalmanFilterOptions<Acts::CKFSourceLinkSelector> ckfOptions(
     gctx, mctx, cctx, sourcelinkSelectorCfg, Acts::LoggerWrapper{*kfLogger}, pOptions,
-    refSurface.get());
+    nullptr);
 
   altel::TelEventTTreeWriter ttreeWriter;
   TTree *pTree = new TTree("eventTree", "eventTree");

@@ -18,7 +18,7 @@ message(STATUS "To build ACTS package, use command:  make external_acts")
 FetchContent_Declare(
   external_acts
   GIT_REPOSITORY https://github.com/eyiliu/acts-core.git
-  GIT_TAG b75e70c59b0838937baed35a52a548a9bad95113 # add_alignment
+  GIT_TAG d37a098cf7f0db9933009643ec1921971261cf21 # add_alignment
   # FETCHCONTENT_UPDATES_DISCONNECTED ON
 )
 FetchContent_Populate(external_acts)
