@@ -12,16 +12,17 @@
 
 #include <TFile.h>
 #include <TTree.h>
+#include <Math/SpecFunc.h>
+#include <Math/DistFunc.h>
 
 // #include "TelGL.hh"
 // #define GLFW_INCLUDE_NONE
 // #include <GLFW/glfw3.h>
+// #include "TelFW.hh"
+// #include "glfw_test.hh"
 
 #include "linenoise.h"
 #include "myrapidjson.h"
-
-// #include "TelFW.hh"
-// #include "glfw_test.hh"
 
 using namespace Acts::UnitLiterals;
 
@@ -29,25 +30,30 @@ static const std::string help_usage = R"(
 Usage:
   -help                             help message
   -verbose                          verbose flag
-  -wait                             wait for user keyboard input per event
+  -wait                             wait for user keyboard input per event, for debug
   -eventSkip      <INT>             number of events to skip before start processing
   -eventMax       <INT>             max number of events to process
   -geometryFile   <PATH>            path to geometry input file (input)
-  -eudaqFiles  <<PATH0> [PATH1]...> paths to input eudaq raw data files (input)
+  -daqFiles  <<PATH0> [PATH1]...>   paths to input daq data files (input). old option -eudaqFiles
   -rootFile       <PATH>            path to root file (output)
   -particleEnergy <FLOAT>           energy of beam particle, electron, (Gev)
-  -targetIds    <<INT0> [INT1]...>  IDs of target detector which are complectely excluded from track fitting. Residual are caculated.
-  -excludeIds   <<INT0> [INT1]...>  IDs of detector which are complectely excluded from track fitting. Passive.
-
+  -includeIds   <<INT0> [INT1]...>  IDs of detector contrubuted to track fitting. If not set, all detector geometries are set as the geometry file.
+  -excludeIds   <<INT0> [INT1]...>  IDs of detector which are complectely excluded from track fitting. Detector geometry is excluded.
+  -targetIds    <<INT0> [INT1]...>  IDs of target detector which are complectely excluded from track fitting. Detector geometry is include. Residual are caculated.
+  -cutProbability <FLOAT>           Probability cut of 2-DoF Chi-Squared CDF. (default 0.999 <chi2=13.816>). Override default cutChiSquared.
+  -cutChiSquared  <FLOAT>           cut of 2-DoF Chi-Squared PDF (default 13.816 <cdf=0.999>). Override default cutProbability.
+  -planeSiThick  <INT_ID> <FLOAT_THICK> silicon thickness of a layer
+  -siThick  <FLOAT>                 mm, silicon thickness when option planeSiThick does not assign the thickness to a layer. (default 0.1 , using geometry file if negetive value)
 examples:
-./altelActsTrack -eudaqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
+./altelActsTrack -cutChiSquared 0.999 -daqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
 )";
 
 int main(int argc, char *argv[]) {
   int64_t eventMaxNum = 0;
   int64_t eventSkipNum = 0;
-  std::vector<int64_t> targetDetId;
-  std::vector<int64_t> excludeDetId;
+  std::set<int64_t> includeDetId;
+  std::set<int64_t> excludeDetId;
+  std::set<int64_t> targetDetId;
 
   std::vector<std::string> rawFilePathCol;
   std::string geometryFilePath;
@@ -56,6 +62,14 @@ int main(int argc, char *argv[]) {
   double particleQ = 1;
   double particleMass = 0.511 * Acts::UnitConstants::MeV;
   double particleEnergy = 5.0 * Acts::UnitConstants::GeV;
+
+  double siThick = 0.1;
+  std::map<size_t, double> planeSiThick;
+
+  bool hasCutProbability = false;
+  bool hasCutChiSquared = false;
+  double cutProbability = 0.999;
+  double cutChiSquared = 13.816;
 
   double distCollimator = 5_m;
   double widthCollimator = 4_cm;
@@ -68,12 +82,18 @@ int main(int argc, char *argv[]) {
                                 {"wait", no_argument, NULL, 'w'},
                                 {"eventSkip", required_argument, NULL, 's'},
                                 {"eventMax", required_argument, NULL, 'm'},
-                                {"eudaqFiles", required_argument, NULL, 'f'},
+                                {"eudaqFiles", required_argument, NULL, 'f'}, // old
+                                {"daqFiles", required_argument, NULL, 'f'},
                                 {"rootFile", required_argument, NULL, 'b'},
                                 {"geometryFile", required_argument, NULL, 'g'},
                                 {"particleEnergy", required_argument, NULL, 'e'},
-                                {"targetIds", required_argument, NULL, 'd'},
+                                {"includeIds", required_argument, NULL, 'i'},
                                 {"excludeIds", required_argument, NULL, 'p'},
+                                {"targetIds", required_argument, NULL, 'd'},
+                                {"cutProbability", required_argument, NULL, 'c'},
+                                {"cutChiSquared", required_argument, NULL, 'u'},
+                                {"planeSiThick", required_argument, NULL, 't'},
+                                {"siThick", required_argument, NULL, 'k'},
                                 {0, 0, 0, 0}};
 
     if(argc == 1){
@@ -95,12 +115,40 @@ int main(int argc, char *argv[]) {
       case 'm':
         eventMaxNum = std::stoul(optarg);
         break;
+      case 'c':
+        hasCutProbability = true;
+        cutProbability = std::stod(optarg);
+        break;
+      case 'u':
+        hasCutChiSquared = true;
+        cutChiSquared = std::stod(optarg);
+        break;
       case 'f':{
         optind--;
         for( ;optind < argc && *argv[optind] != '-'; optind++){
           const char* fileStr = argv[optind];
           rawFilePathCol.push_back(std::string(fileStr));
         }
+        break;
+      }
+
+      case 'k':
+        siThick = std::stod(optarg);
+        break;
+      case 't':{
+        optind--;
+        std::vector<size_t> optindVec;
+        for( ;optind < argc && *argv[optind] != '-'; optind++){
+          optindVec.push_back(optind);
+        }
+        if(optindVec.size()!=2){
+          std::fprintf(stderr, "\n\nplaneSiThick option error\n\n");
+          std::fprintf(stderr, "%s\n", help_usage.c_str());
+          std::exit(1);
+        }
+        size_t id = std::stoul(argv[optindVec[0]]);
+        double thick = std::stod(argv[optindVec[1]]);
+        planeSiThick[id] = thick;
         break;
       }
       case 'b':
@@ -115,7 +163,7 @@ int main(int argc, char *argv[]) {
       case 'd':{
         //optind is increased by 2 when option is set to required_argument
         for(int i = optind-1; i < argc && *argv[i] != '-'; i++){
-          targetDetId.push_back(std::stol(argv[i]));
+          targetDetId.insert(std::stol(argv[i]));
           optind = i+1;
         }
         break;
@@ -123,7 +171,15 @@ int main(int argc, char *argv[]) {
       case 'p':{
         //optind is increased by 2 when option is set to required_argument
         for(int i = optind-1; i < argc && *argv[i] != '-'; i++){
-          excludeDetId.push_back(std::stol(argv[i]));
+          excludeDetId.insert(std::stol(argv[i]));
+          optind = i+1;
+        }
+        break;
+      }
+      case 'i':{
+        //optind is increased by 2 when option is set to required_argument
+        for(int i = optind-1; i < argc && *argv[i] != '-'; i++){
+          includeDetId.insert(std::stol(argv[i]));
           optind = i+1;
         }
         break;
@@ -177,18 +233,59 @@ int main(int argc, char *argv[]) {
     }
   }/////////getopt end////////////////
 
-  std::fprintf(stdout, "\n");
-  std::fprintf(stdout, "%d eudaqFiles:\n", rawFilePathCol.size());
-  for(auto &rawfilepath: rawFilePathCol){
-    std::fprintf(stdout, "  %s\n", rawfilepath.c_str());
+  if(hasCutProbability && !hasCutChiSquared){
+    cutChiSquared = ROOT::Math::chisquared_quantile(cutProbability , 2);
   }
-  std::fprintf(stdout, "geometryFile:  %s\n", geometryFilePath.c_str());
-  std::fprintf(stdout, "rootFile:      %s\n", rootFilePath.c_str());
+  else if(!hasCutProbability && hasCutChiSquared){
+    cutProbability = ROOT::Math::chisquared_cdf(cutChiSquared , 2);
+  }
+
+  if(!excludeDetId.empty() && !includeDetId.empty()){
+    std::fprintf(stderr, "\n\nOptions excludeDetId includeDetId can not be set at same time.\n\n");
+    std::fprintf(stderr, "%s\n", help_usage.c_str());
+    std::exit(1);
+  }
+
+  std::fprintf(stdout, "\n");
+  std::fprintf(stdout, "includeDetId:\n");
+  for(auto &id: includeDetId){
+    std::fprintf(stdout, "                %d\n", id);
+  }
+  std::fprintf(stdout, "excludeDetId:\n");
+  for(auto &id: excludeDetId){
+    std::fprintf(stdout, "                %d\n", id);
+  }
+  std::fprintf(stdout, "targetDetId:\n");
+  for(auto &id: targetDetId){
+    std::fprintf(stdout, "                %d\n", id);
+  }
+
+  std::fprintf(stdout, "%d daqFiles:\n", rawFilePathCol.size());
+  for(auto &rawfilepath: rawFilePathCol){
+    std::fprintf(stdout, "                %s\n", rawfilepath.c_str());
+  }
+  std::fprintf(stdout, "geometryFile:     %s\n", geometryFilePath.c_str());
+  std::fprintf(stdout, "rootFile:         %s\n", rootFilePath.c_str());
+
+  std::fprintf(stdout, "cutProbability:   %f\n", cutProbability);
+  std::fprintf(stdout, "cutChiSquared:    %f\n", cutChiSquared);
+
+  std::fprintf(stdout, "siThick:          %f\n", siThick);
+  std::fprintf(stdout, "planeSiThick:");
+  for(auto &[id, th]:   planeSiThick){
+    std::fprintf(stdout, "                #%d = %f\n", id , th);
+  }
   std::fprintf(stdout, "\n");
 
   if (rawFilePathCol.empty() ||
       rootFilePath.empty() ||
       geometryFilePath.empty()) {
+    std::fprintf(stderr, "%s\n", help_usage.c_str());
+    std::exit(1);
+  }
+
+  if(hasCutProbability && hasCutChiSquared){
+    std::fprintf(stderr, "\n\nOptions cutChiSquared cutProbability can not be set at same time.\n\n");
     std::fprintf(stderr, "%s\n", help_usage.c_str());
     std::exit(1);
   }
@@ -229,7 +326,6 @@ int main(int argc, char *argv[]) {
   Acts::Vector4D seedPos4(-distCollimator, 0, 0, 0);
   Acts::CurvilinearTrackParameters seedParameters(seedPos4, seedPhi, seedTheta,
                                                   particleEnergy, particleQ, seedCov);
-
   //////////// geometry
   std::printf("--------read geo-----\n");
   std::string str_geo = JsonUtils::readFile(geometryFilePath);
@@ -244,19 +340,37 @@ int main(int argc, char *argv[]) {
   if (!jsd_geo.HasMember("geometry")) {
     throw;
   }
-  const auto &js_geo = jsd_geo["geometry"];
-  const auto &js_dets = js_geo["detectors"];
+  auto &js_geo = jsd_geo["geometry"];
+  auto &js_dets = js_geo["detectors"];
 
   std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> mapDetId2PlaneLayer;
   std::map<std::shared_ptr<const Acts::PlaneLayer>, size_t> mapPlaneLayer2DetId;
   std::vector<std::shared_ptr<const Acts::PlaneLayer>> allPlaneLayers;
-  for(const auto& js_det: js_dets.GetArray()){
+  for(auto& js_det: js_dets.GetArray()){
+    size_t id = js_det["id"].GetUint();
+    if(planeSiThick.count(id)){
+      js_det["size"]["z"] = planeSiThick[id];
+    }
+    else if(siThick>0){
+      js_det["size"]["z"] = siThick;
+    }
+
     auto [detId, planeLayer] = TelActs::createPlaneLayer(js_det);
-    auto it = find (excludeDetId.begin(), excludeDetId.end(), detId);
-    if(it != excludeDetId.end()){
+    if(!includeDetId.empty()
+       && !includeDetId.count(detId)
+       && !targetDetId.count(detId)){
       // ignored, dropped
       continue;
     }
+    if(excludeDetId.count(detId)
+       && !targetDetId.count(detId)
+      ){
+      // ignored, dropped
+      continue;
+    }
+
+    std::fprintf(stdout, "plane is created,  detID = %zu\n", size_t(detId));
+
     mapDetId2PlaneLayer[detId] = planeLayer;
     mapPlaneLayer2DetId[planeLayer] = detId;
     allPlaneLayers.push_back(planeLayer);
@@ -270,7 +384,6 @@ int main(int argc, char *argv[]) {
   std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>> mapDetId2PlaneLayer_targets;
   std::vector<std::shared_ptr<const Acts::PlaneLayer>> layerDets;
   std::vector<std::shared_ptr<const Acts::PlaneLayer>> layerTargets;
-
 
   for(auto &[detId, planeLayer] :mapDetId2PlaneLayer){
     auto it = find (targetDetId.begin(), targetDetId.end(), detId);
@@ -320,10 +433,11 @@ int main(int argc, char *argv[]) {
   std::vector<Acts::CKFSourceLinkSelector::Config::InputElement> ckfConfigEle_vec;
   for(auto& [detId, aPlaneLayer]: mapDetId2PlaneLayer){
     if(aPlaneLayer==layerDets[0]){// x sorted layers
-      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {10,10}}); //first layer can have multi-branches
+      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {cutChiSquared,10}}); //first layer can have multi-branches
     }
     else{
-      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {10,1}}); //chi2, max branches
+      // ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {10,1}}); //chi2, max branches
+      ckfConfigEle_vec.push_back({aPlaneLayer->geometryId(), {cutChiSquared,1}}); //chi2, max branches
     }
   }
   Acts::CKFSourceLinkSelector::Config sourcelinkSelectorCfg(ckfConfigEle_vec);

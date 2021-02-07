@@ -1,6 +1,6 @@
 
 unset(EXE_TARGET_LIST)
-find_package(ROOT REQUIRED COMPONENTS Core RIO Tree)
+find_package(ROOT REQUIRED COMPONENTS Core RIO Tree MathCore)
 
 
 function(create_cpp_raw_string)
@@ -87,7 +87,7 @@ list(APPEND EXE_TARGET_LIST altelActsTrack)
 target_link_libraries(altelActsTrack
   altel-acts altel-data-event altel-data-root
   mycommon
-  ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  
+  ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  ROOT::MathCore
   )
 
 add_executable(altelMilleBin altelMilleAlign.cpp)

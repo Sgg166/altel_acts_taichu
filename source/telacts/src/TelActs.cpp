@@ -1,11 +1,9 @@
 #include "TelActs.hh"
 
-
 #include "Acts/Material/HomogeneousSurfaceMaterial.hpp"
 #include "Acts/Material/Material.hpp"
 #include "Acts/Material/ProtoSurfaceMaterial.hpp"
 #include "Acts/Material/MaterialSlab.hpp"
-
 
 #include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/Geometry/CuboidVolumeBounds.hpp"
@@ -18,7 +16,6 @@
 #include "Acts/Geometry/TrackingGeometryBuilder.hpp"
 #include "Acts/Geometry/TrackingVolume.hpp"
 #include "Acts/Geometry/TrackingVolumeArrayCreator.hpp"
-
 
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
@@ -247,8 +244,6 @@ std::unique_ptr<altel::TelEvent> TelActs::createTelEvent(
 }
 
 
-
-
 using namespace Acts::UnitLiterals;
 
 
@@ -371,7 +366,7 @@ std::pair<size_t, std::shared_ptr<Acts::PlaneLayer>> TelActs::createPlaneLayer(c
   double sy = js_det["size"]["y"].GetDouble();
   double sz = js_det["size"]["z"].GetDouble();
 
-  double layerThickness = 80_um;
+  double layerThickness = sz*Acts::UnitConstants::mm;
 
   std::shared_ptr<Acts::PlanarBounds> pBounds(new Acts::RectangleBounds(
                                                 sx * Acts::UnitConstants::mm ,  // *0.5
