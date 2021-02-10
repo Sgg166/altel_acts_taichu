@@ -2,7 +2,6 @@
 unset(EXE_TARGET_LIST)
 find_package(ROOT REQUIRED COMPONENTS Core RIO Tree MathCore)
 
-
 function(create_cpp_raw_string)
   if( (${ARGC} LESS 2) OR (${ARGC} GREATER 3 ) )
     message(FATAL_ERROR "create_cpp_raw_string require 2 or 3 arguments, but given ${ARGC}")
@@ -80,6 +79,14 @@ if(TARGET altel-telfw)
     )
 
 endif()
+
+add_executable(altelConvert altelConvert.cpp)
+list(APPEND EXE_TARGET_LIST altelConvert)
+target_link_libraries(altelConvert
+  altel-acts altel-data-event altel-data-root
+  mycommon
+  ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  ROOT::MathCore
+  )
 
 
 add_executable(altelActsTrack altelActsTracking.cpp)

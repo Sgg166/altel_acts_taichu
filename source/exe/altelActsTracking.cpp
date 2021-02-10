@@ -47,7 +47,6 @@ Usage:
   -planeSiThick  <INT_ID> <FLOAT_THICK> mm, silicon thickness of a layer
   -siThick  <FLOAT>                 mm, silicon thickness when option planeSiThick does not assign the thickness to a layer. (default 0.1 , using geometry file if negetive value)
 
-
 examples:
 ./altelActsTrack -cutChiSquared 0.999 -daqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
 )";
