@@ -350,18 +350,8 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.22.170",
-                    "port":24
-                }
-            },
-            "ctrl_link":{
-                "protocol":"udp",
-                "version": 1,
-                "description":"ALPIDE plane UDP ctrl",
-                "options":{
-                    "path":"builtin",
-                    "ip":"192.168.22.170",
-                    "port":4660
+                    "ip":"131.169.133.170",
+                    "port":9000
                 }
             }
         },
@@ -374,17 +364,7 @@
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
                     "ip":"192.168.22.171",
-                    "port":24
-                }
-            },
-            "ctrl_link":{
-                "protocol":"udp",
-                "version": 1,
-                "description":"ALPIDE plane UDP ctrl",
-                "options":{
-                    "path":"builtin",
-                    "ip":"192.168.22.171",
-                    "port":4660
+                    "port":9000
                 }
             }
         },
@@ -396,18 +376,8 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.22.172",
-                    "port":24
-                }
-            },
-            "ctrl_link":{
-                "protocol":"udp",
-                "version": 1,
-                "description":"ALPIDE plane UDP ctrl",
-                "options":{
-                    "path":"builtin",
-                    "ip":"192.168.22.172",
-                    "port":4660
+                    "ip":"131.169.133.172",
+                    "port":9000
                 }
             }
         },
@@ -419,18 +389,8 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.22.173",
-                    "port":24
-                }
-            },
-            "ctrl_link":{
-                "protocol":"udp",
-                "version": 1,
-                "description":"ALPIDE plane UDP ctrl",
-                "options":{
-                    "path":"builtin",
-                    "ip":"192.168.22.173",
-                    "port":4660
+                    "ip":"131.169.133.173",
+                    "port":9000
                 }
             }
         },
@@ -442,18 +402,8 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.22.174",
-                    "port":24
-                }
-            },
-            "ctrl_link":{
-                "protocol":"udp",
-                "version": 1,
-                "description":"ALPIDE plane UDP ctrl",
-                "options":{
-                    "path":"builtin",
-                    "ip":"192.168.22.174",
-                    "port":4660
+                    "ip":"131.169.133.174",
+                    "port":9000
                 }
             }
         },
@@ -465,18 +415,8 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.22.175",
-                    "port":24
-                }
-            },
-            "ctrl_link":{
-                "protocol":"udp",
-                "version": 1,
-                "description":"ALPIDE plane UDP ctrl",
-                "options":{
-                    "path":"builtin",
-                    "ip":"192.168.22.175",
-                    "port":4660
+                    "ip":"131.169.133.175",
+                    "port":9000
                 }
             }
         },
@@ -488,18 +428,8 @@
                 "version": 1,
                 "description":"ALPIDE plane TCP raw reader",
                 "options":{
-                    "ip":"192.168.10.16",
+                    "ip":"131.169.133.168",
                     "port":24
-                }
-            },
-            "ctrl_link":{
-                "protocol":"udp",
-                "version": 1,
-                "description":"ALPIDE plane UDP ctrl",
-                "options":{
-                    "path":"builtin",
-                    "ip":"192.168.10.16",
-                    "port":4660
                 }
             }
         }

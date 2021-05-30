@@ -5,17 +5,14 @@
 
 #include <cstdio>
 
-#include "FirmwarePortal.hh"
-#include "AltelReader.hh"
+#include "DataFrame.hh"
+#include "TcpConnection.hh"
 
 #include "myrapidjson.h"
 
 namespace altel{
   class Layer{
   public:
-    std::unique_ptr<FirmwarePortal> m_fw;
-    std::unique_ptr<AltelReader> m_rd;
-    std::future<uint64_t> m_fut_async_rd;
     std::future<uint64_t> m_fut_async_watch;
     std::vector<DataFrameSP> m_vec_ring_ev;
     DataFrameSP m_ring_end;
@@ -24,7 +21,6 @@ namespace altel{
     std::atomic<uint64_t> m_count_ring_write;
     std::atomic<uint64_t> m_hot_p_read;
     uint64_t m_count_ring_read;
-    bool m_is_async_reading{false};
     bool m_is_async_watching{false};
 
     uint64_t m_extension{0};
@@ -39,27 +35,30 @@ namespace altel{
 
     uint64_t m_st_n_tg_ev_old{0};
     uint64_t m_st_n_ev_input_old{0};
-    //uint64_t m_st_n_ev_output_old{0};
     uint64_t m_st_n_ev_bad_old{0};
     uint64_t m_st_n_ev_overflow_old{0};
-    std::chrono::system_clock::time_point m_tp_old;
-    std::chrono::system_clock::time_point m_tp_run_begin;
 
     std::string m_st_string;
     std::mutex m_mtx_st;
-  public:
+
+    uint32_t m_tg_expected{0};
+    uint32_t m_flag_wait_first_event{true};
+
+    bool m_isDataAccept{false};
+    std::unique_ptr<TcpConnection> m_conn;
+public:
+    Layer(const std::string& name, const std::string& host, short int port)
+      :m_name(name), m_host(host), m_port(port){
+    }
+
+
     ~Layer();
 
-    void fw_start();
-    uint64_t fw_async_restart();
-    void fw_stop();
-    void fw_init();
-    void fw_conf();
+    void start();
+    void stop();
+    void init();
+    int perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh);
 
-    void rd_start();
-    void rd_stop();
-
-    uint64_t AsyncPushBack();
     DataFrameSP GetNextCachedEvent();
     DataFrameSP& Front();
     void PopFront();
@@ -70,7 +69,8 @@ namespace altel{
     uint64_t AsyncWatchDog();
 
     std::string m_name;
-    rapidjson::CrtAllocator m_jsa;
-    rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> m_js_conf;
+    std::string m_host;
+    short int m_port;
+
   };
 }

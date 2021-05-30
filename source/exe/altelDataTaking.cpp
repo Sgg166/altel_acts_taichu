@@ -239,7 +239,6 @@ int main(int argc, char *argv[]) {
     if(telEvent->measHits().size()<4){
       continue;
     }
-    
     telfwtest.pushBufferEvent(telEvent);
   }
   m_tel->Stop();

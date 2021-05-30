@@ -25,12 +25,12 @@ Telescope::Telescope(const std::string& file_context){
     throw;
   }
   const auto &js_obj = js_doc.GetObject();
-  
+
   if(!js_obj.HasMember("telescope")){
     fprintf(stderr, "JSON configure file error: no \"telescope\" section \n");
     throw;
   }
-  
+
   if(!js_obj.HasMember("testbeam")){
     fprintf(stderr, "JSON configure file error: no \"testbeam\" section \n");
     throw;
@@ -40,22 +40,22 @@ Telescope::Telescope(const std::string& file_context){
     fprintf(stderr, "JSON configure file error: no \"layers\" section \n");
     throw;
   }
-  
+
   const auto& js_telescope  = js_obj["telescope"];
   const auto& js_testbeam   = js_obj["testbeam"];
   const auto& js_layers     = js_obj["layers"];
 
   m_js_telescope.CopyFrom<rapidjson::CrtAllocator>(js_telescope, m_jsa);
   m_js_testbeam.CopyFrom<rapidjson::CrtAllocator>(js_testbeam, m_jsa);
-  
+
   std::map<std::string, double> layer_loc;
   std::multimap<double, std::string> loc_layer;
- 
+
   if(!js_telescope.HasMember("locations")){
     fprintf(stderr, "JSON configure file error: no \"location\" section \n");
     throw;
   }
-  
+
   // throw;
   for(const auto& l: js_telescope["locations"].GetObject()){
     std::string name = l.name.GetString();
@@ -68,17 +68,16 @@ Telescope::Telescope(const std::string& file_context){
     fprintf(stderr, "JSON configure file error: no energy \n");
     throw;
   }
-  
-  
+
   for(const auto& l: loc_layer){
     std::string layer_name = l.second;
     bool layer_found = false;
     for (const auto& js_layer : js_layers.GetArray()){
       if(js_layer.HasMember("name") && js_layer["name"]==layer_name){
-        std::unique_ptr<Layer> l(new Layer);
-        l->m_fw.reset(new FirmwarePortal(FirmwarePortal::Stringify(js_layer["ctrl_link"])));
-        l->m_rd.reset(new AltelReader(FirmwarePortal::Stringify(js_layer["data_link"])));
-        l->m_name=layer_name;
+        std::string ly_name=layer_name;
+        std::string ly_host=js_layer["data_link"]["options"]["ip"].GetString();
+        short int ly_port=js_layer["data_link"]["options"]["port"].GetUint();
+        std::unique_ptr<Layer> l(new Layer(ly_name, ly_host, ly_port));
         m_vec_layer.push_back(std::move(l));
         layer_found = true;
         break;
@@ -93,12 +92,12 @@ Telescope::Telescope(const std::string& file_context){
 
   double energy=js_testbeam["energy"].GetDouble();
   std::fprintf(stdout, "Testbeam energy:  %.1f\n", energy);
-  
+
   if(!m_js_telescope.HasMember("config")){
       std::fprintf(stderr, "JSON configure file error: no telescope config \n");
       throw;
   }
-  
+
   const auto& js_tele_conf = m_js_telescope["config"];
   for(auto &l: m_vec_layer){
     std::string name = l->m_name;
@@ -106,7 +105,9 @@ Telescope::Telescope(const std::string& file_context){
       std::fprintf(stderr, "JSON configure file error: no config %s \n", name.c_str());
       throw;
     }
-    l->m_js_conf.CopyFrom(js_tele_conf[name], l->m_jsa);
+    // hotmask
+    // js_tele_conf[name][]
+    // l->m_js_conf.CopyFrom(js_tele_conf[name], l->m_jsa);
   }
 
 }
@@ -117,8 +118,8 @@ Telescope::~Telescope(){
 
 std::vector<DataFrameSP> Telescope::ReadEvent(){
   std::vector<DataFrameSP> ev_sync;
-  if (!m_is_running) return ev_sync;  
-  
+  if (!m_is_running) return ev_sync;
+
   uint32_t trigger_n = -1;
   for(auto &l: m_vec_layer){
     if( l->Size() == 0){
@@ -133,13 +134,13 @@ std::vector<DataFrameSP> Telescope::ReadEvent(){
   }
 
   for(auto &l: m_vec_layer){
-    auto &ev_front = l->Front(); 
+    auto &ev_front = l->Front();
     if(ev_front->GetTrigger() == trigger_n){
       ev_sync.push_back(ev_front);
       l->PopFront();
     }
   }
-  
+
   if(ev_sync.size() < m_vec_layer.size() ){
     std::cout<< "dropped assambed event with subevent less than requried "<< m_vec_layer.size() <<" sub events" <<std::endl;
     std::string dev_numbers;
@@ -171,10 +172,7 @@ std::vector<DataFrameSP> Telescope::ReadEvent_Lastcopy(){
 
 void Telescope::Init(){
   for(auto & l: m_vec_layer){
-    l->fw_init();
-  }
-  for(auto & l: m_vec_layer){
-    l->fw_conf();
+    l->init();
   }
 }
 
@@ -182,16 +180,9 @@ void Telescope::Start(){
   m_st_n_ev = 0;
   m_mon_ev_read = 0;
   m_mon_ev_write = 0;
-  // for(auto & l: m_vec_layer){
-  //   l->fw_conf();
-  // }
 
   for(auto & l: m_vec_layer){
-    l->rd_start();
-  }
-
-  for(auto & l: m_vec_layer){
-    l->fw_start();
+    l->start();
   }
   std::fprintf(stdout, "tel_start \n");
 
@@ -209,11 +200,7 @@ void Telescope::Start_no_tel_reading(){ // TO be removed,
   m_mon_ev_write = 0;
 
   for(auto & l: m_vec_layer){
-    l->rd_start();
-  }
-
-  for(auto & l: m_vec_layer){
-    l->fw_start();
+    l->start();
   }
 
   if(!m_is_async_watching){
@@ -231,19 +218,12 @@ void Telescope::Stop(){
   m_is_async_watching = false;
   if(m_fut_async_watch.valid())
     m_fut_async_watch.get();
-  
-  for(auto & l: m_vec_layer){
-    l->fw_stop();
-  }
-  
-  for(auto & l: m_vec_layer){
-    l->rd_stop();
-  }
+
 
   for(auto & l: m_vec_layer){
-    l->ClearBuffer();
+    l->stop();
   }
-  
+
   m_is_running = false;
 }
 
@@ -275,7 +255,7 @@ uint64_t Telescope::AsyncRead(){
     else{
       std::fwrite(reinterpret_cast<const char *>(",\n"), 1, 2, fd);
     }
-    
+
     js_writer.Reset(js_sb);
     js_writer.StartObject();
     if(m_flag_next_event_add_conf){
@@ -292,7 +272,7 @@ uint64_t Telescope::AsyncRead(){
       m_js_status.Accept(js_writer);
       m_count_st_js_read ++;
     }
-    
+
     rapidjson::PutN(js_sb, '\n', 1);
     js_writer.String("layers");
     js_writer.StartArray();
@@ -308,11 +288,11 @@ uint64_t Telescope::AsyncRead(){
     auto n_ch = js_sb.GetSize();
     std::fwrite(reinterpret_cast<const char *>(p_ch), 1, n_ch, fd);
   }
-  
+
   std::fwrite(reinterpret_cast<const char *>("]"), 1, 2, fd);
   fclose(fd);
   std::fprintf(stdout, "Tele: disk file closed\n");
-  std::fprintf(stdout,"- %s  %lu Events\n", data_path.c_str(), n_ev); 
+  std::fprintf(stdout,"- %s  %lu Events\n", data_path.c_str(), n_ev);
   return n_ev;
 }
 
@@ -324,12 +304,12 @@ uint64_t Telescope::AsyncWatchDog(){
     for(auto &l: m_vec_layer){
       std::string l_status = l->GetStatusString();
       std::fprintf(stdout, "%s\n", l_status.c_str());
-      
+
       rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> name;
       rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> value;
       name.SetString(l->m_name, m_jsa);
       value.SetString(l_status, m_jsa);
-      js_status.AddMember(std::move(name), std::move(value), m_jsa);      
+      js_status.AddMember(std::move(name), std::move(value), m_jsa);
     }
     uint64_t st_n_ev = m_st_n_ev;
     std::fprintf(stdout, "Tele: disk saved events(%lu) \n\n", st_n_ev);
@@ -340,7 +320,7 @@ uint64_t Telescope::AsyncWatchDog(){
       std::string now_str = TimeNowString("%Y-%m-%d %H:%M:%S");
       js_status.AddMember("time", std::move(now_str), m_jsa);
       m_js_status = std::move(js_status);
-      m_count_st_js_write ++;      
+      m_count_st_js_write ++;
     }
   }
   //sleep and watch running time status;

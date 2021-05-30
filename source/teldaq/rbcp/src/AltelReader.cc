@@ -72,7 +72,7 @@ AltelReader::AltelReader(const std::string& json_str)
   else{
     std::fprintf(stderr, "ERROR<%s>: Unknown reader protocol: %s\n",   __func__,  js_proto.GetString());
     throw;
-  }  
+  }
 }
 
 AltelReader::AltelReader(const rapidjson::GenericValue<rapidjson::UTF8<>, rapidjson::CrtAllocator> &js){
