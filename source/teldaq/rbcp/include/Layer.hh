@@ -6,6 +6,8 @@
 #include <cstdio>
 
 #include "DataFrame.hh"
+
+#include "TelEvent.hpp"
 #include "TcpConnection.hh"
 
 #include "myrapidjson.h"
@@ -68,9 +70,11 @@ public:
     std::string GetStatusString();
     uint64_t AsyncWatchDog();
 
+    static std::shared_ptr<altel::TelEvent> createTelEvent(const std::string& raw);
+
     std::string m_name;
     std::string m_host;
     short int m_port;
-
+    std::vector<std::pair<uint16_t, uint16_t>> m_hots;
   };
 }

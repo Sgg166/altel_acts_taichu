@@ -155,7 +155,7 @@ void DataFrame::fromRaw(const std::string &raw, uint32_t level){
         uint16_t y = addr>>1;
         uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)!=((addr>>1)&0b1));
         debug_print("[%hu, %hu, %hhu]\n", x, y, deviceId);
-        
+        pool.addHit(x, y, m_extension);
         continue;
       }
       debug_print("//00    DATA LONG\n"); // 3 bytes
@@ -180,7 +180,6 @@ void DataFrame::fromRaw(const std::string &raw, uint32_t level){
           uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr_l&0b1)!=((addr_l>>1)&0b1));
           debug_print("[%hu, %hu, %hhu] ", x, y, deviceId);
           pool.addHit(x, y, m_extension);
-
         }
       }
       debug_print("\n");
@@ -190,7 +189,6 @@ void DataFrame::fromRaw(const std::string &raw, uint32_t level){
 
   pool.buildClusters();
   m_clusters = std::move(pool.m_clusters);
-
   return;
 }
 

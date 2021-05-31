@@ -3,6 +3,21 @@
 #include "Layer.hh"
 #include "FirmwarePortal.hh"
 
+
+
+#ifndef DEBUG_PRINT
+#define DEBUG_PRINT 0
+#endif
+#define debug_print(fmt, ...)                                           \
+  do { if (DEBUG_PRINT) std::fprintf(stdout, fmt, ##__VA_ARGS__); } while (0)
+
+#ifndef INFO_PRINT
+#define INFO_PRINT 0
+#endif
+#define info_print(fmt, ...)                                           \
+  do { if (INFO_PRINT) std::fprintf(stdout, fmt, ##__VA_ARGS__); } while (0)
+
+
 //using namespace std::chrono_literals;
 using namespace altel;
 
@@ -73,6 +88,17 @@ void Layer::init(){
   strbuf = ssbuf.str();
   m_conn->sendRaw(strbuf.data(), strbuf.size());
 
+  // for(const auto &hot: js_hotmask.GetArray()){
+  //   uint16_t  x = hot[0].GetUint16();
+  //   uint16_t  y = hot[1].GetUint16();
+  //   uint32_t xy = x<<16 + y;
+
+  //   NetMsg daqMsg{NetMsg::daqcmd, 100, xy, 1, {}};
+  //   ssbuf.str(std::string());
+  //   msgpack::pack(ssbuf, daqMsg);
+  //   strbuf = ssbuf.str();
+  //   m_conn->sendRaw(strbuf.data(), strbuf.size());
+  // }
 }
 
 int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // IMPROVE IT AS A RING
@@ -93,7 +119,7 @@ int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // I
     return 0;
   }
 
-  std::cout<< "bin "<<TcpConnection::binToHexString(netmsg.bin.data(),netmsg.bin.size())<<std::endl;
+  // std::cout<< "bin "<<TcpConnection::binToHexString(netmsg.bin.data(),netmsg.bin.size())<<std::endl;
   if(netmsg.type!=NetMsg::Type::data){
     std::cout<< "unknown msg type"<<std::endl;
   }
@@ -109,7 +135,7 @@ int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // I
     return 0;
   }
   uint16_t tg_l16 = 0xffff & df->GetCounter();
-  //std::cout<< "id "<< tg_l16 <<"  ";
+  // std::cout<< "id "<< tg_l16 <<std::endl;
   if(m_flag_wait_first_event){
     m_flag_wait_first_event = false;
     m_extension = df->GetExtension() ;
@@ -121,15 +147,15 @@ int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // I
     uint32_t tg_guess_0 = (m_tg_expected & 0xffff0000) + tg_l16;
     uint32_t tg_guess_1 = (m_tg_expected & 0xffff0000) + 0x10000 + tg_l16;
     if(tg_guess_0 > m_tg_expected && tg_guess_0 - m_tg_expected < 200){
-      // std::cout<< "missing trigger, expecting : provided "<< (tg_expected & 0xffff) << " : "<< tg_l16<<" ("<< m_extension <<") \n";
+      std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<" ("<< m_extension <<") \n";
       m_tg_expected =tg_guess_0;
     }
     else if (tg_guess_1 > m_tg_expected && tg_guess_1 - m_tg_expected < 200){
-      // std::cout<< "missing trigger, expecting : provided "<< (tg_expected & 0xffff) << " : "<< tg_l16<<" ("<< m_extension <<") \n";
+      std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<" ("<< m_extension <<") \n";
       m_tg_expected =tg_guess_1;
     }
     else{
-      // std::cout<< "broken trigger ID, expecting : provided "<< (tg_expected & 0xffff) << " : "<< tg_l16<<" ("<<df->GetExtension() <<") \n";
+      std::cout<< "broken trigger ID, expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<" ("<<df->GetExtension() <<") \n";
       m_tg_expected ++;
       m_st_n_ev_bad_now ++;
       // permanent data lose
@@ -254,3 +280,165 @@ uint64_t Layer::AsyncWatchDog(){
   }
   return 0;
 }
+
+
+std::shared_ptr<altel::TelEvent> Layer::createTelEvent(const std::string& raw){
+  uint32_t runN = 0;
+  uint32_t eventN = 0;
+  uint32_t triggerN = 0;
+  uint32_t deviceN = 0;
+  std::shared_ptr<altel::TelEvent> telev;
+  std::vector<altel::TelMeasRaw> alpideMeasRaws;
+
+  const uint8_t* p_raw_beg = reinterpret_cast<const uint8_t *>(raw.data());
+  const uint8_t* p_raw = p_raw_beg;
+  if(raw.size()<16){
+    std::fprintf(stderr, "raw data length is less than 16\n");
+    throw;
+  }
+  if( *p_raw_beg!=0x5a){
+    std::fprintf(stderr, "package header/trailer mismatch, head<%hhu>\n", *p_raw_beg);
+    throw;
+  }
+  p_raw++; //header
+  p_raw++; //resv
+  p_raw++; //resv
+
+  uint8_t deviceId = *p_raw;
+  deviceN=*p_raw;
+
+  debug_print(">>deviceId %hhu\n", deviceId);
+  p_raw++; //deviceId
+
+  uint32_t len_payload_data = *reinterpret_cast<const uint32_t*>(p_raw) & 0x00ffffff;
+  uint32_t len_pack_expected = (len_payload_data + 16) & -4;
+  if( len_pack_expected  != raw.size()){
+    std::fprintf(stderr, "raw data length does not match to package size\n");
+    std::fprintf(stderr, "payload_len = %u,  package_size = %zu\n",
+                 len_payload_data, raw.size());
+    throw;
+  }
+  p_raw += 4;
+
+  uint32_t triggerId = *reinterpret_cast<const uint16_t*>(p_raw);
+  debug_print(">>triggerId %u\n", triggerId);
+  triggerN  = *reinterpret_cast<const uint16_t*>(p_raw);
+
+  p_raw += 4;
+
+  const uint8_t* p_payload_end = p_raw_beg + 12 + len_payload_data -1;
+  if( *(p_payload_end+1) != 0xa5 ){
+    std::fprintf(stderr, "package header/trailer mismatch, trailer<%hu>\n", *(p_payload_end+1) );
+    throw;
+  }
+
+  uint8_t l_frame_n = -1;
+  uint8_t l_region_id = -1;
+  while(p_raw <= p_payload_end){
+    char d = *p_raw;
+    if(d & 0b10000000){
+      debug_print("//1     NOT DATA\n");
+      if(d & 0b01000000){
+        debug_print("//11    EMPTY or REGION HEADER or BUSY_ON/OFF\n");
+        if(d & 0b00100000){
+          debug_print("//111   EMPTY or BUSY_ON/OFF\n");
+          if(d & 0b00010000){
+            debug_print("//1111  BUSY_ON/OFF\n");
+            p_raw++;
+            continue;
+          }
+          debug_print("//1110  EMPTY\n");
+          uint8_t chip_id = d & 0b00001111;
+          l_frame_n++;
+          p_raw++;
+          d = *p_raw;
+          uint8_t bunch_counter_h = d;
+          p_raw++;
+          continue;
+        }
+        debug_print("//110   REGION HEADER\n");
+        l_region_id = d & 0b00011111;
+        debug_print(">>region_id %hhu\n", l_region_id);
+        p_raw++;
+        continue;
+      }
+      debug_print("//10    CHIP_HEADER/TRAILER or UNDEFINED\n");
+      if(d & 0b00100000){
+        debug_print("//101   CHIP_HEADER/TRAILER\n");
+        if(d & 0b00010000){
+          debug_print("//1011  TRAILER\n");
+          uint8_t readout_flag= d & 0b00001111;
+          p_raw++;
+          continue;
+        }
+        debug_print("//1010  HEADER\n");
+        uint8_t chip_id = d & 0b00001111;
+        l_frame_n++;
+        p_raw++;
+        d = *p_raw;
+        uint8_t bunch_counter_h = d;
+        p_raw++;
+        continue;
+      }
+      debug_print("//100   UNDEFINED\n");
+      p_raw++;
+      continue;
+    }
+    else{
+      debug_print("//0     DATA\n");
+      if(d & 0b01000000){
+        debug_print("//01    DATA SHORT\n"); // 2 bytes
+        uint8_t encoder_id = (d & 0b00111100)>> 2;
+        uint16_t addr = (d & 0b00000011)<<8;
+        p_raw++;
+        d = *p_raw;
+        addr += *p_raw;
+        p_raw++;
+
+        uint16_t y = addr>>1;
+        uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)!=((addr>>1)&0b1));
+        debug_print("[%hu, %hu, %hhu]\n", x, y, deviceId);
+        alpideMeasRaws.emplace_back(x, y, deviceN, triggerN);
+        continue;
+      }
+      debug_print("//00    DATA LONG\n"); // 3 bytes
+      uint8_t encoder_id = (d & 0b00111100)>> 2;
+      uint16_t addr = (d & 0b00000011)<<8;
+      p_raw++;
+      d = *p_raw;
+      addr += *p_raw;
+      p_raw++;
+      d = *p_raw;
+      uint8_t hit_map = (d & 0b01111111);
+      p_raw++;
+      uint16_t y = addr>>1;
+      uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)!=((addr>>1)&0b1));
+      debug_print("[%hu, %hu, %hhu] ", x, y, deviceId);
+      alpideMeasRaws.emplace_back(x, y, deviceN, triggerN);
+
+      for(int i=1; i<=7; i++){
+        if(hit_map & (1<<(i-1))){
+          uint16_t addr_l = addr + i;
+          uint16_t y = addr_l>>1;
+          uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr_l&0b1)!=((addr_l>>1)&0b1));
+          debug_print("[%hu, %hu, %hhu] ", x, y, deviceId);
+          alpideMeasRaws.emplace_back(x, y, deviceN, triggerN);
+        }
+      }
+      debug_print("\n");
+      continue;
+    }
+  }
+
+  auto alpideMeasHits = altel::TelMeasHit::clustering_UVDCus(alpideMeasRaws,
+                                                             0.02924,
+                                                             0.02688,
+                                                             -0.02924*(1024-1)*0.5,
+                                                             -0.02688*(512-1)*0.5);
+
+  telev.reset(new altel::TelEvent(runN, eventN, deviceN, triggerN));
+  telev->measRaws().insert(telev->measRaws().end(), alpideMeasRaws.begin(), alpideMeasRaws.end());
+  telev->measHits().insert(telev->measHits().end(), alpideMeasHits.begin(), alpideMeasHits.end());
+  return telev;
+}
+

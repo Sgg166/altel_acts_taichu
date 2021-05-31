@@ -110,6 +110,19 @@ target_link_libraries(altelMilleBin
 
 
 
+add_executable(altelTcpClient altelTcpClient.cpp)
+list(APPEND EXE_TARGET_LIST altelTcpClient)
+target_link_libraries(altelTcpClient
+  PRIVATE
+  altel-data-event
+  altel-data-root
+  altel-data-eudaq
+  altel-rbcp
+  mycommon
+  ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  ROOT::MathCore
+  )
+
+
 install(FILES altelTTreeExampleReader.C DESTINATION bin)
 
 # install-tree

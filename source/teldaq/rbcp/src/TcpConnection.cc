@@ -64,10 +64,9 @@ uint64_t TcpConnection::threadConnRecv(FunProcessMessage processMessage, void* p
       std::printf("connection is closed by remote peer\n");
       break;
     }
-    if(count>0){
-      std::cout<<"get bytes "<<count<<std::endl;
-    }
-
+    // if(count>0){
+    //   std::cout<<"get bytes "<<count<<std::endl;
+    // }
     unp.buffer_consumed(count);
     while (unp.next(oh)){
       int re = (*processMessage)(pobj, this, oh);

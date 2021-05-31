@@ -4,6 +4,7 @@
 #include "mysystem.hh"
 
 #include <vector>
+#include <iostream>
 
 namespace altel{
 
@@ -87,10 +88,10 @@ namespace altel{
     inline void addHit(uint16_t x, uint16_t y, uint16_t z){
       m_hits.emplace_back(x, y, z);
     }
-    void buildClusters();  
+    void buildClusters();
     std::vector<PixelHit> m_hits;
-    std::vector<ClusterHit> m_clusters;  
+    std::vector<ClusterHit> m_clusters;
   };
-  
+
 }
 #endif

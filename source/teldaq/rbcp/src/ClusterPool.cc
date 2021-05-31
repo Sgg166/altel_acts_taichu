@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include <iostream>
+
 using namespace altel;
 
 void ClusterPool::buildClusters(){
@@ -15,7 +17,7 @@ void ClusterPool::buildClusters(){
     // from un-identifed hit to edge hit
     hit_col_this_cluster_edge.push_back(hit_col_remain[0]);
     hit_col_remain.erase(hit_col_remain.begin());
-      
+
     while(!hit_col_this_cluster_edge.empty()){
       auto ph_e = hit_col_this_cluster_edge[0];
       uint64_t e = ph_e.index();
@@ -44,11 +46,14 @@ void ClusterPool::buildClusters(){
       // move from edge hit to cluster hit
       hit_col_this_cluster.push_back(e);
       hit_col_this_cluster_edge.erase(hit_col_this_cluster_edge.begin());  
-    } 
+    }
     m_clusters.emplace_back(std::move(hit_col_this_cluster));
   }
 
   for(auto &c : m_clusters){
     c.buildClusterCenter();
   }
+
+
+  
 }

@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
-SOURCE_DIR=/home/teleuser/tmp/altel_eudaq
+# SOURCE_DIR=/home/teleuser/tmp/altel_eudaq
 BIN_DIR=/home/teleuser/tmp/INSTALL/bin
 
 MY_IP=localhost
 
 #cp  $SOURCE_DIR/source/eudaq/misc/* /tmp
 #cp  $SOURCE_DIR/source/lib/misc/*   /tmp
+
+cp /mnt/tbwork/TB2105/altel_acts/source/teldaq/eudaq/misc /tmp
 
 killall -q xterm
 

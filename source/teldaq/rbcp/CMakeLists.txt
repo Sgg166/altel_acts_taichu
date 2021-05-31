@@ -2,7 +2,7 @@ add_subdirectory(rbcp)
 
 aux_source_directory(src LIB_SRC)
 add_library(altel-rbcp STATIC ${LIB_SRC} )
-target_link_libraries(altel-rbcp PUBLIC mycommon PRIVATE rbcp)
+target_link_libraries(altel-rbcp PUBLIC mycommon  altel-data-event PRIVATE rbcp)
 
 function(create_cpp_raw_string)
   if( (${ARGC} LESS 2) OR (${ARGC} GREATER 3 ) )
