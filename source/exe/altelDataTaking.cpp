@@ -22,9 +22,6 @@
 #include "TelFW.hh"
 #include "glfw_test.hh"
 
-#include "eudaq/FileReader.hh"
-#include "CvtEudaqAltelRaw.hh"
-
 static const std::string default_geometry = R"(
 {"geometry": {"detectors": [
     {"id": 0, "size": {"x": 29.94176,"y": 13.76256,"z": 1.0}, "pitch": {"x": 0.02924,"y": 0.02688,"z": 1.0},
@@ -184,53 +181,9 @@ int main(int argc, char *argv[]) {
   m_tel->Start_no_tel_reading();
 
   while(!g_done){
-    auto ev_tel = m_tel->ReadEvent();
-    if(ev_tel.empty()){
-      std::this_thread::sleep_for(std::chrono::microseconds(100));
-      continue;
-    }
-    std::shared_ptr<eudaq::Event> eudaqEvent = eudaq::Event::MakeUnique("AltelRaw");
-    uint64_t trigger_n = ev_tel.front()->GetTrigger();
-    eudaqEvent->SetTriggerN(trigger_n);
-
-    std::map<uint32_t, uint32_t> map_layer_clusterN;
-
-    for(auto& e: ev_tel){
-      uint32_t word32_count  = 2; // layerID_uint32, cluster_n_uint32
-      for(auto &ch : e->m_clusters){
-        word32_count += 3; // x_float, y_float , pixel_n_uint32
-        word32_count += ch.pixelHits.size(); // pixel_xy_uint32,
-      }
-      std::vector<uint32_t> layer_block(word32_count);
-      uint32_t* p_block = layer_block.data();
-      uint32_t layerID = e->GetExtension();
-      *p_block =  layerID;
-      p_block++;
-      uint32_t clusters_size = e->m_clusters.size();
-      *p_block = e->m_clusters.size();
-      p_block ++;
-      for(auto &ch : e->m_clusters){
-        *(reinterpret_cast<float*>(p_block)) = ch.x();
-        p_block ++;
-        *(reinterpret_cast<float*>(p_block)) = ch.y();
-        p_block ++;
-        *p_block = ch.pixelHits.size();
-        p_block ++;
-        for(auto &ph : ch.pixelHits){
-          // Y<< 16 + X
-          *p_block =  uint32_t(ph.x()) + (uint32_t(ph.y())<<16);
-          p_block ++;
-        }
-      }
-      if(p_block - layer_block.data() != layer_block.size()){
-        std::cerr<<"error altel data block"<<std::endl;
-        throw;
-      }
-      map_layer_clusterN[layerID]= clusters_size;
-      eudaqEvent->AddBlock(layerID, layer_block);
-    }
-    std::shared_ptr<altel::TelEvent> telEvent = altel::createTelEvent(eudaqEvent);
+    auto telEvent = m_tel->ReadEvent();
     if(!telEvent){
+      std::this_thread::sleep_for(std::chrono::microseconds(100));
       continue;
     }
     if(telEvent->measRaws().empty() && telEvent->measHits().empty() && telEvent->trajs().empty()){

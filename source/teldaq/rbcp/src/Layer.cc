@@ -1,9 +1,8 @@
 
 #include <regex>
+#include <iostream>
+
 #include "Layer.hh"
-#include "FirmwarePortal.hh"
-
-
 
 #ifndef DEBUG_PRINT
 #define DEBUG_PRINT 0
@@ -18,7 +17,6 @@
   do { if (INFO_PRINT) std::fprintf(stdout, fmt, ##__VA_ARGS__); } while (0)
 
 
-//using namespace std::chrono_literals;
 using namespace altel;
 
 Layer::~Layer(){
@@ -88,17 +86,6 @@ void Layer::init(){
   strbuf = ssbuf.str();
   m_conn->sendRaw(strbuf.data(), strbuf.size());
 
-  // for(const auto &hot: js_hotmask.GetArray()){
-  //   uint16_t  x = hot[0].GetUint16();
-  //   uint16_t  y = hot[1].GetUint16();
-  //   uint32_t xy = x<<16 + y;
-
-  //   NetMsg daqMsg{NetMsg::daqcmd, 100, xy, 1, {}};
-  //   ssbuf.str(std::string());
-  //   msgpack::pack(ssbuf, daqMsg);
-  //   strbuf = ssbuf.str();
-  //   m_conn->sendRaw(strbuf.data(), strbuf.size());
-  // }
 }
 
 int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // IMPROVE IT AS A RING
@@ -125,7 +112,11 @@ int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // I
   }
 
   std::string datastr(netmsg.bin.data(),netmsg.bin.size());
-  auto df = std::make_shared<DataFrame>(std::move(datastr));
+  auto df = altel::Layer::createTelEvent(datastr);
+  if(!df){
+    std::cout<< "fatal error: fail to create telev"<<std::endl;
+    return 0;
+  }
 
   m_st_n_ev_input_now ++;
   uint64_t next_p_ring_write = m_count_ring_write % m_size_ring;
@@ -134,11 +125,11 @@ int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // I
     m_st_n_ev_overflow_now ++;
     return 0;
   }
-  uint16_t tg_l16 = 0xffff & df->GetCounter();
+  uint16_t tg_l16 = 0xffff & df->clkN();
   // std::cout<< "id "<< tg_l16 <<std::endl;
   if(m_flag_wait_first_event){
     m_flag_wait_first_event = false;
-    m_extension = df->GetExtension() ;
+    m_extension = df->detN() ;
     m_tg_expected = tg_l16;
     m_st_n_tg_ev_begin = m_tg_expected;
   }
@@ -155,7 +146,7 @@ int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // I
       m_tg_expected =tg_guess_1;
     }
     else{
-      std::cout<< "broken trigger ID, expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<" ("<<df->GetExtension() <<") \n";
+      std::cout<< "broken trigger ID, expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<" ("<<df->detN() <<") \n";
       m_tg_expected ++;
       m_st_n_ev_bad_now ++;
       // permanent data lose
@@ -163,7 +154,7 @@ int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // I
     }
   }
   //TODO: fix tlu firmware, mismatch between modes AIDA start at 1, EUDET start at 0
-  df->SetTrigger(m_tg_expected);
+  df->clkN() = m_tg_expected;
   m_st_n_tg_ev_now = m_tg_expected;
 
   m_vec_ring_ev[next_p_ring_write] = df;
@@ -178,7 +169,7 @@ std::string  Layer::GetStatusString(){
   return m_st_string;
 }
 
-DataFrameSP& Layer::Front(){
+TelEventSP& Layer::Front(){
   if(m_count_ring_write > m_count_ring_read) {
     uint64_t next_p_ring_read = m_count_ring_read % m_size_ring;
     m_hot_p_read = next_p_ring_read;
@@ -260,11 +251,11 @@ uint64_t Layer::AsyncWatchDog(){
     double st_hz_tg_period = st_n_tg_ev_period / sec_period ;
     double st_hz_input_period = st_n_ev_input_period / sec_period ;
 
-    std::string st_string_new =
-      FirmwarePortal::FormatString("L<%u> event(%d)/trigger(%d - %d)=Ev/Tr(%.4f) dEv/dTr(%.4f) tr_accu(%.2f hz) ev_accu(%.2f hz) tr_period(%.2f hz) ev_period(%.2f hz)",
-                                   m_extension, st_n_ev_input_now, st_n_tg_ev_now, st_n_tg_ev_begin, st_input_vs_trigger_accu, st_input_vs_trigger_period,
-                                   st_hz_tg_accu, st_hz_input_accu, st_hz_tg_period, st_hz_input_period
-                                   );
+    std::string st_string_new ="";
+      // FirmwarePortal::FormatString("L<%u> event(%d)/trigger(%d - %d)=Ev/Tr(%.4f) dEv/dTr(%.4f) tr_accu(%.2f hz) ev_accu(%.2f hz) tr_period(%.2f hz) ev_period(%.2f hz)",
+      //                              m_extension, st_n_ev_input_now, st_n_tg_ev_now, st_n_tg_ev_begin, st_input_vs_trigger_accu, st_input_vs_trigger_period,
+      //                              st_hz_tg_accu, st_hz_input_accu, st_hz_tg_period, st_hz_input_period
+      //                              );
 
     {
       std::unique_lock<std::mutex> lk(m_mtx_st);
@@ -281,13 +272,11 @@ uint64_t Layer::AsyncWatchDog(){
   return 0;
 }
 
-
 std::shared_ptr<altel::TelEvent> Layer::createTelEvent(const std::string& raw){
   uint32_t runN = 0;
   uint32_t eventN = 0;
   uint32_t triggerN = 0;
   uint32_t deviceN = 0;
-  std::shared_ptr<altel::TelEvent> telev;
   std::vector<altel::TelMeasRaw> alpideMeasRaws;
 
   const uint8_t* p_raw_beg = reinterpret_cast<const uint8_t *>(raw.data());
@@ -436,9 +425,9 @@ std::shared_ptr<altel::TelEvent> Layer::createTelEvent(const std::string& raw){
                                                              -0.02924*(1024-1)*0.5,
                                                              -0.02688*(512-1)*0.5);
 
+  std::shared_ptr<altel::TelEvent> telev;
   telev.reset(new altel::TelEvent(runN, eventN, deviceN, triggerN));
   telev->measRaws().insert(telev->measRaws().end(), alpideMeasRaws.begin(), alpideMeasRaws.end());
   telev->measHits().insert(telev->measHits().end(), alpideMeasHits.begin(), alpideMeasHits.end());
   return telev;
 }
-

@@ -61,30 +61,24 @@ int main(int argc, char *argv[]) {
         continue;
       }
       else{
-        uint32_t trigger_n_ev = l->Front()->GetTrigger();
+        uint32_t trigger_n_ev = l->Front()->clkN();
         if(trigger_n_ev< trigger_n)
           trigger_n = trigger_n_ev;
       }
     }
 
-    std::vector<altel::DataFrameSP> ev_sync;
+    std::vector<altel::TelEventSP> ev_sync;
     for(auto &l: g_layers){
       auto &ev_front = l->Front();
       // if(ev_front) l->PopFront();
-      if(ev_front && ev_front->GetTrigger() == trigger_n){
+      if(ev_front && ev_front->clkN() == trigger_n){
         ev_sync.push_back(ev_front);
         l->PopFront();
       }
     }
 
     auto telev_sync = std::make_shared<altel::TelEvent>(0, eventN, 0, trigger_n);
-    for(auto &ev: ev_sync){
-      if(ev->m_raw.size()!=16){
-        std::cout<< "bin "<<TcpConnection::binToHexString(ev->m_raw.data(),ev->m_raw.size())<<std::endl;
-        ev->Print(std::cout, 0);
-        std::cout<<std::endl;
-      }
-      auto telev = altel::Layer::createTelEvent(ev->m_raw);
+    for(auto &telev: ev_sync){
       telev_sync->MRs.insert(telev_sync->MRs.end(), telev->MRs.begin(),telev->MRs.end());
       telev_sync->MHs.insert(telev_sync->MHs.end(), telev->MHs.begin(),telev->MHs.end());
     }
@@ -106,4 +100,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-

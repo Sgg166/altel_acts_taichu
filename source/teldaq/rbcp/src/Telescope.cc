@@ -1,6 +1,10 @@
-#include "Telescope.hh"
 
 #include <regex>
+#include <iostream>
+
+
+#include "Telescope.hh"
+
 
 //using namespace std::chrono_literals;
 using namespace altel;
@@ -116,58 +120,68 @@ Telescope::~Telescope(){
   Stop();
 }
 
-std::vector<DataFrameSP> Telescope::ReadEvent(){
-  std::vector<DataFrameSP> ev_sync;
-  if (!m_is_running) return ev_sync;
+TelEventSP Telescope::ReadEvent(){
+  if (!m_is_running) return nullptr;
 
   uint32_t trigger_n = -1;
   for(auto &l: m_vec_layer){
     if( l->Size() == 0){
       // TODO check cached size of all layers
-      return ev_sync;
+      return nullptr;
     }
     else{
-      uint32_t trigger_n_ev = l->Front()->GetTrigger();
+      uint32_t trigger_n_ev = l->Front()->clkN();
       if(trigger_n_ev< trigger_n)
         trigger_n = trigger_n_ev;
     }
   }
 
+  std::vector<TelEventSP> sub_events;
   for(auto &l: m_vec_layer){
     auto &ev_front = l->Front();
-    if(ev_front->GetTrigger() == trigger_n){
-      ev_sync.push_back(ev_front);
+    if(ev_front->clkN() == trigger_n){
+      sub_events.push_back(ev_front);
       l->PopFront();
     }
   }
 
-  if(ev_sync.size() < m_vec_layer.size() ){
+  if(sub_events.size() < m_vec_layer.size() ){
     std::cout<< "dropped assambed event with subevent less than requried "<< m_vec_layer.size() <<" sub events" <<std::endl;
     std::string dev_numbers;
-    for(auto & ev : ev_sync){
-      dev_numbers += std::to_string(ev->GetExtension());
+    for(auto & ev : sub_events){
+      dev_numbers += std::to_string(ev->detN());
       dev_numbers +=" ";
     }
-    std::cout<< "  tluID="<<trigger_n<<" subevent= "<< dev_numbers <<std::endl;
-    std::vector<DataFrameSP> empty;
-    return empty;
+    std::cout<< "  TID#"<<trigger_n<<" subevent= "<< dev_numbers <<std::endl;
+    return nullptr;
   }
+
+  uint32_t runN = 0;
+  uint32_t eventN =  m_st_n_ev;
+  uint32_t deviceN = 0;
+  uint32_t clockN = trigger_n;
+  auto telev_sync = std::make_shared<altel::TelEvent>(runN, eventN, deviceN, clockN);
+  for(auto &subev: sub_events){
+    telev_sync->MRs.insert(telev_sync->MRs.end(), subev->MRs.begin(),subev->MRs.end());
+    telev_sync->MHs.insert(telev_sync->MHs.end(), subev->MHs.begin(),subev->MHs.end());
+  }
+
   if(m_mon_ev_read == m_mon_ev_write){
-    m_ev_last=ev_sync;
+    m_ev_last=telev_sync;
     m_mon_ev_write ++;
   }
   m_st_n_ev ++;
-  return ev_sync;
+  return telev_sync;
 }
 
-std::vector<DataFrameSP> Telescope::ReadEvent_Lastcopy(){
+TelEventSP Telescope::ReadEvent_Lastcopy(){
   if(m_mon_ev_write > m_mon_ev_read){
-    std::vector<DataFrameSP> re_ev_last = m_ev_last;
+    auto re_ev_last = m_ev_last;
     m_mon_ev_read ++;
     return re_ev_last;
   }
   else
-    return m_ev_last_empty;
+    return nullptr;
 }
 
 void Telescope::Init(){
@@ -232,67 +246,16 @@ uint64_t Telescope::AsyncRead(){
   auto now_c = std::chrono::system_clock::to_time_t(now);
   std::string now_str = TimeNowString("%y%m%d%H%M%S");
   std::string data_path = "data/alpide_"+now_str+".json";
-  FILE* fd = fopen(data_path.c_str(), "wb");
-  rapidjson::StringBuffer js_sb;
-  rapidjson::Writer<rapidjson::StringBuffer> js_writer;
-  js_writer.SetMaxDecimalPlaces(5);
   uint64_t n_ev = 0;
-  m_flag_next_event_add_conf = true;
   m_is_async_reading = true;
   while (m_is_async_reading){
-    auto ev = ReadEvent();
-    if(ev.empty()){
+    auto telev = ReadEvent();
+    if(!telev){
       std::this_thread::sleep_for(std::chrono::microseconds(100));
       continue;
     }
-
     n_ev ++;
-    //continue;
-    js_sb.Clear();
-    if(n_ev == 1){
-      std::fwrite(reinterpret_cast<const char *>("[\n"), 1, 2, fd);
-    }
-    else{
-      std::fwrite(reinterpret_cast<const char *>(",\n"), 1, 2, fd);
-    }
-
-    js_writer.Reset(js_sb);
-    js_writer.StartObject();
-    if(m_flag_next_event_add_conf){
-      rapidjson::PutN(js_sb, '\n', 1);
-      js_writer.String("testbeam");
-      m_js_testbeam.Accept(js_writer);
-      js_writer.String("telescope");
-      m_js_telescope.Accept(js_writer);
-      m_flag_next_event_add_conf = false;
-    }
-    if(m_count_st_js_write > m_count_st_js_read){
-      rapidjson::PutN(js_sb, '\n', 1);
-      js_writer.String("status");
-      m_js_status.Accept(js_writer);
-      m_count_st_js_read ++;
-    }
-
-    rapidjson::PutN(js_sb, '\n', 1);
-    js_writer.String("layers");
-    js_writer.StartArray();
-    for(auto& e: ev){
-      auto js_e = e->JSON(m_jsa);
-      js_e.Accept(js_writer);
-      rapidjson::PutN(js_sb, '\n', 1);
-    }
-    js_writer.EndArray();
-    js_writer.EndObject();
-    rapidjson::PutN(js_sb, '\n', 1);
-    auto p_ch = js_sb.GetString();
-    auto n_ch = js_sb.GetSize();
-    std::fwrite(reinterpret_cast<const char *>(p_ch), 1, n_ch, fd);
   }
-
-  std::fwrite(reinterpret_cast<const char *>("]"), 1, 2, fd);
-  fclose(fd);
-  std::fprintf(stdout, "Tele: disk file closed\n");
-  std::fprintf(stdout,"- %s  %lu Events\n", data_path.c_str(), n_ev);
   return n_ev;
 }
 
@@ -313,7 +276,6 @@ uint64_t Telescope::AsyncWatchDog(){
     }
     uint64_t st_n_ev = m_st_n_ev;
     std::fprintf(stdout, "Tele: disk saved events(%lu) \n\n", st_n_ev);
-    m_flag_next_event_add_conf = true;
 
     //TODO: make a json object to keep status;
     if(m_count_st_js_read == m_count_st_js_write){

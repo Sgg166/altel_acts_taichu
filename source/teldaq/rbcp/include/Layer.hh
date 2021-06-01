@@ -2,10 +2,9 @@
 
 #include <mutex>
 #include <future>
+#include <memory>
 
 #include <cstdio>
-
-#include "DataFrame.hh"
 
 #include "TelEvent.hpp"
 #include "TcpConnection.hh"
@@ -13,11 +12,14 @@
 #include "myrapidjson.h"
 
 namespace altel{
+
+  using TelEventSP = std::shared_ptr<TelEvent>;
+
   class Layer{
   public:
     std::future<uint64_t> m_fut_async_watch;
-    std::vector<DataFrameSP> m_vec_ring_ev;
-    DataFrameSP m_ring_end;
+    std::vector<TelEventSP> m_vec_ring_ev;
+    TelEventSP m_ring_end;
 
     uint64_t m_size_ring{200000};
     std::atomic<uint64_t> m_count_ring_write;
@@ -61,8 +63,7 @@ public:
     void init();
     int perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh);
 
-    DataFrameSP GetNextCachedEvent();
-    DataFrameSP& Front();
+    TelEventSP& Front();
     void PopFront();
     uint64_t Size();
     void ClearBuffer();
@@ -70,7 +71,7 @@ public:
     std::string GetStatusString();
     uint64_t AsyncWatchDog();
 
-    static std::shared_ptr<altel::TelEvent> createTelEvent(const std::string& raw);
+    static TelEventSP createTelEvent(const std::string& raw);
 
     std::string m_name;
     std::string m_host;

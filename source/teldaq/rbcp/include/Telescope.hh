@@ -1,12 +1,9 @@
-#ifndef _TELESCOPE_HH_
-#define _TELESCOPE_HH_
+#pragma once
 
 #include <mutex>
 #include <future>
 #include <cstdio>
 
-#include "FirmwarePortal.hh"
-#include "AltelReader.hh"
 #include "myrapidjson.h"
 #include "Layer.hh"
 
@@ -20,17 +17,16 @@ namespace altel{
     bool m_is_async_watching{false};
     bool m_is_running{false};
 
-    std::vector<DataFrameSP> m_ev_last;
-    std::vector<DataFrameSP> m_ev_last_empty;
+    TelEventSP m_ev_last;
     std::atomic<uint64_t> m_mon_ev_read{0};
     std::atomic<uint64_t> m_mon_ev_write{0};
-    std::vector<DataFrameSP> ReadEvent_Lastcopy();
+    TelEventSP ReadEvent_Lastcopy();
 
     std::atomic<uint64_t> m_st_n_ev{0};
 
     ~Telescope();
     Telescope(const std::string& file_context);
-    std::vector<DataFrameSP> ReadEvent();
+    TelEventSP ReadEvent();
 
     void Init();
     void Start();
@@ -39,15 +35,16 @@ namespace altel{
     uint64_t AsyncRead();
     uint64_t AsyncWatchDog();
 
-    bool m_flag_next_event_add_conf{true};
 
     rapidjson::CrtAllocator m_jsa;
     rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> m_js_testbeam;
+    // JsonDocument m_js_testeam;
     rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> m_js_telescope;
+    // JsonDocument m_js_telescope;
 
     rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  m_js_status;
+    // JsonDocument m_js_status;
     std::atomic<uint64_t> m_count_st_js_write{0};
     std::atomic<uint64_t> m_count_st_js_read{0};
   };
 }
-#endif
