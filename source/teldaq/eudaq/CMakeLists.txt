@@ -1,4 +1,4 @@
-add_subdirectory(legacy)
+# add_subdirectory(legacy)
 
 option(ALTEL_BUILD_EUDAQ_MODULE "build lagecy eudaq module (AltelProducer and Altel Converters)" ON)
 if(NOT ALTEL_BUILD_EUDAQ_MODULE)
@@ -65,4 +65,4 @@ install(TARGETS
   ARCHIVE DESTINATION lib)
 
 
-add_subdirectory(exe)
+# add_subdirectory(exe)

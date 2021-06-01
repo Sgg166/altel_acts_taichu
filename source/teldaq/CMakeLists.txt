@@ -1,2 +1,2 @@
 add_subdirectory(rbcp)
-# add_subdirectory(eudaq)
+add_subdirectory(eudaq)

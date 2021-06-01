@@ -7,8 +7,6 @@
 
 #include "Telescope.hh"
 
-
-
 template<typename ... Args>
 static std::string FormatString( const std::string& format, Args ... args ){
   std::size_t size = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1;
@@ -42,7 +40,6 @@ namespace altel{
     std::atomic<uint64_t> m_tg_n_last;
 
     std::chrono::system_clock::time_point m_tp_run_begin;
-
 
     uint64_t m_st_n_tg_old;
     std::chrono::system_clock::time_point m_st_tp_old;
@@ -106,62 +103,69 @@ void altel::AltelProducer::RunLoop(){
   m_exit_of_run = false;
   bool is_first_event = true;
   while(!m_exit_of_run){
-    auto ev_tel = m_tel->ReadEvent();
-    if(ev_tel.empty()){
+    auto telev = m_tel->ReadEvent();
+    if(!telev){
       std::this_thread::sleep_for(std::chrono::microseconds(100));
       continue;
     }
+
+    uint64_t trigger_n = telev->clkN();
+
     auto ev_eudaq = eudaq::Event::MakeUnique("AltelRaw");
-    uint64_t trigger_n = ev_tel.front()->GetTrigger();
     ev_eudaq->SetTriggerN(trigger_n);
 
-    std::map<uint32_t, uint32_t> map_layer_clusterN;
-
-    for(auto& e: ev_tel){
-      uint32_t word32_count  = 2; // layerID_uint32, cluster_n_uint32
-      for(auto &ch : e->m_clusters){
-        word32_count += 3; // x_float, y_float , pixel_n_uint32
-        word32_count += ch.pixelHits.size(); // pixel_xy_uint32,
+    std::map<uint32_t,  std::vector<std::shared_ptr<altel::TelMeasHit>>> map_layer_measHits;
+    for(auto& mh: telev->measHits()){
+      if(!mh){
+        continue;
       }
-      std::vector<uint32_t> layer_block(word32_count);
+      uint32_t detN = mh->detN();
+      map_layer_measHits[detN].push_back(mh);
+    }
+
+    for(auto& [detN, mhs]: map_layer_measHits){
+      uint32_t word32_count  = 2; // layerID_uint32, cluster_n_uint32
+      for(auto& mh : mhs){
+        word32_count += 3; // x_float, y_float , pixel_n_uint32
+        word32_count += mh->measRaws().size(); // pixel_xy_uint32
+      }
+
+      std::vector<uint32_t>  layer_block(word32_count);
       uint32_t* p_block = layer_block.data();
-      uint32_t layerID = e->GetExtension();
-      *p_block =  layerID;
+      *p_block =  detN;
+
       p_block++;
-      uint32_t clusters_size = e->m_clusters.size();
-      *p_block = e->m_clusters.size();
-      p_block ++;
-      for(auto &ch : e->m_clusters){
-        *(reinterpret_cast<float*>(p_block)) = ch.x();
+      *p_block = mhs.size(); // cluster_n
+
+      for(auto &mh : mhs){
         p_block ++;
-        *(reinterpret_cast<float*>(p_block)) = ch.y();
+        *(reinterpret_cast<float*>(p_block)) = mh->u();
+
         p_block ++;
-        *p_block = ch.pixelHits.size();
+        *(reinterpret_cast<float*>(p_block)) = mh->v();
+
         p_block ++;
-        for(auto &ph : ch.pixelHits){
+        *p_block = mh->measRaws().size();
+
+        for(auto &mr : mh->measRaws()){
           // Y<< 16 + X
-          *p_block =  uint32_t(ph.x()) + (uint32_t(ph.y())<<16);
           p_block ++;
+          *p_block =  uint32_t(mr.u()) + (uint32_t(mr.v())<<16);
         }
       }
-      if(p_block - layer_block.data() != layer_block.size()){
-        std::cerr<<"error altel data block"<<std::endl;
-        throw;
-      }
-      map_layer_clusterN[layerID]= clusters_size;
-      ev_eudaq->AddBlock(layerID, layer_block);
+      ev_eudaq->AddBlock(detN, layer_block);
     }
+
     SendEvent(std::move(ev_eudaq));
-    
     if(is_first_event){
       is_first_event = false;
       m_tg_n_begin = trigger_n;
     }
-    m_tg_n_last = trigger_n;    
+    m_tg_n_last = trigger_n;
   }
 }
 
-void AltelProducer::DoStatus() {
+void altel::AltelProducer::DoStatus() {
   if(m_exit_of_run){
     auto tp_now = std::chrono::system_clock::now();
     m_st_tp_old = tp_now;
