@@ -77,5 +77,16 @@ public:
     std::string m_host;
     short int m_port;
     std::vector<std::pair<uint16_t, uint16_t>> m_hots;
+
+
+
+    template<typename ... Args>
+    static std::string FormatString( const std::string& format, Args ... args ){
+      std::size_t size = snprintf( nullptr, 0, format.c_str(), args ... ) + 1;
+      std::unique_ptr<char[]> buf( new char[ size ] );
+      std::snprintf( buf.get(), size, format.c_str(), args ... );
+      return std::string( buf.get(), buf.get() + size - 1 );
+    }
+
   };
 }

@@ -25,7 +25,7 @@ namespace altel{
     std::atomic<uint64_t> m_st_n_ev{0};
 
     ~Telescope();
-    Telescope(const std::string& file_context);
+    Telescope(const std::string& tele_js_str, const std::string& layer_js_str);
     TelEventSP ReadEvent();
 
     void Init();
@@ -35,16 +35,7 @@ namespace altel{
     uint64_t AsyncRead();
     uint64_t AsyncWatchDog();
 
-
-    rapidjson::CrtAllocator m_jsa;
-    rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> m_js_testbeam;
-    // JsonDocument m_js_testeam;
-    rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> m_js_telescope;
-    // JsonDocument m_js_telescope;
-
-    rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  m_js_status;
-    // JsonDocument m_js_status;
-    std::atomic<uint64_t> m_count_st_js_write{0};
-    std::atomic<uint64_t> m_count_st_js_read{0};
+    JsonDocument m_jsd_tele;
+    JsonDocument m_jsd_layer;
   };
 }

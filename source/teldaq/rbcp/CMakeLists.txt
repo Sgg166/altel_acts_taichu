@@ -1,6 +1,14 @@
+add_subdirectory(misc)
+
 aux_source_directory(src LIB_SRC)
 add_library(altel-rbcp STATIC ${LIB_SRC} )
-target_link_libraries(altel-rbcp PUBLIC mycommon  altel-data-event)
+target_link_libraries(altel-rbcp
+  PUBLIC
+  mycommon
+  altel-data-event
+  PRIVATE
+  altel-builtinJSON-headers
+  )
 
 target_include_directories(altel-rbcp
   PUBLIC

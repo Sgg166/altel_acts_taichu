@@ -2,22 +2,6 @@
 unset(EXE_TARGET_LIST)
 find_package(ROOT REQUIRED COMPONENTS Core RIO Tree MathCore)
 
-function(create_cpp_raw_string)
-  if( (${ARGC} LESS 2) OR (${ARGC} GREATER 3 ) )
-    message(FATAL_ERROR "create_cpp_raw_string require 2 or 3 arguments, but given ${ARGC}")
-  endif()
-  if(${ARGC} EQUAL 2)
-    set(RAW_STRING_DELIM "~~~cpp~raw~~~")
-  endif()
-  if(${ARGC} EQUAL 3)
-    set(RAW_STRING_DELIM ${ARGV2})
-  endif()
-  if( (NOT EXISTS ${ARGV0}) OR (${ARGV1} IS_NEWER_THAN ${ARGV0}) )
-    file(READ ${ARGV1} RAW_STRING_CONTENT)
-    set(RAW_STRING_CONTENT "R\"${RAW_STRING_DELIM}(${RAW_STRING_CONTENT})${RAW_STRING_DELIM}\"")
-    file(WRITE ${ARGV0} "${RAW_STRING_CONTENT}")
-  endif()
-endfunction()
 
 set(ROOT_FEATURE_CXX_STANDARD ${CMAKE_CXX_STANDARD})
 get_target_property(ROOT_CXX_COMPILE_FEATURES ROOT::Core INTERFACE_COMPILE_FEATURES)
@@ -66,8 +50,6 @@ if(TARGET altel-telfw)
     altel-telfw altel-telgl galogen
     )
 
-  create_cpp_raw_string(${CMAKE_CURRENT_BINARY_DIR}/altel_run_conf.hh
-    ${PROJECT_SOURCE_DIR}/source/teldaq/rbcp/misc/altel_run_conf.json)
 
   add_executable(altelDataTaking altelDataTaking.cpp)
   list(APPEND EXE_TARGET_LIST altelDataTaking)

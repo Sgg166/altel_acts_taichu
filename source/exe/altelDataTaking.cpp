@@ -40,10 +40,6 @@ static const std::string default_geometry = R"(
 )";
 
 
-static const std::string default_rbcpconf =
-#include "altel_run_conf.hh"
-  ;
-
 static const std::string help_usage = R"(
 Usage:
   -help                             help message
@@ -143,7 +139,6 @@ int main(int argc, char *argv[]) {
   std::fprintf(stdout, "geometryFile:  <%s>\n", geometryFilePath.c_str());
   std::fprintf(stdout, "rbcpConfFileFile:  <%s>\n", rbcpConfFilePath.c_str());
   std::fprintf(stdout, "\n");
-
   //////////// geometry
 
   std::string str_geo;
@@ -168,14 +163,14 @@ int main(int argc, char *argv[]) {
 
   std::string str_rbcpconf;
   if(rbcpConfFilePath.empty()){
-    str_rbcpconf = default_rbcpconf;
+    str_rbcpconf = "builtin";
   }
   else{
     str_rbcpconf = JsonUtils::readFile(rbcpConfFilePath);
   }
 
   std::unique_ptr<altel::Telescope> m_tel;
-  m_tel.reset(new altel::Telescope(str_rbcpconf)); // todo
+  m_tel.reset(new altel::Telescope(str_rbcpconf, "builtin")); // todo
   m_tel->Init();
 
   m_tel->Start_no_tel_reading();
@@ -183,7 +178,7 @@ int main(int argc, char *argv[]) {
   while(!g_done){
     auto telEvent = m_tel->ReadEvent();
     if(!telEvent){
-      std::this_thread::sleep_for(std::chrono::microseconds(100));
+      std::this_thread::sleep_for(std::chrono::microseconds(1000));
       continue;
     }
     if(telEvent->measRaws().empty() && telEvent->measHits().empty() && telEvent->trajs().empty()){
@@ -192,7 +187,9 @@ int main(int argc, char *argv[]) {
     if(telEvent->measHits().size()<4){
       continue;
     }
+    
     telfwtest.pushBufferEvent(telEvent);
+    // std::this_thread::sleep_for(std::chrono::milliseconds(20));
   }
   m_tel->Stop();
   m_tel.reset();

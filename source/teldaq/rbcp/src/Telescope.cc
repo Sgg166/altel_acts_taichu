@@ -1,13 +1,18 @@
-
 #include <regex>
 #include <iostream>
-
-
 #include "Telescope.hh"
 
-
-//using namespace std::chrono_literals;
 using namespace altel;
+
+static const std::string builtin_tele_conf_str =
+#include "altel_tele_conf_json.hh"
+  ;
+
+
+static const std::string builtin_layer_conf_str =
+#include "altel_layer_conf_json.hh"
+  ;
+
 
 namespace{
   std::string TimeNowString(const std::string& format){
@@ -20,37 +25,30 @@ namespace{
   }
 }
 
-Telescope::Telescope(const std::string& file_context){
-  rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  js_doc;
-  js_doc.Parse(file_context);
 
-  if(js_doc.HasParseError()){
-    fprintf(stderr, "JSON parse error: %s (at string position %lu) \n", rapidjson::GetParseError_En(js_doc.GetParseError()), js_doc.GetErrorOffset());
+Telescope::Telescope(const std::string& tele_js_str, const std::string& layer_js_str){
+
+  m_jsd_tele = JsonUtils::createJsonDocument((tele_js_str=="builtin")?builtin_tele_conf_str:tele_js_str);
+  if(m_jsd_tele.HasParseError()){
+    fprintf(stderr, "JSON parse error: %s (at string position %lu) \n", rapidjson::GetParseError_En(m_jsd_tele.GetParseError()), m_jsd_tele.GetErrorOffset());
     throw;
   }
-  const auto &js_obj = js_doc.GetObject();
-
-  if(!js_obj.HasMember("telescope")){
+  if(!m_jsd_tele.HasMember("telescope")){
     fprintf(stderr, "JSON configure file error: no \"telescope\" section \n");
     throw;
   }
+  const auto& js_telescope  = m_jsd_tele["telescope"];
 
-  if(!js_obj.HasMember("testbeam")){
-    fprintf(stderr, "JSON configure file error: no \"testbeam\" section \n");
+  m_jsd_layer = JsonUtils::createJsonDocument((layer_js_str=="builtin")?builtin_layer_conf_str:layer_js_str);
+  if(m_jsd_layer.HasParseError()){
+    fprintf(stderr, "JSON parse error: %s (at string position %lu) \n", rapidjson::GetParseError_En(m_jsd_layer.GetParseError()), m_jsd_layer.GetErrorOffset());
     throw;
   }
-
-  if(!js_obj.HasMember("layers")){
+  if(!m_jsd_layer.HasMember("layers")){
     fprintf(stderr, "JSON configure file error: no \"layers\" section \n");
     throw;
   }
-
-  const auto& js_telescope  = js_obj["telescope"];
-  const auto& js_testbeam   = js_obj["testbeam"];
-  const auto& js_layers     = js_obj["layers"];
-
-  m_js_telescope.CopyFrom<rapidjson::CrtAllocator>(js_telescope, m_jsa);
-  m_js_testbeam.CopyFrom<rapidjson::CrtAllocator>(js_testbeam, m_jsa);
+  const auto& js_layers     = m_jsd_layer["layers"];
 
   std::map<std::string, double> layer_loc;
   std::multimap<double, std::string> loc_layer;
@@ -68,10 +66,6 @@ Telescope::Telescope(const std::string& file_context){
     loc_layer.insert(std::pair<double, std::string>(loc, name));
   }
 
-  if(!js_testbeam.HasMember("energy")){
-    fprintf(stderr, "JSON configure file error: no energy \n");
-    throw;
-  }
 
   for(const auto& l: loc_layer){
     std::string layer_name = l.second;
@@ -92,26 +86,6 @@ Telescope::Telescope(const std::string& file_context){
       throw;
     }
     std::fprintf(stdout, "Layer %6s:     at location Z = %8.2f\n", layer_name.c_str(), l.first);
-  }
-
-  double energy=js_testbeam["energy"].GetDouble();
-  std::fprintf(stdout, "Testbeam energy:  %.1f\n", energy);
-
-  if(!m_js_telescope.HasMember("config")){
-      std::fprintf(stderr, "JSON configure file error: no telescope config \n");
-      throw;
-  }
-
-  const auto& js_tele_conf = m_js_telescope["config"];
-  for(auto &l: m_vec_layer){
-    std::string name = l->m_name;
-    if(!js_tele_conf.HasMember(name)){
-      std::fprintf(stderr, "JSON configure file error: no config %s \n", name.c_str());
-      throw;
-    }
-    // hotmask
-    // js_tele_conf[name][]
-    // l->m_js_conf.CopyFrom(js_tele_conf[name], l->m_jsa);
   }
 
 }
@@ -233,7 +207,6 @@ void Telescope::Stop(){
   if(m_fut_async_watch.valid())
     m_fut_async_watch.get();
 
-
   for(auto & l: m_vec_layer){
     l->stop();
   }
@@ -262,28 +235,13 @@ uint64_t Telescope::AsyncRead(){
 uint64_t Telescope::AsyncWatchDog(){
   m_is_async_watching = true;
   while(m_is_async_watching){
-    rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> js_status(rapidjson::kObjectType);
     std::this_thread::sleep_for(std::chrono::seconds(1));
     for(auto &l: m_vec_layer){
       std::string l_status = l->GetStatusString();
       std::fprintf(stdout, "%s\n", l_status.c_str());
-
-      rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> name;
-      rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> value;
-      name.SetString(l->m_name, m_jsa);
-      value.SetString(l_status, m_jsa);
-      js_status.AddMember(std::move(name), std::move(value), m_jsa);
     }
     uint64_t st_n_ev = m_st_n_ev;
     std::fprintf(stdout, "Tele: disk saved events(%lu) \n\n", st_n_ev);
-
-    //TODO: make a json object to keep status;
-    if(m_count_st_js_read == m_count_st_js_write){
-      std::string now_str = TimeNowString("%Y-%m-%d %H:%M:%S");
-      js_status.AddMember("time", std::move(now_str), m_jsa);
-      m_js_status = std::move(js_status);
-      m_count_st_js_write ++;
-    }
   }
   //sleep and watch running time status;
   return 0;

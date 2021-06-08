@@ -70,8 +70,7 @@ namespace{
 void altel::AltelProducer::DoInitialise(){
   std::cout<< "it is AltelProducer "<<std::endl;
   auto ini = GetInitConfiguration();
-  std::string tel_json_conf_path = ini->Get("ALTEL_EUDAQ_CONF_JSON_FILE", "/tmp/altel_run_conf.json");
-  m_tel.reset(new altel::Telescope(LoadFileToString(tel_json_conf_path)));
+  m_tel.reset(new altel::Telescope("builtin", "builtin"));
   m_tel->Init();
 }
 

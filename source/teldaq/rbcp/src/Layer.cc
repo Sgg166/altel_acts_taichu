@@ -16,7 +16,6 @@
 #define info_print(fmt, ...)                                           \
   do { if (INFO_PRINT) std::fprintf(stdout, fmt, ##__VA_ARGS__); } while (0)
 
-
 using namespace altel;
 
 Layer::~Layer(){
@@ -137,12 +136,12 @@ int Layer::perConnProcessRecvMesg(void* pconn, msgpack::object_handle& oh){ // I
     // std::cout<<(tg_expected & 0x7fff)<< " " << tg_l16<<"\n";
     uint32_t tg_guess_0 = (m_tg_expected & 0xffff0000) + tg_l16;
     uint32_t tg_guess_1 = (m_tg_expected & 0xffff0000) + 0x10000 + tg_l16;
-    if(tg_guess_0 > m_tg_expected && tg_guess_0 - m_tg_expected < 200){
-      std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<" ("<< m_extension <<") \n";
+    if(tg_guess_0 > m_tg_expected && tg_guess_0 - m_tg_expected < 20000){
+      // std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<" ("<< m_extension <<") \n";
       m_tg_expected =tg_guess_0;
     }
-    else if (tg_guess_1 > m_tg_expected && tg_guess_1 - m_tg_expected < 200){
-      std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<" ("<< m_extension <<") \n";
+    else if (tg_guess_1 > m_tg_expected && tg_guess_1 - m_tg_expected < 20000){
+      // std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<" ("<< m_extension <<") \n";
       m_tg_expected =tg_guess_1;
     }
     else{
@@ -251,11 +250,11 @@ uint64_t Layer::AsyncWatchDog(){
     double st_hz_tg_period = st_n_tg_ev_period / sec_period ;
     double st_hz_input_period = st_n_ev_input_period / sec_period ;
 
-    std::string st_string_new ="";
-      // FirmwarePortal::FormatString("L<%u> event(%d)/trigger(%d - %d)=Ev/Tr(%.4f) dEv/dTr(%.4f) tr_accu(%.2f hz) ev_accu(%.2f hz) tr_period(%.2f hz) ev_period(%.2f hz)",
-      //                              m_extension, st_n_ev_input_now, st_n_tg_ev_now, st_n_tg_ev_begin, st_input_vs_trigger_accu, st_input_vs_trigger_period,
-      //                              st_hz_tg_accu, st_hz_input_accu, st_hz_tg_period, st_hz_input_period
-      //                              );
+    std::string st_string_new =
+      Layer::FormatString("L<%u> event(%d)/trigger(%d - %d)=Ev/Tr(%.4f) dEv/dTr(%.4f) tr_accu(%.2f hz) ev_accu(%.2f hz) tr_period(%.2f hz) ev_period(%.2f hz)",
+                          m_extension, st_n_ev_input_now, st_n_tg_ev_now, st_n_tg_ev_begin, st_input_vs_trigger_accu, st_input_vs_trigger_period,
+                          st_hz_tg_accu, st_hz_input_accu, st_hz_tg_period, st_hz_input_period
+        );
 
     {
       std::unique_lock<std::mutex> lk(m_mtx_st);
