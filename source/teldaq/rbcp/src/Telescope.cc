@@ -1,5 +1,7 @@
 #include <regex>
 #include <iostream>
+#include <thread>
+
 #include "Telescope.hh"
 
 using namespace altel;
