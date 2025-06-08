@@ -84,7 +84,7 @@ find_package(Boost 1.69 REQUIRED
 ## root
 find_package(ROOT REQUIRED
   HINTS $ENV{ROOTSYS}/cmake
-  NO_CMAKE_SYSTEM_PATH
+  # NO_CMAKE_SYSTEM_PATH
 )
 
 

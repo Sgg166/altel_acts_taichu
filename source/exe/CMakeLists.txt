@@ -11,6 +11,10 @@ endif()
 if( ROOT_CXX_COMPILE_FEATURES STREQUAL "cxx_std_14" )
   set(ROOT_FEATURE_CXX_STANDARD 14)
 endif()
+if( ROOT_CXX_COMPILE_FEATURES STREQUAL "cxx_std_17" )
+  set(ROOT_FEATURE_CXX_STANDARD 17)
+endif()
+
 
 if(TARGET altel-telfw)
   # add_executable(TelDetectorResidual TelDetectorResidual.cpp)
