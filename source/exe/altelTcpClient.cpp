@@ -1,4 +1,4 @@
-#include "Telescope.hh"
+#include "Frontend.hh"
 
 #include <list>
 #include <iostream>
@@ -17,7 +17,7 @@
 #include <TelEvent.hpp>
 #include <TelEventTTreeWriter.hpp>
 
-static std::vector<std::unique_ptr<altel::Layer>> g_layers;
+static std::vector<std::unique_ptr<Frontend>> g_layers;
 static sig_atomic_t g_done = 0;
 
 int watchDog(){
@@ -34,15 +34,15 @@ int watchDog(){
 int main(int argc, char *argv[]) {
   signal(SIGINT, [](int){g_done+=1;});
 
-  g_layers.push_back(std::make_unique<altel::Layer>("test0", "131.169.133.170", 9000));
-  g_layers.push_back(std::make_unique<altel::Layer>("test1", "131.169.133.171", 9000));
+  g_layers.push_back(std::make_unique<Frontend>("192.168.200.10","test0", 0));
+  g_layers.push_back(std::make_unique<Frontend>("192.168.200.11","test1", 1));
 
   for(auto &l: g_layers){
-    l->init();
+    l->daq_conf_default();
   }
 
   for(auto &l: g_layers){
-    l->start();
+    l->daq_start_run();
   }
 
   altel::TelEventTTreeWriter ttreeWriter;
@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
     }
 
     std::vector<altel::TelEventSP> ev_sync;
+    
     for(auto &l: g_layers){
       auto &ev_front = l->Front();
       // if(ev_front) l->PopFront();
