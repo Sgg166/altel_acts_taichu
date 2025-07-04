@@ -715,6 +715,13 @@ int Frontend::perConnProcessRecvMesg(void* pconn, const std::string& str){
   s_n ++;
 
   m_st_n_ev_input_now ++;
+
+  if(m_st_n_ev_input_now==1){
+    m_st_n_tg_ev_begin = df->tid;
+  }
+  m_st_n_tg_ev_now = df->tid;
+
+  
   uint64_t next_p_ring_write = m_count_ring_write % m_size_ring;
   if(next_p_ring_write == m_hot_p_read){
     // buffer full, permanent data lose
