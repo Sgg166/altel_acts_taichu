@@ -154,9 +154,34 @@ public:
         js_hit.PushBack(1.0, jsd_data.GetAllocator()); // orgin-local-center-mm
         js_MeasHits.PushBack(std::move(js_hit), jsd_data.GetAllocator());
       }
-      // JsonUtils::printJsonValue(js_MeasHits, true);
+      //JsonUtils::printJsonValue(js_MeasHits, true);
       jsd_data.AddMember("hits", std::move(js_MeasHits), jsd_data.GetAllocator());
 
+
+      JsonValue js_MeasHitsR(rapidjson::kArrayType);
+      js_MeasHitsR.Reserve(ev->measHits().size(), jsd_data.GetAllocator());
+      for(auto &aMeasHit : ev->measHits()){
+        JsonValue js_hit(rapidjson::kArrayType);
+        js_hit.Reserve(4, jsd_data.GetAllocator());
+        js_hit.PushBack(aMeasHit->u(), jsd_data.GetAllocator());
+        js_hit.PushBack(aMeasHit->v(), jsd_data.GetAllocator());
+        js_hit.PushBack(aMeasHit->detN(), jsd_data.GetAllocator());
+        js_hit.PushBack(1.0, jsd_data.GetAllocator()); // orgin-local-center-mm
+      	JsonValue js_mrs(rapidjson::kArrayType);
+      	for(auto &aMeasRaw : aMeasHit->MRs){
+      	  JsonValue js_mr(rapidjson::kArrayType);
+      	  js_mr.PushBack(aMeasRaw.u(), jsd_data.GetAllocator());
+      	  js_mr.PushBack(aMeasRaw.v(), jsd_data.GetAllocator());
+      	  js_mrs.PushBack(std::move(js_mr), jsd_data.GetAllocator());
+      	}
+      	js_hit.PushBack(std::move(js_mrs), jsd_data.GetAllocator());
+        js_MeasHitsR.PushBack(std::move(js_hit), jsd_data.GetAllocator());
+      }
+      //JsonUtils::printJsonValue(js_MeasHitsR, true);
+      jsd_data.AddMember("hitsR", std::move(js_MeasHitsR), jsd_data.GetAllocator());
+
+
+      
       JsonValue js_trajs(rapidjson::kArrayType);
       for(auto &aTraj : ev->TJs){
         JsonValue js_traj(rapidjson::kArrayType);
@@ -174,9 +199,12 @@ public:
         }
         js_trajs.PushBack(std::move(js_traj), jsd_data.GetAllocator());
       }
-      // JsonUtils::printJsonValue(js_trajs, true);
+      //JsonUtils::printJsonValue(js_trajs, true);
       jsd_data.AddMember("tracks", std::move(js_trajs), jsd_data.GetAllocator());
 
+      //JsonUtils::printJsonValue(jsd_data, true);
+
+      
       if(jsd_data.HasMember("tracks")){
         telgl->drawTracks(jsd_data);
       }

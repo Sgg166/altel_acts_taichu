@@ -170,7 +170,8 @@ int main(int argc, char *argv[]) {
     std::fprintf(stderr, "raw file is not open\n");
     throw;
   }
-
+  std::fprintf(stdout, "raw file is openned\n");
+  
   TelFW telfw(800, 400, "test");
   glfw_test telfwtest(str_geo, true);
   telfw.startAsync<glfw_test>(&telfwtest, &glfw_test::beginHook, &glfw_test::clearHook, &glfw_test::drawHook);

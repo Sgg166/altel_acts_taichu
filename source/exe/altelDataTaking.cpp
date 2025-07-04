@@ -24,17 +24,17 @@
 
 static const std::string default_geometry = R"(
 {"geometry": {"detectors": [
-    {"id": 0, "size": {"x": 29.94176,"y": 13.76256,"z": 1.0}, "pitch": {"x": 0.02924,"y": 0.02688,"z": 1.0},
+    {"id": 0, "size": {"x": 25.6,"y": 12.8,"z": 1.0}, "pitch": {"x": 0.025,"y": 0.025,"z": 1.0},
      "pixel": {"x": 1024,"y": 512,"z": 1},"center": {"x": 0.0,"y": 0.0,"z": 0.0}, "rotation": {"x": 0.0,"y": 0.0,"z": 0.0}},
-    {"id": 1, "size": {"x": 29.94176,"y": 13.76256,"z": 1.0}, "pitch": {"x": 0.02924,"y": 0.02688,"z": 1.0},
+    {"id": 1, "size": {"x": 25.6,"y": 12.8,"z": 1.0}, "pitch": {"x": 0.025,"y": 0.025,"z": 1.0},
      "pixel": {"x": 1024,"y": 512,"z": 1},"center": {"x": 0.0,"y": 0.0,"z": 40.0}, "rotation": {"x": 0.0,"y": 0.0,"z": 0.0}},
-    {"id": 2, "size": {"x": 29.94176,"y": 13.76256,"z": 1.0}, "pitch": {"x": 0.02924,"y": 0.02688,"z": 1.0},
+    {"id": 2, "size": {"x": 25.6,"y": 12.8,"z": 1.0}, "pitch": {"x": 0.025,"y": 0.025,"z": 1.0},
      "pixel": {"x": 1024,"y": 512,"z": 1}, "center": {"x": 0.0,"y": 0.0,"z":80.0},"rotation": {"x": 0.0,"y": 0.0,"z": 0.0}},
-    {"id": 3, "size": {"x": 29.94176,"y": 13.76256,"z": 1.0}, "pitch": {"x": 0.02924,"y": 0.02688,"z": 1.0},
+    {"id": 3, "size": {"x": 25.6,"y": 12.8,"z": 1.0}, "pitch": {"x": 0.025,"y": 0.025,"z": 1.0},
      "pixel": {"x": 1024,"y": 512,"z": 1},"center": {"x": 0.0,"y": 0.0,"z": 120.0},"rotation": {"x": 0.0,"y": 0.0,"z": 0.0}},
-    {"id": 4, "size": {"x": 29.94176,"y": 13.76256,"z": 1.0}, "pitch": {"x": 0.02924,"y": 0.02688,"z": 1.0},
+    {"id": 4, "size": {"x": 25.6,"y": 12.8,"z": 1.0}, "pitch": {"x": 0.025,"y": 0.025,"z": 1.0},
      "pixel": {"x": 1024,"y": 512,"z": 1},"center": {"x": 0.0,"y": 0.0,"z": 160.0},"rotation": {"x": 0.0,"y": 0.0,"z": 0.0}},
-    {"id": 5, "size": {"x": 29.94176,"y": 13.76256,"z": 1.0}, "pitch": {"x": 0.02924,"y": 0.02688,"z": 1.0},
+    {"id": 5, "size": {"x": 25.6,"y": 12.8,"z": 1.0}, "pitch": {"x": 0.025,"y": 0.025,"z": 1.0},
      "pixel": {"x": 1024,"y": 512,"z": 1},"center": {"x": 0.0,"y": 0.0,"z": 200.0},"rotation": {"x": 0.0,"y": 0.0,"z": 0.0}}
 ]}}
 )";
@@ -184,9 +184,17 @@ int main(int argc, char *argv[]) {
     if(telEvent->measRaws().empty() && telEvent->measHits().empty() && telEvent->trajs().empty()){
       continue;
     }
-    if(telEvent->measHits().size()<4){
+    if(telEvent->measHits().size()<3){
+      
       continue;
     }
+
+    // std::cout<<std::endl;
+    // for(auto &aMeasHit : telEvent->measHits()){
+    //   std::cout<< "{" << aMeasHit->u() <<","<< aMeasHit->v()<< "," << aMeasHit->detN()<< "}  ";
+    // }
+    // std::cout<<std::endl;
+
     
     telfwtest.pushBufferEvent(telEvent);
     // std::this_thread::sleep_for(std::chrono::milliseconds(20));

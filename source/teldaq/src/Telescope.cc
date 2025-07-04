@@ -116,13 +116,13 @@ TelEventSP Telescope::ReadEvent(){
   }
 
   if(sub_datapacks.size() < m_vec_layer.size() ){
-    std::cout<< "dropped assambed event with subevent less than requried "<< m_vec_layer.size() <<" sub events" <<std::endl;
+    //std::cout<< "dropped assambed event with subevent less than requried "<< m_vec_layer.size() <<" sub events" <<std::endl;
     std::string dev_numbers;
     for(auto & ev : sub_datapacks){
       dev_numbers += std::to_string(ev->daqid);
       dev_numbers +=" ";
     }
-    std::cout<< "  TID#"<<trigger_n<<" subevent= "<< dev_numbers <<std::endl;
+    //std::cout<< "  TID#"<<trigger_n<<" subevent= "<< dev_numbers <<std::endl;
     return nullptr;
   }
 
@@ -134,6 +134,7 @@ TelEventSP Telescope::ReadEvent(){
     TelEventSP subev = std::make_shared<TelEvent>(0, m_st_n_ev, daqid, tid);
     const auto &vecPixel = dp->vecpixel;
     for(const auto & pix: vecPixel){
+      //subev->MRs.emplace_back(pix.xcol, pix.yrow, daqid, tid);
       subev->MRs.emplace_back(pix.xcol, pix.yrow, daqid, tid);
     }
     subev->MHs = TelMeasHit::clustering_UVDCus(subev->MRs);

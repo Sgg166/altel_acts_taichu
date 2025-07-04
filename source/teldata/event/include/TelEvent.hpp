@@ -4,6 +4,8 @@
 #include <memory>
 #include <cstddef>
 #include <algorithm>
+#include <iostream>
+
 namespace altel{
 
   struct TelMeasRaw{
@@ -51,10 +53,10 @@ namespace altel{
       };
 
     TelMeasHit(std::vector<TelMeasRaw> mrs,
-               double pitchU = 0.02924,
-               double pitchV = 0.02688,
-               double offsetU = -0.02924 * (1024/2. - 0.5),
-               double offsetV = -0.02688 * (512/2. - 0.5))
+               double pitchU = 0.025,
+               double pitchV = 0.025,
+               double offsetU = -0.025 * (1024/2. - 0.5),
+               double offsetV = -0.025 * (512/2. - 0.5))
       :MRs(mrs){
       if(MRs.empty()){
         return;
@@ -84,10 +86,10 @@ namespace altel{
 
     static std::vector<std::shared_ptr<TelMeasHit>>
     clustering_UVDCus(const std::vector<TelMeasRaw>& measRaws,
-                      double pitchU = 0.02924,
-                      double pitchV = 0.02688,
-                      double offsetU = -0.02924 * (1024/2 - 0.5),
-                      double offsetV = -0.02688 * (512/2 - 0.5)){
+                      double pitchU = 0.025,
+                      double pitchV = 0.025,
+                      double offsetU = -0.025 * (1024/2 - 0.5),
+                      double offsetV = -0.025 * (512/2 - 0.5)){
       std::vector<std::shared_ptr<TelMeasHit>> measHits;
 
       auto hit_col_remain= measRaws;
@@ -102,7 +104,14 @@ namespace altel{
 
         while(!hit_col_this_cluster_edge.empty()){
           auto ph_e = hit_col_this_cluster_edge[0];
+	  if(ph_e.u()>=1024 || ph_e.v()>=512) {
+	    std::cout<<"out of size\n"<<std::endl;
+	    throw;
+
+	  }
           uint64_t e = ph_e.index();
+
+	  
           uint64_t c = 0x00000001;
           uint64_t r = 0x00010000;
           //  8 sorround hits search

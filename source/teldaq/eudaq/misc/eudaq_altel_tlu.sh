@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 # SOURCE_DIR=/home/teleuser/tmp/altel_eudaq
-BIN_DIR=/home/teleuser/tmp/INSTALL/bin
+BIN_DIR=/home/HEPuser/WorkSpace/DAQSoftware/altel_acts/INSTALL/bin
 
 MY_IP=localhost
 
 #cp  $SOURCE_DIR/source/eudaq/misc/* /tmp
 #cp  $SOURCE_DIR/source/lib/misc/*   /tmp
 
-cp /mnt/tbwork/TB2105/altel_acts/source/teldaq/eudaq/misc /tmp
+cp /home/HEPuser/WorkSpace/DAQSoftware/altel_acts/source/teldaq/eudaq/misc/* /tmp
 
 killall -q xterm
 
@@ -24,5 +24,5 @@ xterm -T "Monitor" -e "$BIN_DIR/StdEventMonitor -t StdEventMonitor -r tcp://$MY_
 xterm -T "Collector" -e "$BIN_DIR/euCliCollector -n TriggerIDSyncDataCollector -t one -r tcp://$MY_IP:44000" &
 sleep 1
 
-xterm -T "TLU" -e "$BIN_DIR/euCliProducer -n AidaTluProducer -t aida_tlu -r tcp://$MY_IP:44000" &
+#xterm -T "TLU" -e "$BIN_DIR/euCliProducer -n AidaTluProducer -t aida_tlu -r tcp://$MY_IP:44000" &
 xterm -geometry 150x20+400+800 -T "altel" -e "$BIN_DIR/euCliProducer -n AltelProducer -t altel -r tcp://$MY_IP:44000" & 
