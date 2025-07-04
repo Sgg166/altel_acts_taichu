@@ -8,8 +8,8 @@
 PixelWord::PixelWord(const uint32_t v){ //BE32TOH
     // valid(1) tschip(8) xcol[9]  yrow[10] pattern[4]
     pattern =  v & 0xf;
-    yrow    = (v>> 4) & 0x3ff;
-    xcol    = (v>> (4+10)) & 0x1ff;
+    xcol    = (v>> 4) & 0x3ff;
+    yrow    = (v>> (4+10)) & 0x1ff;
     tschip  = (v>> (4+10+9)) & 0xff;
     isvalid = (v>> (4+10+9+8)) & 0x1;
     raw = v;
