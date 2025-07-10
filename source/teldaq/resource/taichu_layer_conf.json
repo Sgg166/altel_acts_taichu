@@ -93,6 +93,20 @@
                     "ip":"192.168.200.7"
                 }
             }
+        },
+	{
+            "name":"200p32",
+	    "daqid":32,
+            "data_link":{
+                "protocol":"tcp",
+                "version": 1,
+                "description":"Taichu plane TCP raw reader",
+                "options":{
+                    "ip":"192.168.200.32"
+                }
+            }
         }        
+
+	
     ]
 }

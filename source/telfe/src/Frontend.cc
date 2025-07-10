@@ -623,7 +623,12 @@ void Frontend::daq_conf_default(){
   SetFirmwareRegister("all_buffer_reset", 1);
   SetFirmwareRegister("set_daq_id", m_daqid);
   SetFirmwareRegister("global_work_mode", 0);
-  // need to set daq id and trigger mode
+
+  uint64_t value_chip_serial_delay = 3;
+  if(m_daqid == 32 ){
+    value_chip_serial_delay = 4;
+  }
+  SetFirmwareRegister("chip_serial_delay", value_chip_serial_delay);
 
   SetSensorRegister("RCKI", 1);
   // BSEL 0 ISEL1 0 ISEL0 0 EXCKS 0 DSEL 0 CKESEL 0 RCKI (1) RCKO 0
