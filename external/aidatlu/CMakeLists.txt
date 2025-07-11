@@ -3,7 +3,7 @@ include(ExternalProject)
 FetchContent_Declare(
   external_aidatlu
   GIT_REPOSITORY https://github.com/eyiliu/aidatlu.git
-  GIT_TAG 99a02a4c52dfca906efd7096fd58c3674d24acff
+  GIT_TAG 43d9376a3642555ffb972067e61d5be28593a709
   # FETCHCONTENT_UPDATES_DISCONNECTED ON
 )
 FetchContent_Populate(external_aidatlu)

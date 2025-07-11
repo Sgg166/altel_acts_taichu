@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
     if(telEvent->measRaws().empty() && telEvent->measHits().empty() && telEvent->trajs().empty()){
       continue;
     }
-    if(telEvent->measHits().size()<3){
+    if(telEvent->measHits().size()<1){
       
       continue;
     }
