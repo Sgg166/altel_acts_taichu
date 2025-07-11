@@ -59,7 +59,8 @@ if(TARGET altel-telfw)
   list(APPEND EXE_TARGET_LIST altelDataTaking)
   target_include_directories(altelDataTaking  PRIVATE ./ ${CMAKE_CURRENT_BINARY_DIR})
   target_link_libraries(altelDataTaking
-    altel-data-event altel-data-eudaq altel-rbcp
+    altel-data-event altel-data-root altel-data-eudaq altel-rbcp
+    ROOT::Core ROOT::RIO ROOT::Tree
     mycommon
     altel-telfw altel-telgl galogen
     )

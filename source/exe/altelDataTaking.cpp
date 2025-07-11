@@ -1,3 +1,5 @@
+#include "TelEventTTreeWriter.hpp"
+
 #include "eudaq/Producer.hh"
 #include "Telescope.hh"
 
@@ -12,15 +14,39 @@
 #include <numeric>
 #include <chrono>
 
+#include <TFile.h>
+#include <TTree.h>
+
+
 #include "TelGL.hh"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+
+
 
 #include "linenoise.h"
 #include "myrapidjson.h"
 
 #include "TelFW.hh"
 #include "glfw_test.hh"
+
+
+TFile* create_and_open_rootfile(const std::filesystem::path& filepath){
+
+  std::filesystem::path filepath_abs = std::filesystem::absolute(filepath);
+  std::filesystem::file_status st_file = std::filesystem::status(filepath_abs);
+  if (std::filesystem::exists(st_file)) {
+    std::fprintf(stderr, "File < %s > exists.\n\n", filepath_abs.c_str());
+    throw;
+  }
+  TFile *tf = TFile::Open(filepath_abs.c_str(),"recreate");
+  if (!tf) {
+    std::fprintf(stderr, "ROOT TFile opening failed: %s \n\n", filepath_abs.c_str());
+    throw;
+  }
+  return tf;
+}
+
 
 static const std::string default_geometry = R"(
 {"geometry": {"detectors": [
@@ -44,9 +70,9 @@ static const std::string help_usage = R"(
 Usage:
   -help                             help message
   -verbose                          verbose flag
-  -geometryFile   <PATH>            path to geometry input file (input)
-  -rbcpConfFile   <PATH>            path to eudaq rbcp configure file (input)
-
+  -geometryFile   <PATH>            path to viewer geometry input file (input)
+  -rbcpConfFile   <PATH>            path to datataking  configure file (input)
+  -rootDataFile   <PATH>            path to root file for data saving  (output)
 examples:
  ./bin/altelDataTaking -geo calice_geo_align4.json
 )";
@@ -57,7 +83,7 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, [](int){g_done+=1;});
   std::string geometryFilePath;
   std::string rbcpConfFilePath;
-
+  std::string rootDataFilePath;
   int do_wait = 0;
   int do_verbose = 0;
   {////////////getopt begin//////////////////
@@ -65,6 +91,7 @@ int main(int argc, char *argv[]) {
                                 {"verbose", no_argument, NULL, 'v'},//val
                                 {"rbcpConfFile", required_argument, NULL, 'e'},
                                 {"geometryFile", required_argument, NULL, 'g'},
+                                {"rootDataFile", required_argument, NULL, 't'},
                                 {0, 0, 0, 0}};
 
     // if(argc == 1){
@@ -85,6 +112,9 @@ int main(int argc, char *argv[]) {
         break;
       case 'g':
         geometryFilePath = optarg;
+        break;
+      case 't':
+        rootDataFilePath = optarg;
         break;
       case 'w':
         do_wait=1;
@@ -138,6 +168,7 @@ int main(int argc, char *argv[]) {
   std::fprintf(stdout, "\n");
   std::fprintf(stdout, "geometryFile:  <%s>\n", geometryFilePath.c_str());
   std::fprintf(stdout, "rbcpConfFileFile:  <%s>\n", rbcpConfFilePath.c_str());
+  std::fprintf(stdout, "rootDataFileFile:  <%s>\n", rootDataFilePath.c_str());
   std::fprintf(stdout, "\n");
   //////////// geometry
 
@@ -175,30 +206,47 @@ int main(int argc, char *argv[]) {
 
   m_tel->Start_no_tel_reading();
 
+  TFile *tfile = 0;
+  altel::TelEventTTreeWriter *ttreewriter = 0;
+  TTree *pTree = 0;
+  if(rootDataFilePath.size()){
+    tfile = create_and_open_rootfile(rootDataFilePath);
+    ttreewriter = new altel::TelEventTTreeWriter;
+    TTree *pTree = new TTree("eventTree", "eventTree");
+    ttreewriter->setTTree(pTree);
+  }
+
   while(!g_done){
     auto telEvent = m_tel->ReadEvent();
     if(!telEvent){
       std::this_thread::sleep_for(std::chrono::microseconds(1000));
       continue;
     }
+    if(tfile){
+      ttreewriter->fillTelEvent(telEvent);
+    }
+
     if(telEvent->measRaws().empty() && telEvent->measHits().empty() && telEvent->trajs().empty()){
       continue;
     }
+
     if(telEvent->measHits().size()<1){
-      
       continue;
     }
-
     // std::cout<<std::endl;
     // for(auto &aMeasHit : telEvent->measHits()){
     //   std::cout<< "{" << aMeasHit->u() <<","<< aMeasHit->v()<< "," << aMeasHit->detN()<< "}  ";
     // }
     // std::cout<<std::endl;
-
-    
     telfwtest.pushBufferEvent(telEvent);
     // std::this_thread::sleep_for(std::chrono::milliseconds(20));
   }
+
+  if(tfile){
+    pTree->Write();
+    tfile->Close();
+  }
+
   m_tel->Stop();
   m_tel.reset();
   telfw.stopAsync();
