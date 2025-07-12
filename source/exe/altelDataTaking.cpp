@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
   if(rootDataFilePath.size()){
     tfile = create_and_open_rootfile(rootDataFilePath);
     ttreewriter = new altel::TelEventTTreeWriter;
-    TTree *pTree = new TTree("eventTree", "eventTree");
+    pTree = new TTree("eventTree", "eventTree");
     ttreewriter->setTTree(pTree);
   }
 
