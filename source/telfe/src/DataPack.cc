@@ -6,10 +6,22 @@
 #include "mysystem.hh"
 
 PixelWord::PixelWord(const uint32_t v){ //BE32TOH
-    // valid(1) tschip(8) xcol[9]  yrow[10] pattern[4]
+    // valid(1) tschip(8) raw_dcol[9]  raw_row[10] pattern[4]
     pattern =  v & 0xf;
-    xcol    = (v>> 4) & 0x3ff;
-    yrow    = (v>> (4+10)) & 0x1ff;
+
+    //1023    1022
+    //.....
+    //8       9
+    //7       6
+    //4       5
+    //3       2
+    //0       1
+    uint16_t raw_row = (v>> 4) & 0x3ff;
+    uint16_t raw_dcol = (v>> (4+10)) & 0x1ff;
+
+    xcol    = raw_dcol*2 + (raw_dcol%4==1)+ (raw_dcol%4==2);
+    yrow    = raw_row/2;
+
     tschip  = (v>> (4+10+9)) & 0xff;
     isvalid = (v>> (4+10+9+8)) & 0x1;
     raw = v;
