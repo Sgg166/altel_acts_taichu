@@ -419,29 +419,42 @@ void Frontend::SetBoardDAC(uint32_t ch, double voltage){
 
 
 void Frontend::FlushPixelMask(const std::set<std::pair<uint16_t, uint16_t>> &colMaskXY, MaskType maskType){
-  std::array<std::array<bool, 512>, 1024> maskMat;
-  for(auto &maskXCol : maskMat){
-    for(auto &mask : maskXCol){
-      mask = false;
+  std::array<std::array<bool, 512>, 1024> rawMaskMat; // index -> [0-1023][0-511]   [rawRowN][rawDColN]
+  for(auto &pixMask_aRawRow : rawMaskMat){
+    for(auto &pixMask : pixMask_aRawRow){
+      pixMask = false;
     }
   }
-  for(const auto& [xRow, yCol] : colMaskXY){
-    maskMat[xRow][yCol] = true;
-    std::cout<<xRow<<" "<<yCol<<std::endl;
+
+
+  //3       2
+  //0       1
+
+  for(const auto& [xCol, yRow] : colMaskXY){
+    uint16_t rawDColN = xCol/2;
+    uint16_t rawRowN = yRow/2*4;
+    if(xCol%2==1 || yRow%2==0){
+      rawRowN+=1;
+    }else if(xCol%2==1 || yRow%2==1){
+      rawRowN+=2;
+    }else if(xCol%2==0 || yRow%2==1){
+      rawRowN+=3;
+    }
+    rawMaskMat[rawRowN][rawDColN] = true;
+    std::printf("{%u,%u}->[%u,%u]\n", xCol,yRow, rawDColN, rawRowN);
   }
 
   // mask_en
   // std::cout<< "56    63 48    55 40    47 32    39 24    31 16    23 8     15 0      7"<<std::endl;
   // std::cout<< "0------- 1------- 2------- 3------- 4------- 5------- 6------- 7-------"<<std::endl;
-  std::vector<uint8_t> vecXColMaskByte_latest;
-  for(int xRow= 0;xRow<=1023; xRow++){
-    std::vector<uint8_t> vecXColMaskByte;
+  std::vector<uint8_t> vecRawRowMaskByte_latest;
+  for(int rawRowN= 0; rawRowN<=1023; rawRowN++){
+    std::vector<uint8_t> vecRawRowMaskByte;
     uint8_t  maskByte = 0;
-    for(int yCol  = 511; yCol>=0; yCol--){
-      uint8_t bitPos = yCol%8;
+    for(int rawDColN  = 511; rawDColN>=0; rawDColN--){
+      uint8_t bitPos = 7-(rawDColN%8);
       uint8_t bitMask = 1<<bitPos;
-      uint8_t bitValue = maskMat[xRow][yCol]; //get from config
-
+      uint8_t bitValue = rawMaskMat[rawRowN][rawDColN]; //get from config
       //revert
       if(maskType == MaskType::UNMASK || maskType == MaskType::UNCAL){
         bitValue = ~(bool(bitValue));
@@ -449,13 +462,13 @@ void Frontend::FlushPixelMask(const std::set<std::pair<uint16_t, uint16_t>> &col
 
       maskByte = (maskByte & (~bitMask)) | (bitValue << bitPos);
       if(bitPos==0){
-        vecXColMaskByte.push_back(maskByte);
+        vecRawRowMaskByte.push_back(maskByte);
         maskByte=0;
       }
     }
 
-    if(vecXColMaskByte != vecXColMaskByte_latest){
-      for(const auto & maskByte:  vecXColMaskByte){
+    if(vecRawRowMaskByte != vecRawRowMaskByte_latest){
+      for(const auto & maskByte:  vecRawRowMaskByte){
         // std::bitset<8> rawbit(maskByte);
         // std::cout<< rawbit<<" ";
         // SetSensorRegister("PIXELMASK_DATA", maskByte);
@@ -463,7 +476,7 @@ void Frontend::FlushPixelMask(const std::set<std::pair<uint16_t, uint16_t>> &col
         WriteByte(0x0023,maskByte);
         WriteByte(0x0021,0);
       }
-      vecXColMaskByte_latest = vecXColMaskByte;
+      vecRawRowMaskByte_latest = vecRawRowMaskByte;
     }
     WriteByte(0x0022,7);
     WriteByte(0x0023,0);
