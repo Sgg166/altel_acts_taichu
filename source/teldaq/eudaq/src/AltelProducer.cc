@@ -4,6 +4,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <regex>
 
 #include "Telescope.hh"
 
@@ -68,14 +69,115 @@ namespace{
 }
 
 void altel::AltelProducer::DoInitialise(){
-  std::cout<< "it is AltelProducer "<<std::endl;
-  auto ini = GetInitConfiguration();
-  m_tel.reset(new altel::Telescope("builtin", "builtin"));
-  m_tel->Init();
+  m_tel.reset();
+  const eudaq::Configuration &param = *GetInitConfiguration();
+  param.Print();
+
+  std::vector<std::string> vecLayerName;
+  std::string tel_json_str;
+
+  if(param.Has("GEOMETRY_SETUP")){
+    std::map<std::string, double> mapLayerPos;
+    std::string str_GEOMETRY_SETUP;
+    str_GEOMETRY_SETUP = param.Get("GEOMETRY_SETUP", "");
+    std::regex block_regex("([a-zA-Z0-9]+)\\:([0-9]+)"); // sm[1]  name, sm[2]  pos
+    auto blocks_begin = std::sregex_iterator(str_GEOMETRY_SETUP.begin(), str_GEOMETRY_SETUP.end(), block_regex);
+    auto blocks_end = std::sregex_iterator();
+    std::cout << "Ini file: found " << std::distance(blocks_begin, blocks_end) << " telescope layers"<<std::endl;
+    for (std::sregex_iterator ism = blocks_begin; ism != blocks_end; ++ism){
+      // std::smatch &sm= *ism;
+      std::string sm_str = (*ism).str();
+      std::string layer_name = (*ism)[1].str();
+      vecLayerName.push_back(layer_name);
+      double layer_pos = std::stod((*ism)[2].str());
+      mapLayerPos[layer_name] = layer_pos;
+    }
+
+    rapidjson::Document jsdoc;
+    rapidjson::Document::AllocatorType& a = jsdoc.GetAllocator();
+    jsdoc.SetObject();
+    jsdoc.AddMember("telescope", rapidjson::Value(rapidjson::kObjectType), a);
+    jsdoc["telescope"].AddMember("locations", rapidjson::Value(rapidjson::kObjectType), a);
+    jsdoc["telescope"].AddMember("config", rapidjson::Value(rapidjson::kObjectType), a);
+    for(const auto pairLayerPos : mapLayerPos){
+      rapidjson::Value name_js(pairLayerPos.first.c_str(), a);
+      rapidjson::Value pos_js(pairLayerPos.second);
+      jsdoc["telescope"]["locations"].AddMember(name_js, pos_js, a);
+    }
+    rapidjson::StringBuffer sb;
+    // rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(sb);
+    jsdoc.Accept(writer);
+    tel_json_str = sb.GetString();
+  }
+
+  std::map<std::string,  std::set<std::pair<uint16_t, uint16_t>>> mask_col;
+  for(const auto & lname : vecLayerName){
+    std::string pmask_para_key("PIXEL_MASK_OVERRIDE_");
+    pmask_para_key+=lname;
+    if(param.Has(pmask_para_key)){
+      std::set<std::pair<uint16_t, uint16_t>> maskXYs;
+      std::string str_PIXEL_MASK_OVERRIDE_x;
+      str_PIXEL_MASK_OVERRIDE_x = param.Get(pmask_para_key, "");
+      {
+        std::regex block_regex("([0-9]+)\\:([0-9]+)"); // X:Y
+        auto blocks_begin = std::sregex_iterator(str_PIXEL_MASK_OVERRIDE_x.begin(), str_PIXEL_MASK_OVERRIDE_x.end(), block_regex);
+        auto blocks_end = std::sregex_iterator();
+        std::cout << "found layer <"<<lname<<"> mask size: "  << std::distance(blocks_begin, blocks_end) << " "<<std::endl;
+        for (std::sregex_iterator ism = blocks_begin; ism != blocks_end; ++ism){
+          const std::smatch &sm= *ism;
+          uint16_t maskx = (uint16_t)std::stoul(sm[1].str());
+          uint16_t masky = (uint16_t)std::stoul(sm[2].str());
+          maskXYs.emplace(maskx, masky);
+        }
+      }
+      {
+        std::regex block_regex("([0-9]+)\\:([NnYyXx])"); // X:Y
+        auto blocks_begin = std::sregex_iterator(str_PIXEL_MASK_OVERRIDE_x.begin(), str_PIXEL_MASK_OVERRIDE_x.end(), block_regex);
+        auto blocks_end = std::sregex_iterator();
+        std::cout << "found layer <"<<lname<<"> mask size: "  << std::distance(blocks_begin, blocks_end) << " "<<std::endl;
+        for (std::sregex_iterator ism = blocks_begin; ism != blocks_end; ++ism){
+          const std::smatch &sm= *ism;
+          uint16_t maskx = (uint16_t)std::stoul(sm[1].str());
+          for(uint16_t masky = 0; masky<512; masky++ ){
+            maskXYs.emplace(maskx, masky);
+          }
+        }
+      }
+
+      {
+        std::regex block_regex("([NnYyXx])\\:([0-9]+)"); // X:Y
+        auto blocks_begin = std::sregex_iterator(str_PIXEL_MASK_OVERRIDE_x.begin(), str_PIXEL_MASK_OVERRIDE_x.end(), block_regex);
+        auto blocks_end = std::sregex_iterator();
+        std::cout << "found layer <"<<lname<<"> mask size: "  << std::distance(blocks_begin, blocks_end) << " "<<std::endl;
+        for (std::sregex_iterator ism = blocks_begin; ism != blocks_end; ++ism){
+          const std::smatch &sm= *ism;
+          uint16_t masky = (uint16_t)std::stoul(sm[2].str());
+          for(uint16_t maskx = 0; maskx<1024; maskx++ ){
+            maskXYs.emplace(maskx, masky);
+          }
+        }
+      }
+      mask_col.emplace(lname, std::move(maskXYs));
+    }
+  }
+
+  if(!tel_json_str.empty()){
+    m_tel.reset(new Telescope(tel_json_str,""));
+  }else{
+    std::cout<<"not able to create tele_json from eudaq init file"<<std::endl;
+    m_tel.reset(new Telescope("", ""));
+  }
+  if(m_tel)  m_tel->Init();
+  if(m_tel)  m_tel->FlushPixelMask(mask_col);
+
 }
 
 void altel::AltelProducer::DoConfigure(){
   //do nothing here
+
+
+
 }
 
 void altel::AltelProducer::DoStartRun(){
