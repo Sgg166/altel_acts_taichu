@@ -33,6 +33,7 @@ public:
 
   Frontend(const std::string& sensor_jsstr,
            const std::string& firmware_jsstr,
+           const std::string& setup_jsstr,
            const std::string& netip,
            const std::string& name,
            const uint64_t daqid
@@ -91,9 +92,9 @@ private:
   
   rapidjson::Document m_jsdoc_sensor;
   rapidjson::Document m_jsdoc_firmware;
+  rapidjson::Document m_jsdoc_setup;
 
   /////////////////////////////////////////////////////
-
 
 
 public:

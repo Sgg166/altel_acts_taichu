@@ -41,6 +41,7 @@ static const std::string builtin_taichupix3_reg_str =
 
 Frontend::Frontend(const std::string& sensor_jsstr,
                    const std::string& firmware_jsstr,
+                   const std::string& setup_jsstr,
                    const std::string& netip,
                    const std::string& name,
                    const uint64_t daqid
@@ -56,6 +57,9 @@ Frontend::Frontend(const std::string& sensor_jsstr,
     fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(m_jsdoc_sensor.GetParseError()), m_jsdoc_sensor.GetErrorOffset());
     throw;
   }
+
+  m_jsdoc_setup.Parse(setup_jsstr.empty()? "{}":setup_jsstr.c_str());
+
   m_netip = netip;
   m_name = name;
   m_daqid = daqid;
@@ -608,6 +612,17 @@ void Frontend::daq_reset(){
 
 
 void Frontend::daq_conf_default(){
+
+  
+
+
+
+  
+
+
+
+
+  
   SetFirmwareRegister("upload_data", 0);
   SetFirmwareRegister("chip_reset", 0);
   SetFirmwareRegister("chip_reset", 1);

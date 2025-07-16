@@ -69,8 +69,7 @@ Telescope::Telescope(const std::string& tele_js_str, const std::string& layer_js
         std::string ly_name=layer_name;
         uint64_t ly_daqid=js_layer["daqid"].GetUint();
         std::string ly_host=js_layer["data_link"]["options"]["ip"].GetString();
-        //std::unique_ptr<Layer> l(new Layer(ly_name, ly_host, ly_port));
-        std::unique_ptr<Frontend> l(new Frontend("", "", ly_host, ly_name, ly_daqid));
+        std::unique_ptr<Frontend> l(new Frontend("", "", "", ly_host, ly_name, ly_daqid));
         m_vec_layer.push_back(std::move(l));
         layer_found = true;
         break;
@@ -174,6 +173,7 @@ void Telescope::Init(){
   for(auto & l: m_vec_layer){
     l->daq_conf_default();
   }
+
 }
 
 void Telescope::Start(){
