@@ -283,7 +283,7 @@ int main(int argc, char **argv){
   TFile *tf_data=0;
   std::unique_ptr<Frontend> daqbup;
   try{
-    daqbup.reset(new Frontend(daqbHost_ipstr, "ConfigDAQtool", 0));
+    daqbup.reset(new Frontend("", "", daqbHost_ipstr, "ConfigDAQtool", 0));
   }catch(...){
     daqbup.reset();
     exit(-1);

@@ -31,12 +31,6 @@ class Frontend{
 public:
   enum MaskType {MASK, CAL, UNMASK, UNCAL};
 
-  Frontend(const std::string& netip,
-           const std::string& name,
-           const uint64_t daqid
-    );
-
-
   Frontend(const std::string& sensor_jsstr,
            const std::string& firmware_jsstr,
            const std::string& netip,

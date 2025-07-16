@@ -38,27 +38,6 @@ static const std::string builtin_taichupix3_reg_str =
   ;
 
 
-Frontend::Frontend(const std::string& netip,
-                   const std::string& name,
-                   const uint64_t daqid
-  ){
-  m_jsdoc_firmware.Parse(builtin_firmware_reg_str.c_str());
-  if(m_jsdoc_firmware.HasParseError()){
-    fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(m_jsdoc_firmware.GetParseError()), m_jsdoc_firmware.GetErrorOffset());
-    throw;
-  }
-
-  m_jsdoc_sensor.Parse(builtin_taichupix3_reg_str.c_str());
-  if(m_jsdoc_sensor.HasParseError()){
-    fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(m_jsdoc_sensor.GetParseError()), m_jsdoc_sensor.GetErrorOffset());
-    throw;
-  }
-  m_netip = netip;
-  m_name = name;
-  m_daqid = daqid;
-  m_extension = daqid;
-}
-
 
 Frontend::Frontend(const std::string& sensor_jsstr,
                    const std::string& firmware_jsstr,
@@ -661,6 +640,10 @@ void Frontend::daq_conf_default(){
   SetFirmwareRegister("load_m", 0xff);
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
+
+
+  //flush mask
+  
   FlushPixelMask({}, Frontend::MaskType::MASK);
   FlushPixelMask({}, Frontend::MaskType::UNCAL);
 
@@ -717,6 +700,8 @@ void Frontend::daq_conf_default(){
   SetSensorRegisters({{"REG_CDAC_8NA_TRIM", 0b00}, {"REG_CDAC_8NA5", 0}});
   //  00000 REG_CDAC_8NA_TRIM 00 REG_CDAC_8NA5 0
 
+
+    
   return;
 }
 
