@@ -169,13 +169,12 @@ void altel::AltelProducer::DoInitialise(){
     m_tel.reset(new Telescope("", ""));
   }
   if(m_tel)  m_tel->Init();
-  if(m_tel)  m_tel->FlushPixelMask(mask_col);
+  if(m_tel && !mask_col.empty() )  m_tel->FlushPixelMask(mask_col);
 
 }
 
 void altel::AltelProducer::DoConfigure(){
   //do nothing here
-
 
 
 }

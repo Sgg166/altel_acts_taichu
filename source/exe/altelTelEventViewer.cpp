@@ -171,6 +171,31 @@ int main(int argc, char *argv[]) {
 
     std::shared_ptr<altel::TelEvent> telEvent  = ttreeReader.createTelEvent(eventNum);
     std::fprintf(stdout, "FileEvent #%d, event #%d, clock/trigger #%d\n", eventNum, telEvent->eveN(), telEvent->clkN());
+    //////////////////////////
+
+    std::map<uint32_t,  std::vector<std::shared_ptr<altel::TelMeasHit>>> map_layer_measHits;
+    for(auto& mh: telEvent->measHits()){
+      if(!mh){
+        continue;
+      }
+      uint32_t detN = mh->detN();
+      map_layer_measHits[detN].push_back(mh);
+    }
+
+    for(auto& [detN, mhs]: map_layer_measHits){
+      std::fprintf(stdout, "DAQID<%lu>, cluster<%zu>:", detN, mhs.size());
+      // cluster_n
+      for(auto &mh : mhs){
+        std::fprintf(stdout, " ->{%f,%f}",mh->u(), mh->v());
+        std::fprintf(stdout, "[%lu#",mh->measRaws().size());
+        for(auto &mr : mh->measRaws()){
+          std::fprintf(stdout, "(%lu,%lu)", mr.u(), mr.v());
+        }
+        std::fprintf(stdout, "]\n");
+      }
+    }
+    ////////////////////////
+
     telfwtest.pushBufferEvent(telEvent);
 
     if(do_wait){
