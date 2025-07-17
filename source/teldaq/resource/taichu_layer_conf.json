@@ -2,83 +2,92 @@
     "layers":[
         {
             "name":"200p2",
-	    "daqid":0,
+	    "daqid":2,
             "data_link":{
                 "protocol":"tcp",
-                "version": 1,
-                "description":"Taichu plane TCP raw reader",
                 "options":{
                     "ip":"192.168.200.2"
                 }
-            }
+            },
+	    "ctrl_link":{
+		"masks":[
+		    [100, 200],
+		    [201,202], [302,307,309]],
+		    [{"min": 0,  "max": 50}, {"min": 0,  "max": 50}]
+		]
+	    }
 	},
 
         {
             "name":"200p3",
-	    "daqid":1,
+	    "daqid":3,
             "data_link":{
                 "protocol":"tcp",
-                "version": 1,
-                "description":"Taichu plane TCP raw reader",
                 "options":{
                     "ip":"192.168.200.3"
                 }
-            }	    
+            },
+	    "ctrl_link":{
+		"masks":[]
+	    }
         },
 
         {
             "name":"200p4",
-	    "daqid":2,
+	    "daqid":4,
             "data_link":{
                 "protocol":"tcp",
-                "version": 1,
-                "description":"Taichu plane TCP raw reader",
                 "options":{
                     "ip":"192.168.200.4"
                 }
-            }
-
+            },
+	    "ctrl_link":{
+		"masks":[]
+	    }
         },
 
         {
             "name":"200p5",
-	    "daqid":3,
+	    "daqid":5,
             "data_link":{
                 "protocol":"tcp",
-                "version": 1,
-                "description":"Taichu plane TCP raw reader",
                 "options":{
                     "ip":"192.168.200.5"
                 }
-            }
+            },
+	    "ctrl_link":{
+		"masks":[]
+	    }
 
         },
 
         {
             "name":"200p8",
-	    "daqid":4,
+	    "daqid":8,
             "data_link":{
                 "protocol":"tcp",
-                "version": 1,
-                "description":"Taichu plane TCP raw reader",
                 "options":{
                     "ip":"192.168.200.8"
                 }
-            }
+            },
+	    "ctrl_link":{
+		"masks":[]
+	    }
 
         },
  
         {
             "name":"200p9",
-	    "daqid":5,
+	    "daqid":9,
             "data_link":{
                 "protocol":"tcp",
-                "version": 1,
-                "description":"Taichu plane TCP raw reader",
                 "options":{
                     "ip":"192.168.200.9"
                 }
-            }
+            },
+	    "ctrl_link":{
+		"masks":[]
+	    }
 
         },
 	
@@ -92,8 +101,12 @@
                 "options":{
                     "ip":"192.168.200.7"
                 }
-            }
+            },
+	    "ctrl_link":{
+		"masks":[]
+	    }
         },
+
 	{
             "name":"200p32",
 	    "daqid":32,
@@ -104,9 +117,25 @@
                 "options":{
                     "ip":"192.168.200.32"
                 }
-            }
-        }        
-
-	
+            },
+	    "ctrl_link":{
+		"masks":[]
+	    }
+        },
+	{
+            "name":"200p35",
+	    "daqid":35,
+            "data_link":{
+                "protocol":"tcp",
+                "version": 1,
+                "description":"Taichu plane TCP raw reader",
+                "options":{
+                    "ip":"192.168.200.35"
+                }
+            },
+	    "ctrl_link":{
+		"masks":[]
+	    }
+        }	
     ]
 }

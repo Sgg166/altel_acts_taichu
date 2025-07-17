@@ -69,7 +69,15 @@ Telescope::Telescope(const std::string& tele_js_str, const std::string& layer_js
         std::string ly_name=layer_name;
         uint64_t ly_daqid=js_layer["daqid"].GetUint();
         std::string ly_host=js_layer["data_link"]["options"]["ip"].GetString();
-        std::unique_ptr<Frontend> l(new Frontend("", "", "", ly_host, ly_name, ly_daqid));
+        std::string str_ctrl_link;
+        if(js_layer.HasMember("ctrl_link")){
+          // auto& js_ctrl_link = js_layer["ctrl_link"];
+          rapidjson::StringBuffer sb;
+          rapidjson::Writer<rapidjson::StringBuffer> w(sb);
+          js_layer["ctrl_link"].Accept(w);
+          str_ctrl_link = std::string(sb.GetString(), sb.GetSize());
+        }
+        std::unique_ptr<Frontend> l(new Frontend("", "", str_ctrl_link, ly_host, ly_name, ly_daqid));
         m_vec_layer.push_back(std::move(l));
         layer_found = true;
         break;
