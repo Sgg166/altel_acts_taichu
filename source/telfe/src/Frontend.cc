@@ -409,7 +409,6 @@ void Frontend::FlushPixelMask(const std::set<std::pair<uint16_t, uint16_t>> &col
     }
   }
 
-
   //3       2
   //0       1
 
@@ -613,16 +612,76 @@ void Frontend::daq_reset(){
 
 void Frontend::daq_conf_default(){
 
-  
+  std::set<std::pair<uint16_t, uint16_t>> maskCol;
+  if(m_jsdoc_setup.HasMember("masks")){
+    const auto& js_masks = m_jsdoc_setup["masks"];
+    for (const auto& js_mask_xy : js_masks.GetArray()){
+      if(js_mask_xy.Size()!=2){
+        continue;
+      }
+      std::vector<uint16_t> maskx;
+      {
+        const auto& js_mask_x = js_mask_xy[0];
+        if(js_mask_x.IsUint()){
+          maskx.push_back(js_mask_x.GetUint());
+        }
+        else if(js_mask_x.IsArray()){
+          for(const auto& js_mask_x_sub : js_mask_x.GetArray()){
+            if(js_mask_x_sub.IsUint()){
+              maskx.push_back(js_mask_x_sub.GetUint());
+            }
+          }
+        }
+        else if(js_mask_x.IsObject()){
+          if(!js_mask_x.HasMember("min") || !js_mask_x.HasMember("max")){
+            continue;
+          }
+          if(!js_mask_x["min"].IsUint() || !js_mask_x["max"].IsUint()){
+            continue;
+          }
+          uint16_t vmin = js_mask_x["min"].GetUint();
+          uint16_t vmax = js_mask_x["max"].GetUint();
+          for(uint16_t v= vmin; v<=vmax; v++){
+            maskx.push_back(v);
+          }
+        }
+      }
+      std::vector<uint16_t> masky;
+      {
+        const auto& js_mask_y = js_mask_xy[1];
+        if(js_mask_y.IsUint()){
+          masky.push_back(js_mask_y.GetUint());
+            }
+        else if(js_mask_y.IsArray()){
+          for(const auto& js_mask_y_sub : js_mask_y.GetArray()){
+            if(js_mask_y_sub.IsUint()){
+              maskx.push_back(js_mask_y_sub.GetUint());
+            }
+          }
+        }
+        else if(js_mask_y.IsObject()){
+          if(!js_mask_y.HasMember("min") || !js_mask_y.HasMember("max")){
+            continue;
+          }
+          if(!js_mask_y["min"].IsUint() || !js_mask_y["max"].IsUint()){
+            continue;
+          }
+          uint16_t vmin = js_mask_y["min"].GetUint();
+          uint16_t vmax = js_mask_y["max"].GetUint();
+          for(uint16_t v= vmin; v<=vmax; v++){
+            masky.push_back(v);
+          }
+        }
+      }
+      for(auto x: maskx){
+        for(auto y: masky){
+          maskCol.emplace(x, y);
+        }
+      }
+    }//end per item; mask array
+  }
 
 
-
-  
-
-
-
-
-  
   SetFirmwareRegister("upload_data", 0);
   SetFirmwareRegister("chip_reset", 0);
   SetFirmwareRegister("chip_reset", 1);
@@ -656,10 +715,9 @@ void Frontend::daq_conf_default(){
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 
-
   //flush mask
-  
-  FlushPixelMask({}, Frontend::MaskType::MASK);
+
+  FlushPixelMask(maskCol, Frontend::MaskType::MASK);
   FlushPixelMask({}, Frontend::MaskType::UNCAL);
 
   // voltage
