@@ -68,9 +68,7 @@ Frontend::Frontend(const std::string& sensor_jsstr,
 
 void  Frontend::WriteByte(uint64_t address, uint64_t value){
 
-  DebugFormatPrint(std::cout, "WriteByte( address= %#016x ,  value= %#016x )\n", address, value);
-
-  std::cout<< address << "  " <<value<<std::endl;
+  debug_print("WriteByte( address= %#016x ,  value= %#016x )\n", address, value);
   rbcp r(m_netip);
   std::string recvStr(100, 0);
   r.DispatchCommand("wrb",  address, value, NULL);
@@ -78,19 +76,19 @@ void  Frontend::WriteByte(uint64_t address, uint64_t value){
 };
 
 uint64_t Frontend::ReadByte(uint64_t address){
-  DebugFormatPrint(std::cout, "ReadByte( address= %#016x)\n", address);
+  debug_print("ReadByte( address= %#016x)\n", address);
   uint8_t reg_value=0;
   rbcp r(m_netip);
   std::string recvStr(100, 0);
   // TODO: wait readback compatible firmware, always return zero
   r.DispatchCommand("rd", address, 1, &recvStr);
   reg_value=recvStr[0];
-  DebugFormatPrint(std::cout, "ReadByte( address= %#016x) return value= %#016x\n", address, reg_value);
+  debug_print( "ReadByte( address= %#016x) return value= %#016x\n", address, reg_value);
   return reg_value;
 };
 
 void Frontend::SetFirmwareRegister(const std::string& name, uint64_t value){
-  DebugFormatPrint(std::cout, "INFO<%s>: %s( name= %s ,  value= %#016x )\n", __func__, __func__, name.c_str(), value);
+  debug_print( "INFO<%s>: %s( name= %s ,  value= %#016x )\n", __func__, __func__, name.c_str(), value);
   static const std::string array_name("FIRMWARE_REG");
   auto& json_array = m_jsdoc_firmware[array_name];
   if(json_array.Empty()){
@@ -149,7 +147,7 @@ void Frontend::SetSensorRegisters(const std::map<std::string, uint64_t>& mapRegV
       }
       uint64_t mask = String2Uint64(json_mask.GetString());
       uint8_t offset = LeastNoneZeroOffset(mask);
-      DebugFormatPrint(std::cout, "INFO<%s>:sensor reg  name=%s  mask=%#08x bitoffset=%u \n", __func__, name.c_str(),  mask, offset);
+      debug_print( "INFO<%s>:sensor reg  name=%s  mask=%#08x bitoffset=%u \n", __func__, name.c_str(),  mask, offset);
 
       auto& json_mode = json_reg["mode"];
       if(!json_mode.IsString()){
@@ -211,7 +209,7 @@ void Frontend::SetSensorRegisters(const std::map<std::string, uint64_t>& mapRegV
 }
 
 void Frontend::SetSensorRegister(const std::string& name, uint64_t value){
-  DebugFormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
+  debug_print( "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
   static const std::string array_name("SENSOR_REG");
   auto& json_array = m_jsdoc_sensor[array_name];
   if(json_array.Empty()){
@@ -237,7 +235,7 @@ void Frontend::SetSensorRegister(const std::string& name, uint64_t value){
     }
     uint64_t mask = String2Uint64(json_mask.GetString());
     uint8_t offset = LeastNoneZeroOffset(mask);
-    DebugFormatPrint(std::cout, "INFO<%s>:sensor reg  name=%s  mask=%#08x bitoffset=%u \n", __func__, name.c_str(),  mask, offset);
+    debug_print("INFO<%s>:sensor reg  name=%s  mask=%#08x bitoffset=%u \n", __func__, name.c_str(),  mask, offset);
 
     auto& json_mode = json_reg["mode"];
     if(!json_mode.IsString()){
@@ -296,7 +294,7 @@ uint64_t Frontend::SensorRegAddr2GlobalRegAddr(uint64_t addr){
 
 
 uint64_t Frontend::GetFirmwareRegister(const std::string& name){
-  DebugFormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
+  debug_print( "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
   static const std::string array_name("FIRMWARE_REG");
   auto& json_array = m_jsdoc_firmware[array_name];
   if(json_array.Empty()){
@@ -322,13 +320,13 @@ uint64_t Frontend::GetFirmwareRegister(const std::string& name){
     FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }
-  DebugFormatPrint(std::cout, "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
+  debug_print( "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
   return value;
 }
 
 
 uint64_t Frontend::GetSensorRegister(const std::string& name){
-  DebugFormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n",__func__, __func__, name.c_str());
+  debug_print( "INFO<%s>:  %s( name=%s )\n",__func__, __func__, name.c_str());
   static const std::string array_name("SENSOR_REG");
   auto& json_array = m_jsdoc_sensor[array_name];
   if(json_array.Empty()){
@@ -369,7 +367,7 @@ uint64_t Frontend::GetSensorRegister(const std::string& name){
     FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }
-  DebugFormatPrint(std::cout, "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
+  debug_print( "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
   return value;
 }
 
@@ -415,11 +413,11 @@ void Frontend::FlushPixelMask(const std::set<std::pair<uint16_t, uint16_t>> &col
   for(const auto& [xCol, yRow] : colMaskXY){
     uint16_t rawDColN = xCol/2;
     uint16_t rawRowN = yRow/2*4;
-    if(xCol%2==1 || yRow%2==0){
+    if(xCol%2==1 && yRow%2==0){
       rawRowN+=1;
-    }else if(xCol%2==1 || yRow%2==1){
+    }else if(xCol%2==1 && yRow%2==1){
       rawRowN+=2;
-    }else if(xCol%2==0 || yRow%2==1){
+    }else if(xCol%2==0 && yRow%2==1){
       rawRowN+=3;
     }
     rawMaskMat[rawRowN][rawDColN] = true;
@@ -434,7 +432,7 @@ void Frontend::FlushPixelMask(const std::set<std::pair<uint16_t, uint16_t>> &col
     std::vector<uint8_t> vecRawRowMaskByte;
     uint8_t  maskByte = 0;
     for(int rawDColN  = 511; rawDColN>=0; rawDColN--){
-      uint8_t bitPos = 7-(rawDColN%8);
+      uint8_t bitPos = (rawDColN%8);
       uint8_t bitMask = 1<<bitPos;
       uint8_t bitValue = rawMaskMat[rawRowN][rawDColN]; //get from config
       //revert
@@ -470,13 +468,13 @@ void Frontend::FlushPixelMask(const std::set<std::pair<uint16_t, uint16_t>> &col
     SetFirmwareRegister("load_c", 0);
     SetFirmwareRegister("load_c", 1);
     SetFirmwareRegister("load_c", 0);
-    std::cout<<"load c successfully"<<std::endl;
+    // std::cout<<"load c successfully"<<std::endl;
   }
   else{
     SetFirmwareRegister("load_m", 0);
     SetFirmwareRegister("load_m", 1);
     SetFirmwareRegister("load_m", 0);
-    std::cout<<"load m successfully"<<std::endl;
+    // std::cout<<"load m successfully"<<std::endl;
   }
 }
 
