@@ -58,7 +58,7 @@ namespace{
     std::ifstream ifs(path);
     if(!ifs.good()){
         std::cerr<<"LoadFileToString:: ERROR, unable to load file<"<<path<<">\n";
-	throw;
+        throw;
     }
 
     std::string str;
@@ -215,6 +215,10 @@ void altel::AltelProducer::RunLoop(){
     ev_eudaq->SetTriggerN(trigger_n);
 
     std::map<uint32_t,  std::vector<std::shared_ptr<altel::TelMeasHit>>> map_layer_measHits;
+    std::vector<uint32_t> detNs={9,7,5,3,2,32};
+    for(auto& detN: detNs){
+      map_layer_measHits[detN];
+    }
     for(auto& mh: telev->measHits()){
       if(!mh){
         continue;
