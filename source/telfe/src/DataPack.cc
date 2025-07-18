@@ -12,14 +12,19 @@ PixelWord::PixelWord(const uint32_t v){ //BE32TOH
     //1023    1022
     //.....
     //8       9
+    /////////////
     //7       6
     //4       5
+    /////////////
     //3       2
     //0       1
     uint16_t raw_row = (v>> 4) & 0x3ff;
     uint16_t raw_dcol = (v>> (4+10)) & 0x1ff;
-
-    xcol    = raw_dcol*2 + (raw_dcol%4==1)+ (raw_dcol%4==2);
+    uint16_t z4 = raw_row%4;
+    //z4 indicate the postion inside the 4 pixels group
+    // 4    3
+    // 0    1
+    xcol    = raw_dcol*2 + (z4==1)+ (z4==2);
     yrow    = raw_row/2;
 
     tschip  = (v>> (4+10+9)) & 0xff;
