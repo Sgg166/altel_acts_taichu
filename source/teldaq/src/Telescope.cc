@@ -1,6 +1,7 @@
 #include <regex>
 #include <iostream>
 #include <thread>
+#include <string>
 #include "Telescope.hh"
 #include "Frontend.hh"
 
@@ -112,40 +113,24 @@ TelEventSP Telescope::ReadEvent(){
     }
   }
 
-  // std::vector<TelEventSP> sub_events;
-  std::vector<DataPackSP> sub_datapacks;
+  std::vector<TelEventSP> sub_events;
   for(auto &l: m_vec_layer){
-    auto &ev_front = l->Front();
-    if(ev_front->tid == trigger_n){
-      sub_datapacks.push_back(ev_front);
+    auto &ev_front = l->Front()->telev_pack;
+    if(ev_front->clkN() == trigger_n){
+      sub_events.push_back(ev_front);
       l->PopFront();
     }
   }
 
-  if(sub_datapacks.size() < m_vec_layer.size() ){
+  if(sub_events.size() < m_vec_layer.size() ){
     //std::cout<< "dropped assambed event with subevent less than requried "<< m_vec_layer.size() <<" sub events" <<std::endl;
     std::string dev_numbers;
-    for(auto & ev : sub_datapacks){
-      dev_numbers += std::to_string(ev->daqid);
+    for(auto & ev : sub_events){
+      dev_numbers += std::to_string(ev->detN());
       dev_numbers +=" ";
     }
     //std::cout<< "  TID#"<<trigger_n<<" subevent= "<< dev_numbers <<std::endl;
     return nullptr;
-  }
-
-
-  std::vector<TelEventSP> sub_events;
-  for(const auto &dp: sub_datapacks){
-    uint16_t tid = dp->tid;
-    uint16_t daqid = dp->daqid;
-    TelEventSP subev = std::make_shared<TelEvent>(0, m_st_n_ev, daqid, tid);
-    const auto &vecPixel = dp->vecpixel;
-    for(const auto & pix: vecPixel){
-      //subev->MRs.emplace_back(pix.xcol, pix.yrow, daqid, tid);
-      subev->MRs.emplace_back(pix.xcol, pix.yrow, daqid, tid);
-    }
-    subev->MHs = TelMeasHit::clustering_UVDCus(subev->MRs);
-    sub_events.push_back(subev);
   }
 
   uint32_t runN = 0;

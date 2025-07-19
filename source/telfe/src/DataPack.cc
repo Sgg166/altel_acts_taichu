@@ -22,7 +22,7 @@ PixelWord::PixelWord(const uint32_t v){ //BE32TOH
     uint16_t raw_dcol = (v>> (4+10)) & 0x1ff;
     uint16_t z4 = raw_row%4;
     //z4 indicate the postion inside the 4 pixels group
-    // 4    3
+    // 3    2
     // 0    1
     xcol    = raw_dcol*2 + (z4==1)+ (z4==2);
     yrow    = raw_row/2;
@@ -68,10 +68,14 @@ int DataPack::MakeDataPack(const std::string& str){
     len = len<<8;
     len += *p;
     p++;
+
+    telev_pack = std::make_shared<altel::TelEvent>(0, 0, daqid, tid);
     uint16_t pixelwordN = len;
     for(size_t n = 0; n< pixelwordN; n++){
         uint32_t v  = BE32TOH(*reinterpret_cast<const uint32_t*>(p));
         vecpixel.emplace_back(v);
+        telev_pack->MRs.emplace_back(vecpixel.back().xcol, vecpixel.back().yrow, daqid, tid);
+        telev_pack->MHs = altel::TelMeasHit::clustering_UVDCus(telev_pack->MRs);
         p += 4;
     }
     packend = *p;

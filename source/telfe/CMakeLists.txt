@@ -3,7 +3,7 @@ add_subdirectory(resource)
 
 aux_source_directory(src THE_SRC_FILES)
 add_library(altel-frontend SHARED ${THE_SRC_FILES} )
-target_link_libraries (altel-frontend PRIVATE sensor-firmware-builtinJSON-headers mycommon stdc++fs )
+target_link_libraries (altel-frontend PUBLIC sensor-firmware-builtinJSON-headers mycommon stdc++fs altel-data)
 target_include_directories(altel-frontend
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

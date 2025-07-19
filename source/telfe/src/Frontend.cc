@@ -688,10 +688,10 @@ void Frontend::daq_conf_default(){
   SetFirmwareRegister("set_daq_id", m_daqid);
   SetFirmwareRegister("global_work_mode", 0);
 
-  uint64_t value_chip_serial_delay = 3;
-  if(m_daqid == 32 ){
-    value_chip_serial_delay = 4;
-  }
+  uint64_t value_chip_serial_delay = 4;
+  // if(m_daqid == 32 ){
+  //   value_chip_serial_delay = 3;
+  // }
   SetFirmwareRegister("chip_serial_delay", value_chip_serial_delay);
 
   SetSensorRegister("RCKI", 1);

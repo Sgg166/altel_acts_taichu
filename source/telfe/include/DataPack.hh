@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include "TelEvent.hpp"
 
 struct PixelWord{
     PixelWord(const uint32_t v);
@@ -13,6 +14,9 @@ struct PixelWord{
     uint8_t  pattern;
     uint8_t  isvalid;
     uint32_t raw;
+
+  // altel::TelMeasRaw mr;
+
 };
 
 //struct DataPack;
@@ -24,7 +28,8 @@ struct DataPack{
     uint16_t len;
     uint16_t packend;
     std::string packraw;
-
+  std::shared_ptr<altel::TelEvent> telev_pack;
+  
     int MakeDataPack(const std::string& str);
     bool CheckDataPack();
 };
