@@ -31,7 +31,15 @@ void altelTTree_MaskMaker(const std::string& rootFilePath){
     std::shared_ptr<altel::TelEvent> telEvent  = ttreeReader.createTelEvent(eventNum);
     std::fprintf(stdout, "Event:  FileEvent #%zu, event #%u, clock/trigger #%lu, numTraj %zu, numMeasHit %zu, numMeasRaw %zu \n",
                  eventNum, telEvent->eveN(), telEvent->clkN(), telEvent->trajs().size(), telEvent->measHits().size(), telEvent->measRaws().size());
+
     size_t nmr = 0;
+    for(auto &mh: telEvent->measHits()){
+        nmr += mh->measRaws().size();
+    }
+    if(nmr>2){
+      //skip sparking event
+      continue;
+    }
     for(auto &mh: telEvent->measHits()){
       for(auto &mr : mh->measRaws()){
         uint16_t x = mr.u();
@@ -51,7 +59,8 @@ void altelTTree_MaskMaker(const std::string& rootFilePath){
 
   std::cout<<"================="<<fire_count.size()<<std::endl;
   for(auto &[idxy, count]: fire_count){
-    if(count>totalNumEvents/2000.){
+    //totalNumEvents/20000;
+    if(count>totalNumEvents/50000.){
       printf("%hu [%hu, %hu]  ,  %f \n", idxy[0], idxy[1], idxy[2], count*1.0/totalNumEvents);
     }
   }

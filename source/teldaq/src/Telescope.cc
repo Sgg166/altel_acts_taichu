@@ -143,6 +143,16 @@ TelEventSP Telescope::ReadEvent(){
     telev_sync->MHs.insert(telev_sync->MHs.end(), subev->MHs.begin(),subev->MHs.end());
   }
 
+  size_t none_empty_layer_n = 0;
+  for(auto &subev: sub_events){
+    if(!subev->MRs.empty()){
+      none_empty_layer_n ++;
+    }
+  }
+  if(none_empty_layer_n+1 >= m_vec_layer.size()){
+    m_st_n_ev_tumb++;
+  }
+
   if(m_mon_ev_read == m_mon_ev_write){
     m_ev_last=telev_sync;
     m_mon_ev_write ++;
@@ -246,7 +256,10 @@ uint64_t Telescope::AsyncWatchDog(){
       std::fprintf(stdout, "%s\n", l_status.c_str());
     }
     uint64_t st_n_ev = m_st_n_ev;
-    std::fprintf(stdout, "Tele: disk saved events(%lu) \n\n", st_n_ev);
+    uint64_t st_n_ev_tumb = m_st_n_ev_tumb;
+
+    std::fprintf(stdout, "Tele: disk saved events(%lu) event_tumb(%lu) %f%%, \n\n",
+                 st_n_ev, st_n_ev_tumb, 100.*st_n_ev_tumb/st_n_ev );
   }
   //sleep and watch running time status;
   return 0;

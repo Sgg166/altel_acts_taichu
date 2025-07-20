@@ -582,6 +582,9 @@ void Frontend::daq_stop_run(){
     m_fut_async_watch.get();
   }
 
+  std::cout<<"daqid "<< m_daqid<< " trigger mode:"<<  GetFirmwareRegister("MODE_PIXEL_ARRIVE_EARLIER")<<std::endl;;
+  std::cout<<"daqid "<< m_daqid<< " PIXEL_ACCEPT_WIN_OPEN_L:"<<  GetFirmwareRegister("PIXEL_ACCEPT_WIN_OPEN_L")<<std::endl;;
+
   SetFirmwareRegister("chip_reset", 0);
   SetFirmwareRegister("chip_reset", 1);
   SetFirmwareRegister("global_reset", 1);
@@ -694,6 +697,30 @@ void Frontend::daq_conf_default(){
   // }
   SetFirmwareRegister("chip_serial_delay", value_chip_serial_delay);
 
+
+  //MODE_PIXEL_ARRIVE_EARLIER
+  //TRIGGER_ACCEPT_WIN_CLOSE_H/L
+  //PIXEL_ACCEPT_WIN_OPEN_H/L
+  //PIXEL_ACCEPT_WIN_CLOSE_H/L
+  //TRIGGER_BUSY_LENGTH_H/L
+
+  // if(m_daqid == 2 || m_daqid == 5 || m_daqid == 9 ){
+    SetFirmwareRegister("TRIGGER_BUSY_LENGTH_H", 0);
+    SetFirmwareRegister("TRIGGER_BUSY_LENGTH_L", 200);
+
+    SetFirmwareRegister("PIXEL_ACCEPT_WIN_OPEN_H", 0);
+    SetFirmwareRegister("PIXEL_ACCEPT_WIN_OPEN_L", 70);
+    SetFirmwareRegister("PIXEL_ACCEPT_WIN_CLOSE_H", 0);
+    SetFirmwareRegister("PIXEL_ACCEPT_WIN_CLOSE_L", 200);
+  // }
+
+  // if(m_daqid == 5 || m_daqid == 9){
+  //   SetFirmwareRegister("MODE_PIXEL_ARRIVE_EARLIER", 0);
+  //   SetFirmwareRegister("TRIGGER_ACCEPT_WIN_CLOSE_H", 0);
+  //   SetFirmwareRegister("TRIGGER_ACCEPT_WIN_CLOSE_L", 200);
+  // }
+
+
   SetSensorRegister("RCKI", 1);
   // BSEL 0 ISEL1 0 ISEL0 0 EXCKS 0 DSEL 0 CKESEL 0 RCKI (1) RCKO 0
 
@@ -729,7 +756,11 @@ void Frontend::daq_conf_default(){
   SetSensorRegisters({{"REG_CDAC1_0", 0}, {"EN_CDAC_T0", 1}, {"EN_CDAC0", 1}, {"REG_CDAC0_7_3", 0b00000}});
   //  REG_CDAC1_0 0  EN_CDAC_T0 1 EN_CDAC0 1 REG_CDAC0_7_3 00000
 
-  SetSensorRegisters({{"EN_CDAC1", 1}, {"REG_CDAC1_7_1", 0b0010000}}); ////TODO::  ITHR  32 + prefix 1
+  uint8_t v_REG_CDAC1_7_1 = 0b0010000;
+  if(m_daqid = 32){
+    v_REG_CDAC1_7_1 = 0b0100000;
+  }
+  SetSensorRegisters({{"EN_CDAC1", 1}, {"REG_CDAC1_7_1", v_REG_CDAC1_7_1}}); ////TODO::  ITHR  32 + prefix 1
   //  EN_CDAC1 1 REG_CDAC1_7_1 (0010000)
 
   SetSensorRegisters({{"REG_CDAC2_6_0", 0b0000101}, {"EN_CDAC_T1", 1}});

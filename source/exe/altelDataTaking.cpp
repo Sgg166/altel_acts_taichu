@@ -74,7 +74,9 @@ Usage:
   -rbcpConfFile   <PATH>            path to datataking  configure file (input)
   -rootDataFile   <PATH>            path to root file for data saving  (output)
 examples:
- ./bin/altelDataTaking -geo calice_geo_align4.json
+ ./bin/altelDataTaking  -geo geo_viewer.json -rb geo_datataking.json -root data.root
+
+
 )";
 
 

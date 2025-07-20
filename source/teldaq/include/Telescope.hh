@@ -30,6 +30,7 @@ namespace altel{
     TelEventSP ReadEvent_Lastcopy();
 
     std::atomic<uint64_t> m_st_n_ev{0};
+    std::atomic<uint64_t> m_st_n_ev_tumb{0};
 
     ~Telescope();
     Telescope(const std::string& tele_js_str, const std::string& layer_js_str);
