@@ -81,28 +81,46 @@
 	    "comment_1":"default 200; 5us"
 	},
 	{
-	    "name":"TRIGGER_ACCEPT_WIN_CLOSE_H",
+	    "name":"PIXEL_ACCEPT_WIN_CLOSE_H",
 	    "address":"0x142",
 	    "comment":"Close of accept window for arriving taichu data after tlu trigger; high",
 	    "comment_1":"default 0"
 	},
 	{
-	    "name":"TRIGGER_ACCEPT_WIN_CLOSE_L",
+	    "name":"PIXEL_ACCEPT_WIN_CLOSE_L",
 	    "address":"0x143",
 	    "comment":"Close of accept window for arriving taichu data after tlu trigger; LSB 25ns",
 	    "comment_1":"default 200; 5us"
 	},
 	{
-	    "name":"TRIGGER_ACCEPT_WIN_START_H",
+	    "name":"PIXEL_ACCEPT_WIN_OPEN_H",
 	    "address":"0x144",
 	    "comment":"Start of accept window for arriving taichu data after tlu trigger; high",
 	    "comment_1":"default 0"
 	},
 	{
-	    "name":"TRIGGER_ACCEPT_WIN_START_L",
+	    "name":"PIXEL_ACCEPT_WIN_OPEN_L",
 	    "address":"0x145",
 	    "comment":"Start of accept window for arriving taichu data after tlu trigger; LSB 25ns",
 	    "comment_1":"default 0"	    
-	}	
+	},
+	{
+	    "name":"MODE_PIXEL_ARRIVE_EARLIER",
+	    "address":"0x146",
+	    "comment":"any none-Zero number to indicate PIXEL_ARRIVE_EARLIER, and pixel data will be buffered and wait for TLU trigger",
+	    "comment_1":"default 0, pixel data is later than tlu trigger"
+	},
+	{
+	    "name":"TRIGGER_ACCEPT_WIN_CLOSE_H",
+	    "address":"0x147",
+	    "comment":"Close of accept window for arriving tlu trigger after pixel data; high",
+	    "comment_1":"default 0"
+	},
+	{
+	    "name":"TRIGGER_ACCEPT_WIN_CLOSE_L",
+	    "address":"0x148",
+	    "comment":" Close of accept window for arriving tlu trigger after pixel data; LSB 25ns",
+	    "comment_1":"default 200; 5us"
+	}
     ]
 }
