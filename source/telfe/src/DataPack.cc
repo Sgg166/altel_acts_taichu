@@ -74,9 +74,13 @@ int DataPack::MakeDataPack(const std::string& str){
     for(size_t n = 0; n< pixelwordN; n++){
         uint32_t v  = BE32TOH(*reinterpret_cast<const uint32_t*>(p));
         vecpixel.emplace_back(v);
-        telev_pack->MRs.emplace_back(vecpixel.back().xcol, vecpixel.back().yrow, daqid, tid);
-        telev_pack->MHs = altel::TelMeasHit::clustering_UVDCus(telev_pack->MRs);
+        if(vecpixel.back().isvalid){
+          telev_pack->MRs.emplace_back(vecpixel.back().xcol, vecpixel.back().yrow, daqid, tid);
+        }
         p += 4;
+    }
+    if(telev_pack->MRs.size()){
+      telev_pack->MHs = altel::TelMeasHit::clustering_UVDCus(telev_pack->MRs);
     }
     packend = *p;
     p++;
