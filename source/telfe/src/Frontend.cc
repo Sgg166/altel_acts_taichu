@@ -756,10 +756,11 @@ void Frontend::daq_conf_default(){
   SetSensorRegisters({{"REG_CDAC1_0", 0}, {"EN_CDAC_T0", 1}, {"EN_CDAC0", 1}, {"REG_CDAC0_7_3", 0b00000}});
   //  REG_CDAC1_0 0  EN_CDAC_T0 1 EN_CDAC0 1 REG_CDAC0_7_3 00000
 
-  uint8_t v_REG_CDAC1_7_1 = 0b0010000;
-  if(m_daqid = 32){
-    v_REG_CDAC1_7_1 = 0b0100000;
+  uint8_t v_REG_CDAC1_7_1 = 0b0100000;  // ITHR =64
+  if(m_daqid == 32){
+    v_REG_CDAC1_7_1 = 0b0010000;
   }
+  
   SetSensorRegisters({{"EN_CDAC1", 1}, {"REG_CDAC1_7_1", v_REG_CDAC1_7_1}}); ////TODO::  ITHR  32 + prefix 1
   //  EN_CDAC1 1 REG_CDAC1_7_1 (0010000)
 
