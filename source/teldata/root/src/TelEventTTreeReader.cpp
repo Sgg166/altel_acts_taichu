@@ -238,6 +238,8 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
     it_numFitHit_PerTraj++;
   }
 
+
+  telEvent->measRaws() = std::move(measRaws);
   telEvent->measHits() = std::move(measHits);
   telEvent->trajs() = std::move(trajs);
 
