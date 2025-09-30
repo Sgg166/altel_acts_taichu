@@ -36,6 +36,9 @@ void altel::TelEventTTreeWriter::setTTree(TTree* pTTree){
   auto bHitFitVec_DetN = tree.Branch("TrajHitVec_DetN", &pHitFitVec_DetN);
   auto bHitFitVec_U = tree.Branch("TrajHitVec_U", &pHitFitVec_U);
   auto bHitFitVec_V = tree.Branch("TrajHitVec_V", &pHitFitVec_V);
+  auto bHitFitVec_U_err = tree.Branch("TrajHitVec_U_err", &pHitFitVec_U_err);
+  auto bHitFitVec_V_err = tree.Branch("TrajHitVec_V_err", &pHitFitVec_V_err);
+
   auto bHitFitVec_X = tree.Branch("TrajHitVec_X", &pHitFitVec_X);
   auto bHitFitVec_Y = tree.Branch("TrajHitVec_Y", &pHitFitVec_Y);
   auto bHitFitVec_Z = tree.Branch("TrajHitVec_Z", &pHitFitVec_Z);
@@ -81,6 +84,10 @@ void altel::TelEventTTreeWriter::fillTelEvent(std::shared_ptr<altel::TelEvent> t
     rHitFitVec_DetN.clear();
     rHitFitVec_U.clear();
     rHitFitVec_V.clear();
+    
+    rHitFitVec_U_err.clear();
+    rHitFitVec_V_err.clear();
+    
     rHitFitVec_X.clear();
     rHitFitVec_Y.clear();
     rHitFitVec_Z.clear();
@@ -172,6 +179,10 @@ void altel::TelEventTTreeWriter::fillTelEvent(std::shared_ptr<altel::TelEvent> t
         rHitFitVec_DetN.push_back(aHitFit->detN());
         rHitFitVec_U.push_back(aHitFit->u());
         rHitFitVec_V.push_back(aHitFit->v());
+
+        rHitFitVec_U_err.push_back(aHitFit->u_err());
+        rHitFitVec_V_err.push_back(aHitFit->v_err());
+        
         rHitFitVec_X.push_back(aHitFit->x());
         rHitFitVec_Y.push_back(aHitFit->y());
         rHitFitVec_Z.push_back(aHitFit->z());

@@ -1,7 +1,7 @@
-
 unset(EXE_TARGET_LIST)
-find_package(ROOT REQUIRED COMPONENTS Core RIO Tree MathCore)
+find_package(ROOT REQUIRED COMPONENTS Core RIO Tree MathCore )
 
+find_package(eudaq REQUIRED COMPONENTS eudaq::core)
 
 set(ROOT_FEATURE_CXX_STANDARD ${CMAKE_CXX_STANDARD})
 get_target_property(ROOT_CXX_COMPILE_FEATURES ROOT::Core INTERFACE_COMPILE_FEATURES)
@@ -17,23 +17,25 @@ endif()
 
 
 if(TARGET altel-telfw)
-  # add_executable(TelDetectorResidual TelDetectorResidual.cpp)
-  # list(APPEND EXE_TARGET_LIST TelDetectorResidual)
-  # target_include_directories(TelDetectorResidual  PRIVATE ./ )
-  # target_link_libraries(TelDetectorResidual
-  #   altel-acts ActsAlignment mycommon
-  #   ROOT::Core ROOT::RIO ROOT::Tree
-  #   altel-telfw altel-telgl galogen
-  #   )
+   add_executable(TelDetectorResidual TelDetectorResidual.cpp)
+   list(APPEND EXE_TARGET_LIST TelDetectorResidual)
+   target_include_directories(TelDetectorResidual  PRIVATE ./ )
+   target_link_libraries(TelDetectorResidual
+     altel-acts ActsAlignment mycommon
+     ROOT::Core ROOT::RIO ROOT::Tree
+     altel-telfw altel-telgl galogen
+     )
 
-  # add_executable(TelKinkAngle TelKinkAngle.cpp)
-  # list(APPEND EXE_TARGET_LIST TelKinkAngle)
-  # target_include_directories(TelKinkAngle  PRIVATE ./ )
-  # target_link_libraries(TelKinkAngle
-  #   altel-acts ActsAlignment mycommon
-  #   ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist
-  #   altel-telfw altel-telgl galogen
-  #   )
+   add_executable(TelKinkAngle TelKinkAngle.cpp)
+   list(APPEND EXE_TARGET_LIST TelKinkAngle)
+   target_include_directories(TelKinkAngle  PRIVATE ./ )
+   target_link_libraries(TelKinkAngle
+     altel-acts ActsAlignment mycommon
+     ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist ROOT::Graf ROOT::Gpad
+     altel-telfw altel-telgl galogen
+     )
+   
+
 
   add_executable(altelTelEventViewer altelTelEventViewer.cpp)
   list(APPEND EXE_TARGET_LIST altelTelEventViewer)
@@ -52,6 +54,7 @@ if(TARGET altel-telfw)
     altel-data-event altel-data-eudaq
     mycommon
     altel-telfw altel-telgl galogen
+    altel-data-root
     )
 
 
@@ -75,6 +78,14 @@ target_link_libraries(altelConvert
   ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  ROOT::MathCore
   )
 
+add_executable(altelConvert2josn altelConvert2josn.cpp)
+list(APPEND EXE_TARGET_LIST altelConvert2josn)
+target_link_libraries(altelConvert2josn
+  altel-acts altel-data-event 
+  mycommon
+  rapidjson
+  eudaq::core
+  )
 
 add_executable(altelActsTrack altelActsTracking.cpp)
 list(APPEND EXE_TARGET_LIST altelActsTrack)
@@ -94,7 +105,24 @@ target_link_libraries(altelMilleBin
   altel-mille
   mycommon
   )
-
+add_executable(test test.cc)
+list(APPEND EXE_TARGET_LIST test)
+target_include_directories(test
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../teldata/event/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../telacts/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../teldaq/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../telfe/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+target_link_libraries(test
+    PRIVATE
+    altel-data-event altel-data-root altel-data-eudaq altel-rbcp
+    altel-mille
+    mycommon
+    ROOT::Core ROOT::RIO ROOT::Tree ROOT::Hist  ROOT::MathCore
+    altel-telfw altel-telgl galogen
+)
 
 
 # add_executable(altelTcpClient altelTcpClient.cpp)

@@ -221,10 +221,10 @@ int main(int argc, char* argv[]) {
         }
       }
       auto alpideMeasHits = altel::TelMeasHit::clustering_UVDCus(alpideMeasRaws,
-                                                                 0.02924,
-                                                                 0.02688,
-                                                                 -0.02924*(1024-1)*0.5,
-                                                                 -0.02688*(512-1)*0.5);
+                                                                 0.025,
+                                                                 0.025,
+                                                                 -0.025*(1024-1)*0.5,
+                                                                 -0.025*(512-1)*0.5);
 
       telev.measRaws().insert(telev.measRaws().end(), alpideMeasRaws.begin(), alpideMeasRaws.end());
       telev.measHits().insert(telev.measHits().end(), alpideMeasHits.begin(), alpideMeasHits.end());

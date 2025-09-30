@@ -35,6 +35,10 @@ void altel::TelEventTTreeReader::setTTree(TTree *pTTree){
   tree.SetBranchAddress("TrajHitVec_DetN", &pHitFitVec_DetN);
   tree.SetBranchAddress("TrajHitVec_U", &pHitFitVec_U);
   tree.SetBranchAddress("TrajHitVec_V", &pHitFitVec_V);
+  
+  tree.SetBranchAddress("TrajHitVec_U_err", &pHitFitVec_U_err);
+  tree.SetBranchAddress("TrajHitVec_V_err", &pHitFitVec_V_err);
+
   tree.SetBranchAddress("TrajHitVec_X", &pHitFitVec_X);
   tree.SetBranchAddress("TrajHitVec_Y", &pHitFitVec_Y);
   tree.SetBranchAddress("TrajHitVec_Z", &pHitFitVec_Z);
@@ -155,6 +159,10 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
   auto it_fitHitVec_detN = rHitFitVec_DetN.begin();
   auto it_fitHitVec_U = rHitFitVec_U.begin();
   auto it_fitHitVec_V = rHitFitVec_V.begin();
+
+  auto it_fitHitVec_U_err = rHitFitVec_U_err.begin();
+  auto it_fitHitVec_V_err = rHitFitVec_V_err.begin();
+
   auto it_fitHitVec_X = rHitFitVec_X.begin();
   auto it_fitHitVec_Y = rHitFitVec_Y.begin();
   auto it_fitHitVec_Z = rHitFitVec_Z.begin();
@@ -180,6 +188,10 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
     auto fitHit = std::make_shared<altel::TelFitHit>(*it_fitHitVec_detN,
                                                      *it_fitHitVec_U,
                                                      *it_fitHitVec_V,
+
+                                                     *it_fitHitVec_U_err,
+                                                     *it_fitHitVec_V_err,
+                                                     
                                                      *it_fitHitVec_X,
                                                      *it_fitHitVec_Y,
                                                      *it_fitHitVec_Z,
@@ -204,6 +216,10 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
     it_fitHitVec_detN ++;
     it_fitHitVec_U ++;
     it_fitHitVec_V ++;
+
+    it_fitHitVec_U_err ++;
+    it_fitHitVec_V_err ++;
+    
     it_fitHitVec_X ++;
     it_fitHitVec_Y ++;
     it_fitHitVec_Z ++;

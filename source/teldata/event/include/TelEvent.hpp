@@ -1,5 +1,5 @@
 #pragma once
-
+#include <cmath>
 #include <vector>
 #include <memory>
 #include <cstddef>
@@ -35,6 +35,21 @@ namespace altel{
     inline const uint16_t& detN() const  {return data.loc[2];}
     inline const uint16_t& clkN() const  {return data.loc[3];}
 
+    inline uint32_t pixelId() const { return static_cast<uint32_t>(v()) * 1024 + u();  }
+    inline uint32_t pixelId()  {return static_cast<uint32_t>(v()) * 1024 + u();  }
+    
+     static uint32_t uvToPixelId(double u_mm, double v_mm) {
+        double pitch = 0.025;
+        int u_idx = static_cast<int>(std::floor(u_mm / pitch + 0.5));  // 四舍五入
+        int v_idx = static_cast<int>(std::floor(v_mm / pitch + 0.5));
+        return static_cast<uint32_t>(v_idx) * 1024 + u_idx;
+    }
+
+    static inline std::pair<uint16_t, uint16_t> pixelIdToUV(uint32_t pixelId) {
+    return {static_cast<uint16_t>(pixelId % 1024), 
+            static_cast<uint16_t>(pixelId / 1024)};
+    }
+ 
     inline uint64_t& index(){return data.index;}
     inline uint16_t& u() {return data.loc[0];}
     inline uint16_t& v() {return data.loc[1];}
@@ -150,7 +165,7 @@ namespace altel{
     uint16_t DN{0};   // detector id
     double PLs[2]{0.0, 0.0}; // local pos
     double DLs[3]{0.0, 0.0, 0.0}; // local dir // todo remove
-
+    double PLsE[2]{-1,-1};
     double PGs[3]{0.0, 0.0, 0.0}; // global pos
     double DGs[3]{0.0, 0.0, 0.0}; // global dir
 
@@ -163,10 +178,21 @@ namespace altel{
               std::shared_ptr<TelMeasHit> originMeasHit=nullptr)
       :DN(detN), PLs{u, v}, PGs{x, y, z}, DGs{dx, dy, dz}, OM(originMeasHit){};
 
+    TelFitHit(uint16_t detN,
+              double u, double v,
+              double u_err, double v_err,
+              double x, double y, double z,
+              double dx, double dy, double dz,
+              std::shared_ptr<TelMeasHit> originMeasHit=nullptr)
+      :DN(detN), PLs{u, v}, PLsE{u_err,v_err},PGs{x, y, z}, DGs{dx, dy, dz}, OM(originMeasHit){};
+
 
     inline uint16_t& detN() {return DN;}
     inline double& u() {return PLs[0];}
     inline double& v() {return PLs[1];}
+    inline double& u_err() {return PLsE[0];}
+    inline double& v_err() {return PLsE[1];}
+    
     inline double& x() {return PGs[0];}
     inline double& y() {return PGs[1];}
     inline double& z() {return PGs[2];}
@@ -178,6 +204,8 @@ namespace altel{
     inline const uint16_t& detN() const {return DN;}
     inline const double& u() const {return PLs[0];}
     inline const double& v() const {return PLs[1];}
+    inline const double& u_err() const {return PLsE[0];}
+    inline const double& v_err() const {return PLsE[1];}
     inline const double& x() const {return PGs[0];}
     inline const double& y() const {return PGs[1];}
     inline const double& z() const {return PGs[2];}
@@ -215,7 +243,7 @@ namespace altel{
     }
 
     bool hasMatchedMeasHit() const{
-      if(FH){
+      if(MM){
         return true;
       }
       else{

@@ -48,7 +48,7 @@ Usage:
   -siThick  <FLOAT>                 mm, silicon thickness when option planeSiThick does not assign the thickness to a layer. (default 0.1 , using geometry file if negetive value)
 
 examples:
-./altelActsTrack -cutChiSquared 0.999 -daqFiles eudaqRaw/altel_Run069017_200824002945.raw -geometryFile calice_geo_align4.json -rootFile detresid.root -targetIds 5 -eventMax 10000
+./altelActsTrack -cutChiSquared 13.816 -daqFiles ../../testbeam_data_2507/DATA/run000030.raw -geometryFile ../../testbeam_data_2507/RUN/geo_setup2_align3_0p04.json -rootFile  detresid.root -targetIds 32 -eventMax  1000000
 )";
 
 int main(int argc, char *argv[]) {
@@ -400,6 +400,7 @@ int main(int argc, char *argv[]) {
 
   Acts::GeometryObjectSorterT<std::shared_ptr<const Acts::PlaneLayer>> layerSorter(gctx, Acts::BinningValue::binX);
   std::sort(layerDets.begin(), layerDets.end(), layerSorter);
+//  std::reverse(layerDets.begin(), layerDets.end());
 
   std::fprintf(stdout, "elementN = %d, detN = %d, targetN = %d\n",
                mapDetId2PlaneLayer.size(), mapDetId2PlaneLayer_dets.size(), mapDetId2PlaneLayer_targets.size());
@@ -481,6 +482,7 @@ int main(int argc, char *argv[]) {
   size_t eventNum = 0;
   size_t trackNum = 0;
   size_t droppedTrackNum = 0;
+  size_t goodEventNum = 0;
   auto tp_start = std::chrono::system_clock::now();
 
   eudaq::FileReaderUP reader;
@@ -551,7 +553,7 @@ int main(int argc, char *argv[]) {
 
     if(sourcelinks.empty()) {
       emptyEventNum ++;
-      eventNum ++;
+      //eventNum ++;
       // std::cout<<"empty"<<std::endl;
       continue;
     }
@@ -573,7 +575,7 @@ int main(int argc, char *argv[]) {
     targetEvent->measHits()=fullEvent->measHits(detId_targets);
 
     TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 400_um, 2);
-
+    bool hasGoodTrack = false;
     for(auto &aTraj: detEvent->TJs){
       size_t orginHitNum = aTraj->numOriginMeasHit();
       if(orginHitNum<3){
@@ -582,12 +584,16 @@ int main(int argc, char *argv[]) {
         continue;
       }
       trackNum ++;
+      hasGoodTrack = true;
+    }
+    if(hasGoodTrack) {
+      goodEventNum++; 
     }
 
     ttreeWriter.fillTelEvent(detEvent);
-    eventNum ++;
+  //  eventNum ++;
 
-    // telfwtest.pushBufferEvent(detEvent);
+   //  telfwtest.pushBufferEvent(detEvent);
 
     if(do_wait){
       std::cout<<"waiting, press any key to conitnue"<<std::endl;
@@ -598,10 +604,10 @@ int main(int argc, char *argv[]) {
   auto tp_end = std::chrono::system_clock::now();
   std::chrono::duration<double> dur_diff = tp_end-tp_start;
   double time_s = dur_diff.count();
-  std::fprintf(stdout, "total time: %.6fs, \nprocessed total %d events,  include %d empty events,\nfound %d good tracks, dropped %d tracks\n",
-               time_s, eventNum, emptyEventNum, trackNum, droppedTrackNum);
-  std::fprintf(stdout, "event rate: %.0fhz, non-empty event rate: %.0fhz, empty event rate: %.0fhz, track rate: %.0fhz\n",
-               eventNum/time_s, (eventNum-emptyEventNum)/time_s, emptyEventNum/time_s, trackNum/time_s);
+  std::fprintf(stdout, "total time: %.6fs, \nprocessed total %d events,  include %d empty events,\nfound %d non_empty events,\nfound %d good tracks, dropped %d tracks,\nfound %d events with good tracks\n",
+               time_s, eventNum, emptyEventNum,(eventNum-emptyEventNum), trackNum, droppedTrackNum,goodEventNum);
+  std::fprintf(stdout, "event rate: %.0fhz, non-empty event rate: %.0fhz, empty event rate: %.0fhz, track rate: %.0fhz,, good event rate: %.0fhz\n",
+               eventNum/time_s, (eventNum-emptyEventNum)/time_s, emptyEventNum/time_s, trackNum/time_s,goodEventNum/time_s);
 
   TFile tfile(rootFilePath.c_str(),"recreate");
   pTree->Write();
@@ -609,9 +615,10 @@ int main(int argc, char *argv[]) {
 
   if(do_wait){
     std::cout<<"waiting, press any key to conitnue"<<std::endl;
-    std::getc(stdin);
+     std::getc(stdin);
   }
 
   // telfw.stopAsync();
   return 0;
 }
+

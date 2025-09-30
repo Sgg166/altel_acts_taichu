@@ -9,6 +9,7 @@
 #include <TFile.h>
 #include <TTree.h>
 #include <TProfile2D.h>
+#include <TCanvas.h>
 
 #include "TelGL.hh"
 #define GLFW_INCLUDE_NONE
@@ -34,8 +35,8 @@ Usage:
   -targetId       <int>...     IDs of target detector which are complectely excluded from track fitting. Residual are caculated.
 
 examples:
-./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo /work/testbeam/altel_align/runspace/test313/align_313_geo.json -r detresid.root -eventM 10
-./bin/TelDetectorResidual -hitFile /work/data/TB2006/alpide_200629033515.json  -geo align_313_geo.json -r detresid.root -eventM 100000 -target 5
+./bin/TelKinkAngle -hitFile /work/data/TB2006/alpide_200629033515.json  -geo /work/testbeam/altel_align/runspace/test313/align_313_geo.json -r detresid.root -eventM 10
+./bin/TelKinkAngle -hitFile /work/data/TB2006/alpide_200629033515.json  -geo align_313_geo.json -r detresid.root -eventM 100000 -target 5
 )";
 
 
@@ -215,7 +216,7 @@ int main(int argc, char *argv[]) {
     std::fprintf(stderr, "Geometry file <%s> does not contain any json objects.\n", geometryFilePath.c_str() );
     throw;
   }
-  JsonUtils::printJsonValue(jsd_geo, true);
+  //JsonUtils::printJsonValue(jsd_geo, true);
 
   std::printf("--------create acts geo object-----\n");
   if (!jsd_geo.HasMember("geometry")) {
@@ -311,9 +312,11 @@ int main(int argc, char *argv[]) {
   ttreeWriter.setTTree(pTree);
 
   TProfile2D *tp2Kink=new TProfile2D("tp2Kink","tp2Kink", 300, -15.0, 15.0 , 150, -7.5, 7.5);
+  TH1F *hkink_angle =  new TH1F("hkink_angle", " hkink_angle;kA_{dir_after-dir_before};Entries [100bin]", 100, -0.001, 0.001);
 
   JsonFileDeserializer jsfd(hitFilePath);
-
+ // eudaq::FileReaderUP reader(daqFilePath);
+  
   for(size_t i=0; i< eventSkipNum; i++){
     auto evpack = jsfd.getNextJsonDocument();
     if(evpack.IsNull()){
@@ -334,7 +337,15 @@ int main(int argc, char *argv[]) {
       std::fprintf(stdout, "reach null object, possible end of file\n");
       break;
     }
-
+ 
+  /*  //-------------------------------------------------
+    auto eudaqEvent = reader->GetNextEvent();
+    if(!eudaqEvent){
+      reader.reset();
+      continue; // goto for next raw file
+    }
+    //-----------------------------------------------
+    */
     size_t runN = 0;
     size_t setupN = 0;
     std::shared_ptr<altel::TelEvent> detEvent  = TelActs::createTelEvent(evpack, runN, eventNum, setupN, mapDetId2PlaneLayer_dets);
@@ -384,8 +395,8 @@ int main(int argc, char *argv[]) {
           continue;
         }
 
-        uint16_t id_before = 2;
-        uint16_t id_after = 4;
+        uint16_t id_before = 5;
+        uint16_t id_after = 32;
         auto trajHit_before = aTraj->trajHit(id_before);
         auto trajHit_after = aTraj->trajHit(id_after);
         if(!trajHit_before || !trajHit_after){
@@ -410,6 +421,7 @@ int main(int argc, char *argv[]) {
         double v = fitHit_before->PLs[1];
 
         tp2Kink->Fill(u,v, kinkAngle);
+        hkink_angle->Fill(kinkAngle);
       }
     }
 
@@ -430,7 +442,14 @@ int main(int argc, char *argv[]) {
 
   pTree->Write();
   tp2Kink->Write();
-
+  TCanvas* c1 = new TCanvas("c1","Kink Angle Map",800,600);
+  c1->Divide(2, 1);
+  c1->cd(1);
+  tp2Kink->Draw("COLZ");
+  c1->cd(2);
+  hkink_angle->Draw();
+  c1->Update();
+  c1->SaveAs("tp2Kink.svg");
   tfile.Close();
   return 0;
 }

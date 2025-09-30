@@ -1,0 +1,120 @@
+<?xml version="1.0" standalone="no"?>
+<svg width="567.429" height="384.512" viewBox="0 0 567.429 384.512" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+<title>
+detID=32 before_and_after.svg
+</title>
+<desc>
+Creator: ROOT Version 6.28/04
+CreationDate: Wed Aug 20 16:36:10 2025</desc>
+<defs>
+</defs>
+<rect x="0.5" y="0" width="566.929" height="384.012" fill="white"/>
+<rect x="57.1929" y="38.4012" width="453.543" height="307.21" fill="white"/>
+<rect x="57.1929" y="38.4012" width="453.543" height="307.21" fill="none" stroke="black"/>
+<path d="M57.1929,345.611h 453.543" fill="none" stroke="black"/>
+<path d="M126.484,336.395v 9.21629" fill="none" stroke="black"/>
+<path d="M146.169,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M165.854,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M185.539,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M205.224,336.395v 9.21629" fill="none" stroke="black"/>
+<path d="M224.909,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M244.594,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M264.28,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M283.965,336.395v 9.21629" fill="none" stroke="black"/>
+<path d="M303.65,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M323.335,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M343.02,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M362.705,336.395v 9.21629" fill="none" stroke="black"/>
+<path d="M382.39,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M402.075,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M421.76,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M441.445,336.395v 9.21629" fill="none" stroke="black"/>
+<path d="M126.484,336.395v 9.21629" fill="none" stroke="black"/>
+<path d="M106.799,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M87.1142,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M67.4291,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M441.445,336.395v 9.21629" fill="none" stroke="black"/>
+<path d="M461.13,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M480.815,341.003v 4.60815" fill="none" stroke="black"/>
+<path d="M500.5,341.003v 4.60815" fill="none" stroke="black"/>
+<text xml:space="preserve" x="119.226" y="357.881" fill="black" font-size="12.8307" font-family="Helvetica">40</text>
+<text xml:space="preserve" x="198.187" y="357.881" fill="black" font-size="12.8307" font-family="Helvetica">60</text>
+<text xml:space="preserve" x="277.148" y="357.881" fill="black" font-size="12.8307" font-family="Helvetica">80</text>
+<text xml:space="preserve" x="352.132" y="357.881" fill="black" font-size="12.8307" font-family="Helvetica">100</text>
+<text xml:space="preserve" x="431.093" y="357.881" fill="black" font-size="12.8307" font-family="Helvetica">120</text>
+<text xml:space="preserve" x="409.507" y="370.947" fill="black" font-size="12.8307" font-family="Helvetica"> X-measHits.size()</text>
+<path d="M57.1929,345.611v -307.21" fill="none" stroke="black"/>
+<path d="M70.7992,306.082h -13.6063" fill="none" stroke="black"/>
+<path d="M63.9961,297.792h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,289.501h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,281.211h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,272.921h -6.80315" fill="none" stroke="black"/>
+<path d="M70.7992,264.63h -13.6063" fill="none" stroke="black"/>
+<path d="M63.9961,256.34h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,248.049h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,239.759h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,231.468h -6.80315" fill="none" stroke="black"/>
+<path d="M70.7992,223.178h -13.6063" fill="none" stroke="black"/>
+<path d="M63.9961,214.888h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,206.597h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,198.307h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,190.016h -6.80315" fill="none" stroke="black"/>
+<path d="M70.7992,181.726h -13.6063" fill="none" stroke="black"/>
+<path d="M63.9961,173.436h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,165.145h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,156.855h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,148.564h -6.80315" fill="none" stroke="black"/>
+<path d="M70.7992,140.274h -13.6063" fill="none" stroke="black"/>
+<path d="M63.9961,131.983h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,123.693h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,115.403h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,107.112h -6.80315" fill="none" stroke="black"/>
+<path d="M70.7992,98.8218h -13.6063" fill="none" stroke="black"/>
+<path d="M63.9961,90.5314h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,82.2409h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,73.9505h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,65.6601h -6.80315" fill="none" stroke="black"/>
+<path d="M70.7992,57.3697h -13.6063" fill="none" stroke="black"/>
+<path d="M70.7992,306.082h -13.6063" fill="none" stroke="black"/>
+<path d="M63.9961,314.373h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,322.663h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,330.953h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,339.244h -6.80315" fill="none" stroke="black"/>
+<path d="M70.7992,57.3697h -13.6063" fill="none" stroke="black"/>
+<path d="M63.9961,49.0793h -6.80315" fill="none" stroke="black"/>
+<path d="M63.9961,40.7889h -6.80315" fill="none" stroke="black"/>
+<text xml:space="preserve" x="30.0394" y="310.164" fill="black" font-size="12.8307" font-family="Helvetica">1.45</text>
+<text xml:space="preserve" x="36.8562" y="268.695" fill="black" font-size="12.8307" font-family="Helvetica">1.5</text>
+<text xml:space="preserve" x="30.0394" y="227.226" fill="black" font-size="12.8307" font-family="Helvetica">1.55</text>
+<text xml:space="preserve" x="36.8562" y="185.757" fill="black" font-size="12.8307" font-family="Helvetica">1.6</text>
+<text xml:space="preserve" x="30.0394" y="144.289" fill="black" font-size="12.8307" font-family="Helvetica">1.65</text>
+<text xml:space="preserve" x="36.8562" y="103.388" fill="black" font-size="12.8307" font-family="Helvetica">1.7</text>
+<text xml:space="preserve" x="30.0394" y="61.351" fill="black" font-size="12.8307" font-family="Helvetica">1.75</text>
+<g transform="rotate(-90,16.4058,109.069)">
+<text xml:space="preserve" x="16.4058" y="109.069" fill="black" font-size="12.8307" font-family="Helvetica">Y-Probability</text>
+</g>
+<text xml:space="preserve" x="95.935" y="17.61" fill="black" font-size="16.4246" font-family="Helvetica">detID=32 measHits.size() varies with the threshould</text>
+<path d="M94.9882,64.002l 125.984, 16.9954l 125.984, 203.944l 125.984, 35.0685" fill="none" stroke="#0000ff" stroke-width="2"/>
+<g fill="black">
+<circle cx="94.9882" cy="64.002" r="2.27226"/>
+<circle cx="220.972" cy="80.9974" r="2.27226"/>
+<circle cx="346.957" cy="284.942" r="2.27226"/>
+<circle cx="472.941" cy="320.01" r="2.27226"/>
+</g>
+<path d="M94.9882,76.4376l 125.984, 9.53398l 125.984, 202.286l 125.984, 36.4778" fill="none" stroke="#ff0000" stroke-width="2"/>
+<g fill="black">
+<rect x="92.7159" y="74.1654" width="4.54452" height="4.54452"/>
+<rect x="218.7" y="83.6994" width="4.54452" height="4.54452"/>
+<rect x="344.684" y="285.986" width="4.54452" height="4.54452"/>
+<rect x="470.669" y="322.463" width="4.54452" height="4.54452"/>
+</g>
+<rect x="340.657" y="57.6018" width="170.079" height="57.6018" fill="white"/>
+<path d="M340.657,115.204h 170.079" fill="none" stroke="black"/>
+<path d="M510.736,115.204v -57.6018" fill="none" stroke="black"/>
+<path d="M510.736,57.6018h -170.079" fill="none" stroke="black"/>
+<path d="M340.657,57.6018v 57.6018" fill="none" stroke="black"/>
+<text xml:space="preserve" x="382.808" y="74.9846" fill="black" font-size="9.89973" font-family="Helvetica">mean_Raw_size_32</text>
+<path d="M347.035,72.0023h 29.7638" fill="none" stroke="#0000ff" stroke-width="2"/>
+<text xml:space="preserve" x="382.808" y="103.956" fill="black" font-size="9.89973" font-family="Helvetica">after_mean_Raw_size_32</text>
+<path d="M347.035,100.803h 29.7638" fill="none" stroke="#ff0000" stroke-width="2"/>
+<text xml:space="preserve" x="95.935" y="17.61" fill="black" font-size="16.4246" font-family="Helvetica">detID=32 measHits.size() varies with the threshould</text></svg>

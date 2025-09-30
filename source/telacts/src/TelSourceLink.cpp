@@ -1,9 +1,13 @@
 #include "TelSourceLink.hpp"
 #include "Acts/Utilities/Units.hpp"
-
+#include <random>
 using namespace Acts::UnitLiterals;
 
-
+/*static std::random_device rd;
+static std::mt19937 gen(rd());
+static std::normal_distribution<double> dist_resX(6.0, 1.0);  // 均值6.0，标准差1.0
+static std::normal_distribution<double> dist_resY(6.0, 1.0);  // 均值6.0，标准差1.0
+*/
 TelActs::TelSourceLink::TelSourceLink(const Acts::PlaneLayer &planeLayer, std::shared_ptr<altel::TelMeasHit> hitMeas)
   : m_hitMeas(hitMeas), m_cov(Acts::BoundMatrix::Zero()), m_surface(&planeLayer){
   if(!hitMeas){
@@ -14,9 +18,40 @@ TelActs::TelSourceLink::TelSourceLink(const Acts::PlaneLayer &planeLayer, std::s
 
   double resX = 6_um;
   double resY = 6_um;
+
   m_cov(0, 0) = resX * resX;
   m_cov(1, 1) = resY * resY;
 
+
+/*  double pitchU = 25_um;  // 像素 pitch = 25 µm 
+  double pitchV = 25_um;
+
+  // 统计 cluster 在 U 和 V 方向上的扩展
+  std::set<uint16_t> unique_u, unique_v;
+  for (const auto& raw : hitMeas->measRaws()) {
+    unique_u.insert(raw.u());
+    unique_v.insert(raw.v());
+  }
+  size_t cluSizeU = unique_u.size();
+  size_t cluSizeV = unique_v.size();
+
+  // 分辨率估算: 单像素 = pitch/√12, 多像素 = pitch/(√12 * √N)
+  double resU = (cluSizeU > 0)
+                  ? pitchU / (std::sqrt(12.0) * std::sqrt((double)cluSizeU))
+                  : pitchU / std::sqrt(12.0);
+  double resV = (cluSizeV > 0)
+                  ? pitchV / (std::sqrt(12.0) * std::sqrt((double)cluSizeV))
+                  : pitchV / std::sqrt(12.0);
+
+  m_cov(0, 0) = resU * resU; 
+  m_cov(1, 1) = resV * resV;
+
+
+  double resX = dist_resX(gen) ;
+  double resY = dist_resY(gen) ;
+  m_cov(0, 0) = (resX*1_um) * (resX*1_um);
+  m_cov(1, 1) = (resY*1_um) * (resY*1_um);
+*/
 }
 
 
@@ -42,6 +77,37 @@ TelActs::TelSourceLink::TelSourceLink(std::shared_ptr<altel::TelMeasHit> hitMeas
   m_cov(0, 0) = resX * resX;
   m_cov(1, 1) = resY * resY;
 
+
+
+  /*double pitchU = 25_um;  // 像素 pitch = 25 µm 
+  double pitchV = 25_um;
+
+  // 统计 cluster 在 U 和 V 方向上的扩展
+  std::set<uint16_t> unique_u;
+  std::set<uint16_t> unique_v;
+  for (const auto& raw : hitMeas->measRaws()) {
+    unique_u.insert(raw.u());
+    unique_v.insert(raw.v());
+  }
+  size_t cluSizeU = unique_u.size();
+  size_t cluSizeV = unique_v.size();
+
+  // 分辨率估算: 单像素 = pitch/√12, 多像素 = pitch/(√12 * √N)
+  double resU = (cluSizeU > 0)
+                  ? pitchU / (std::sqrt(12.0) * std::sqrt((double)cluSizeU))
+                  : pitchU / std::sqrt(12.0);
+  double resV = (cluSizeV > 0)
+                  ? pitchV / (std::sqrt(12.0) * std::sqrt((double)cluSizeV))
+                  : pitchV / std::sqrt(12.0);
+
+  // 设置协方差矩阵 (只在局部平面位置上的 2x2 部分非零)
+  m_cov(0, 0) = resU * resU;
+  m_cov(1, 1) = resV * resV;
+
+  double resX = dist_resX(gen) ;
+  double resY = dist_resY(gen) ;
+  m_cov(0, 0) = (resX*1_um) * (resX*1_um);
+  m_cov(1, 1) = (resY*1_um) * (resY*1_um);*/
   m_hitMeas = hitMeas;
 
 }
