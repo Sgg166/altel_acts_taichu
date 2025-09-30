@@ -1,0 +1,4 @@
+# 忽略编译产物
+BUILD/
+INSTALL/lib64/
+testbeam_data_2507/
