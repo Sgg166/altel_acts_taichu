@@ -102,8 +102,10 @@ target_link_libraries(altelMilleBin
   PRIVATE
   altel-data-event
   altel-data-eudaq
+  altel-data-root
   altel-mille
   mycommon
+  ROOT::Core ROOT::RIO ROOT::Tree 
   )
 add_executable(test test.cc)
 list(APPEND EXE_TARGET_LIST test)
@@ -124,6 +126,21 @@ target_link_libraries(test
     altel-telfw altel-telgl galogen
 )
 
+#------------------
+add_executable(param_optimizer param_optimizer.cpp)
+list(APPEND EXE_TARGET_LIST param_optimizer)
+target_link_libraries(param_optimizer 
+  PRIVATE altel-acts mycommon
+)
+#------------------------ 
+#------------------------------------
+
+
+#target_include_directories(param_optimizer 
+# PRIVATE 
+# ${CMAKE_SOURCE_DIR}/source/common/rapidjson
+# ${CMAKE_SOURCE_DIR}/source/telacts/include
+#)
 
 # add_executable(altelTcpClient altelTcpClient.cpp)
 # list(APPEND EXE_TARGET_LIST altelTcpClient)
