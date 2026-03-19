@@ -5,7 +5,7 @@
 
 #include "eudaq/FileReader.hh"
 #include "CvtEudaqAltelRaw.hh"
-
+#include "TelEventTTreeReader.hpp"
 #include <numeric>
 #include <chrono>
 #include <regex>
@@ -38,6 +38,7 @@ Usage:
   -beamPosition   <FLOAT>           mm, positon beam collimator (range [-5000 5000],  default -5000). Direction is toward ORIGIN point
   -beamEnergy     <FLOAT>           energy of beam particle, electron, (Gev, default 5)
   -daqFiles  <<PATH0> [PATH1]...>   paths to input daq data files (input). old option -eudaqFiles
+  -rootfile        <PATH>           path to input ROOT file (input) JadePix3_run333
   -rootFile       <PATH>            path to out root file of reconstructed trajactories (output)
   -includeIds   <<INT0> [INT1]...>  IDs of detector contrubuted to track fitting. If not set, all detector geometries are set as the geometry file.
   -excludeIds   <<INT0> [INT1]...>  IDs of detector which are complectely excluded from track fitting. Detector geometry is excluded.
@@ -46,9 +47,12 @@ Usage:
   -cutChiSquared  <FLOAT>           cut of 2-DoF Chi-Squared PDF (default 13.816 <cdf=0.999>). Override default cutProbability.
   -planeSiThick  <INT_ID> <FLOAT_THICK> mm, silicon thickness of a layer
   -siThick  <FLOAT>                 mm, silicon thickness when option planeSiThick does not assign the thickness to a layer. (default 0.1 , using geometry file if negetive value)
-
+  -resolutionConfig <INT>           path to resolution input file (input)
 examples:
-./altelActsTrack -cutChiSquared 13.816 -daqFiles ../../testbeam_data_2507/DATA/run000030.raw -geometryFile ../../testbeam_data_2507/RUN/geo_setup2_align3_0p04.json -rootFile  detresid.root -targetIds 32 -eventMax  1000000
+./altelActsTrack -cutChiSquared 13.816 -daqFiles ../../testbeam_data_2507/DATA/run000030.raw -geometryFile ../../testbeam_data_2507/RUN/geo_setup2_align3_0p04.json  -resolutionConfig ../../testbeam_data_2507/RUN/resolution_template.json  -rootFile  detresid.root -targetIds 32 -eventMax  1000000
+
+examples with ROOT file:
+./altelActsTrack -cutChiSquared 13.816 -rootfile run333.root -geometryFile ../../testbeam_data_2507/RUN/geo_setup2_align3_0p04.json -rootFile  detresid.root -targetIds 32 -eventMax  1000000
 )";
 
 int main(int argc, char *argv[]) {
@@ -61,13 +65,14 @@ int main(int argc, char *argv[]) {
   std::vector<std::string> rawFilePathCol;
   std::string geometryFilePath;
   std::string rootFilePath;
-
+  std::string resolutionConfigFile;
+  std::string rootfile_path;  // Add ROOT input file path
   double particleQ = 1;
   double particleMass = 0.511 * Acts::UnitConstants::MeV;
 
   double beamEnergy = 5.0 * Acts::UnitConstants::GeV;
   double beamPosition = -5000 * Acts::UnitConstants::mm;
-  double beamSize = 40 * Acts::UnitConstants::mm;
+  double beamSize = 40.0 * Acts::UnitConstants::mm;
 
   double siThick = 0.1;
   std::map<size_t, double> planeSiThick;
@@ -88,6 +93,7 @@ int main(int argc, char *argv[]) {
                                 {"eventMax", required_argument, NULL, 'm'},
                                 {"eudaqFiles", required_argument, NULL, 'f'}, // old
                                 {"daqFiles", required_argument, NULL, 'f'},
+                                {"rootfile", required_argument, NULL, 'F'},//add
                                 {"rootFile", required_argument, NULL, 'b'},
                                 {"geometryFile", required_argument, NULL, 'g'},
                                 {"particleEnergy", required_argument, NULL, 'e'}, // old
@@ -101,6 +107,7 @@ int main(int argc, char *argv[]) {
                                 {"cutChiSquared", required_argument, NULL, 'u'},
                                 {"planeSiThick", required_argument, NULL, 't'},
                                 {"siThick", required_argument, NULL, 'k'},
+                                {"resolutionConfig", required_argument, NULL, 'R'},
                                 {0, 0, 0, 0}};
 
     if(argc == 1){
@@ -122,6 +129,9 @@ int main(int argc, char *argv[]) {
       case 'm':
         eventMaxNum = std::stoul(optarg);
         break;
+        case 'R':
+        resolutionConfigFile = optarg;
+        break;
       case 'c':
         hasCutProbability = true;
         cutProbability = std::stod(optarg);
@@ -138,7 +148,9 @@ int main(int argc, char *argv[]) {
         }
         break;
       }
-
+      case 'F':
+        rootfile_path = std::string(optarg);
+        break;//add
       case 'k':
         siThick = std::stod(optarg);
         break;
@@ -272,13 +284,18 @@ int main(int argc, char *argv[]) {
   for(auto &id: targetDetId){
     std::fprintf(stdout, "                %d\n", id);
   }
+  if(!rawFilePathCol.empty()){//add
+    std::fprintf(stdout, "%d daqFiles:\n", rawFilePathCol.size());
+    for(auto &rawfilepath: rawFilePathCol){
+      std::fprintf(stdout, "                %s\n", rawfilepath.c_str());
+    }
+  }//add
+  if(!rootfile_path.empty()){
+    std::fprintf(stdout, "ROOT input file: %s\n", rootfile_path.c_str());
+  }//这三行是new add
 
-  std::fprintf(stdout, "%d daqFiles:\n", rawFilePathCol.size());
-  for(auto &rawfilepath: rawFilePathCol){
-    std::fprintf(stdout, "                %s\n", rawfilepath.c_str());
-  }
   std::fprintf(stdout, "geometryFile:     %s\n", geometryFilePath.c_str());
-  std::fprintf(stdout, "rootFile:         %s\n", rootFilePath.c_str());
+  std::fprintf(stdout, "rootFile(out):         %s\n", rootFilePath.c_str());
 
   std::fprintf(stdout, "cutProbability:   %f\n", cutProbability);
   std::fprintf(stdout, "cutChiSquared:    %f\n", cutChiSquared);
@@ -290,7 +307,7 @@ int main(int argc, char *argv[]) {
   }
   std::fprintf(stdout, "\n");
 
-  if (rawFilePathCol.empty() ||
+  if ((rawFilePathCol.empty() && rootfile_path.empty()) ||
       rootFilePath.empty() ||
       geometryFilePath.empty()) {
     std::fprintf(stderr, "%s\n", help_usage.c_str());
@@ -313,7 +330,12 @@ int main(int argc, char *argv[]) {
 
   // Setup the magnetic field
   auto magneticField = std::make_shared<Acts::ConstantBField>(0_T, 0_T, 0_T);
-
+//--------------------------------------------------------------------------------------------
+  if (!resolutionConfigFile.empty()) {
+        std::printf("Loading resolution config from: %s\n", resolutionConfigFile.c_str());
+        TelActs::initializeResolutionConfig(resolutionConfigFile);
+      }
+//-----------------------------------------------------------------------------------------------------  
   //////////// geometry
   std::printf("--------read geo-----\n");
   std::string str_geo = JsonUtils::readFile(geometryFilePath);
@@ -468,9 +490,15 @@ int main(int argc, char *argv[]) {
     gctx, mctx, cctx, sourcelinkSelectorCfg, Acts::LoggerWrapper{*kfLogger}, pOptions,
     nullptr);
 
+  TFile *tfileOut = new TFile(rootFilePath.c_str(), "RECREATE");//add
+  if(!tfileOut || !tfileOut->IsOpen()){
+    std::fprintf(stderr, "Output ROOT file <%s> cannot be opened.\n", rootFilePath.c_str());
+    throw;
+  }//add
+
   altel::TelEventTTreeWriter ttreeWriter;
-  TTree *pTree = new TTree("eventTree", "eventTree");
-  ttreeWriter.setTTree(pTree);
+  TTree *pTreeOut = new TTree("eventTree", "eventTree");
+  ttreeWriter.setTTree(pTreeOut);
 
   // TelFW telfw(800, 400, "test");
   // glfw_test telfwtest(geometryFilePath);
@@ -483,65 +511,105 @@ int main(int argc, char *argv[]) {
   size_t trackNum = 0;
   size_t droppedTrackNum = 0;
   size_t goodEventNum = 0;
+  size_t validEventNum = 0;
+
+  size_t trackN = 0;
+   size_t EventNum = 0;
+
   auto tp_start = std::chrono::system_clock::now();
 
   eudaq::FileReaderUP reader;
   std::unique_ptr<JsonFileDeserializer> jsreader;
+  altel::TelEventTTreeReader ttreeReader;//add
+  bool useRootFile = !rootfile_path.empty();//add
+  TFile *tfileIn = nullptr;//add
+  if(useRootFile){
+    tfileIn = new TFile(rootfile_path.c_str(), "READ");
+    if(!tfileIn || !tfileIn->IsOpen()){
+      std::fprintf(stderr, "ROOT file <%s> cannot be opened.\n", rootfile_path.c_str());
+      throw;
+    }
+    TTree *pTreeIn = 0;
+    tfileIn->GetObject("eventTree", pTreeIn);
+    if(!pTreeIn){
+      std::fprintf(stderr, "eventTree not found in ROOT file.\n");
+      throw;
+    }
+    ttreeReader.setTTree(pTreeIn);
+  }//从if(useRootFile)开始add
 
   bool is_eudaq_raw = true;
-  if(std::regex_match(rawFilePathCol.front(), std::regex("\\S+.json")) ){
+  
+  if(!rawFilePathCol.empty() && std::regex_match(rawFilePathCol.front(), std::regex("\\S+.json")) ){//!rawFilePathCol.empty() &&原本没有
     is_eudaq_raw= false;
   }
+
   while(1){
     if(eventNum> eventMaxNum && eventMaxNum>0){
       break;
     }
     std::shared_ptr<altel::TelEvent> fullEvent;
-    if(is_eudaq_raw){
-      if(!reader){
-        if(rawFileNum<rawFilePathCol.size()){
-          std::fprintf(stdout, "processing raw file: %s\n", rawFilePathCol[rawFileNum].c_str());
-          reader = eudaq::Factory<eudaq::FileReader>::MakeUnique(eudaq::str2hash("native"), rawFilePathCol[rawFileNum]);
-          rawFileNum++;
-        }
-        else{
-          std::fprintf(stdout, "processed %d raw files, quit\n", rawFileNum);
-          break;
-        }
+    if(useRootFile){
+      // Read from ROOT file
+      size_t totalNumEvents = ttreeReader.numEvents();
+      if(eventNum >= totalNumEvents){
+        break;
       }
-      auto eudaqEvent = reader->GetNextEvent();
-      if(!eudaqEvent){
-        reader.reset();
-        continue; // goto for next raw file
+      if(eventSkipNum>0 && eventNum<eventSkipNum){
+        eventNum++;
+        continue;
       }
-      readEventNum++;
-      if(readEventNum<=eventSkipNum){
+      fullEvent = ttreeReader.createTelEvent(eventNum);
+      if(!fullEvent){
         continue;
       }
       eventNum++;
-      fullEvent  = altel::createTelEvent(eudaqEvent);
-    }
-    else{
-      if(!jsreader){
-        if(rawFileNum<rawFilePathCol.size()){
-          std::fprintf(stdout, "processing js file: %s\n", rawFilePathCol[rawFileNum].c_str());
-          jsreader.reset(new JsonFileDeserializer(rawFilePathCol[rawFileNum]));
-          rawFileNum++;
+    }else{
+      if(is_eudaq_raw){
+        if(!reader){
+          if(rawFileNum<rawFilePathCol.size()){
+            std::fprintf(stdout, "processing raw file: %s\n", rawFilePathCol[rawFileNum].c_str());
+            reader = eudaq::Factory<eudaq::FileReader>::MakeUnique(eudaq::str2hash("native"), rawFilePathCol[rawFileNum]);
+            rawFileNum++;
+          }
+          else{
+            std::fprintf(stdout, "processed %d raw files, quit\n", rawFileNum);
+            break;
+          }
         }
-        else{
-          std::fprintf(stdout, "processed %d raw files, quit\n", rawFileNum);
-          break;
+        auto eudaqEvent = reader->GetNextEvent();
+        if(!eudaqEvent){
+          reader.reset();
+          continue; // goto for next raw file
         }
-      }
-      auto evpack = jsreader->getNextJsonDocument();
-      if(evpack.IsNull()){
-        jsreader.reset();
+        readEventNum++;
+        if(readEventNum<=eventSkipNum){
         continue;
+        }
+        eventNum++;
+        fullEvent  = altel::createTelEvent(eudaqEvent);
       }
-      eventNum++;
-      fullEvent  = TelActs::createTelEvent(evpack, 0, eventNum, 0);
+      else{
+        if(!jsreader){
+          if(rawFileNum<rawFilePathCol.size()){
+            std::fprintf(stdout, "processing js file: %s\n", rawFilePathCol[rawFileNum].c_str());
+            jsreader.reset(new JsonFileDeserializer(rawFilePathCol[rawFileNum]));
+            rawFileNum++;
+          }
+          else{
+            std::fprintf(stdout, "processed %d raw files, quit\n", rawFileNum);
+            break;
+          }
+        }
+        auto evpack = jsreader->getNextJsonDocument();
+        if(evpack.IsNull()){
+          jsreader.reset();
+          continue;
+        }
+        eventNum++;
+        fullEvent  = TelActs::createTelEvent(evpack, 0, eventNum, 0);
+      }
     }
-
     // TODO test nullptr
     std::shared_ptr<altel::TelEvent> detEvent(new altel::TelEvent(fullEvent->runN(),
                                                                   fullEvent->eveN(),
@@ -573,6 +641,37 @@ int main(int argc, char *argv[]) {
                                                                      fullEvent->detN(),
                                                                      fullEvent->clkN()));
     targetEvent->measHits()=fullEvent->measHits(detId_targets);
+    //================================================
+  /*  size_t valid5HitTrackNum_beforeMerge = 0;
+    for(auto &aTraj: detEvent->TJs){
+      size_t orginHitNum = aTraj->numOriginMeasHit();
+      if(orginHitNum == 5){
+        valid5HitTrackNum_beforeMerge++;
+      }
+    }
+    if(valid5HitTrackNum_beforeMerge == 1) {
+      validEventNum++;
+    }*/
+//===============================================
+
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++
+/*    bool Track = false;
+    for(auto &aTraj: detEvent->TJs){
+      size_t orginHitNum = aTraj->numOriginMeasHit();
+      if(orginHitNum!=5){
+      //  if(orginHitNum != 1)
+          //DroppedTrackNum++;
+        continue;
+      }
+      trackN ++;
+      Track = true;
+    }
+    if(Track) {
+      EventNum++; 
+    }
+*/
+//+++++++++++++++++++++++++++++++++++++++++++++
 
     TelActs::mergeAndMatchExtraTelEvent(detEvent, targetEvent, 400_um, 2);
     bool hasGoodTrack = false;
@@ -604,14 +703,20 @@ int main(int argc, char *argv[]) {
   auto tp_end = std::chrono::system_clock::now();
   std::chrono::duration<double> dur_diff = tp_end-tp_start;
   double time_s = dur_diff.count();
-  std::fprintf(stdout, "total time: %.6fs, \nprocessed total %d events,  include %d empty events,\nfound %d non_empty events,\nfound %d good tracks, dropped %d tracks,\nfound %d events with good tracks\n",
-               time_s, eventNum, emptyEventNum,(eventNum-emptyEventNum), trackNum, droppedTrackNum,goodEventNum);
+  std::fprintf(stdout, "total time: %.6fs, \nprocessed total %d events,  include %d empty events,\nfound %d non_empty events,\nfound %d good tracks, dropped %d tracks,\nfound %d events with good tracks,\nfound %d EventNum,\nfound %d validEventNum\n",
+               time_s, eventNum, emptyEventNum,(eventNum-emptyEventNum), trackNum, droppedTrackNum,goodEventNum,EventNum,validEventNum);
   std::fprintf(stdout, "event rate: %.0fhz, non-empty event rate: %.0fhz, empty event rate: %.0fhz, track rate: %.0fhz,, good event rate: %.0fhz\n",
                eventNum/time_s, (eventNum-emptyEventNum)/time_s, emptyEventNum/time_s, trackNum/time_s,goodEventNum/time_s);
 
-  TFile tfile(rootFilePath.c_str(),"recreate");
-  pTree->Write();
-  tfile.Close();
+  //TFile tfileOut(rootFilePath.c_str(),"recreate");
+  //TFile *tfileOut = new TFile(rootFilePath.c_str(), "RECREATE");
+  tfileOut->cd();
+  pTreeOut->Write();
+  tfileOut->Close();
+ 
+  if(tfileIn){
+    tfileIn->Close();
+  }//add
 
   if(do_wait){
     std::cout<<"waiting, press any key to conitnue"<<std::endl;
