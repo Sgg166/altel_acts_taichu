@@ -49,12 +49,14 @@ Usage:
   -eudaqRawFile   <PATH>            path to eudaq raw file (input)
   -rootOutput                       path to output ROOT file (output)
 examples:
- ./bin/altelEudaqRawViewer -w -geo calice_geo_align4.json  -eudaq eudaqRaw/altel_Run069017_200824002945.raw
+ ./altelEudaqRawViewer -w -geo ../../testbeam_data_2507/RUN/geo_setup2_align3_0p04.json  -eudaq ../../testbeam_data_2507/DATA/run000030.raw  -root output.root
 )";
 
 int main(int argc, char *argv[]) {
   int64_t eventMaxNum = 0;
   int64_t eventSkipNum = 0;
+  int emptyEventCount = 0;
+  size_t validEventCount = 0;
   std::string geometryFilePath;
   std::string eudaqRawFilePath;
   std::string rootOutputPath;
@@ -194,9 +196,9 @@ int main(int argc, char *argv[]) {
   telfw.startAsync<glfw_test>(&telfwtest, &glfw_test::beginHook, &glfw_test::clearHook, &glfw_test::drawHook);
 
   for(size_t eventNum = 0;;eventNum++){
-    std::fprintf(stdout,"eventNum1 : %d\n", eventNum);
+  //  std::fprintf(stdout,"eventNum1 : %d\n", eventNum);
     auto eudaqEvent = reader->GetNextEvent();
-    std::fprintf(stdout,"eventNum2 : %d\n", eventNum);
+  //  std::fprintf(stdout,"eventNum2 : %d\n", eventNum);
     if(!eudaqEvent){
       std::fprintf(stdout, "reach end of data file\n");
       break;
@@ -218,8 +220,10 @@ int main(int argc, char *argv[]) {
 
     if(telEvent->measRaws().empty() && telEvent->measHits().empty() && telEvent->trajs().empty()){
       std::fprintf(stdout, "FileEvent #%d, empty event, skipped\n", eventNum);
+        emptyEventCount++;
       continue;
     }
+    validEventCount++;
 
     std::fprintf(stdout, "FileEvent #%d, event #%d, clock/trigger #%d\n", eventNum, telEvent->eveN(), telEvent->clkN());
     std::fprintf(stdout, "=== Details of the event  ===\n");
@@ -278,6 +282,8 @@ int main(int argc, char *argv[]) {
 
 
   reader.reset();
+  std::fprintf(stdout, "Total valid events: %zu\n", validEventCount);
+  std::fprintf(stdout, "\nTotal empty events: %d\n", emptyEventCount);
   if(do_wait){
     std::fprintf(stdout, "finished, press any key to exit\n");
     std::getc(stdin);
