@@ -7,7 +7,7 @@
 
 
 ```sh
-git clone https://github.com/eyiliu/altel_acts.git
+git clone https://github.com/Sgg166/altel_acts.git
 cd altel_acts
 mkdir BUILD
 cd BUILD
