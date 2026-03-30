@@ -53,7 +53,10 @@ void altel::TelEventTTreeWriter::setTTree(TTree* pTTree){
   auto bTrajVec_NumHitFit_PerTraj = tree.Branch("TrajVec_NumTrajHits_PerTraj", &pTrajVec_NumHitFit_PerTraj);
   auto bTrajVec_NumHitMeas_Origin_PerTraj = tree.Branch("TrajVec_NumOriginMeasHits_PerTraj", &pTrajVec_NumHitMeas_Origin_PerTraj);
   auto bTrajVec_NumHitMeas_Matched_PerTraj = tree.Branch("TrajVec_NumMatchedMeasHits_PerTraj", &pTrajVec_NumHitMeas_Matched_PerTraj);
-
+//+++++++
+  auto bTrajVec_Chi2 = tree.Branch("TrajVec_Chi2", &pTrajVec_Chi2);
+  auto bTrajVec_Ndf = tree.Branch("TrajVec_Ndf", &pTrajVec_Ndf);
+//+++++++++
   auto bTrajVec_Index_To_HitFit =
     tree.Branch("TrajVec_TrajHit_Index", &pTrajVec_Index_To_HitFit);
 
@@ -102,8 +105,10 @@ void altel::TelEventTTreeWriter::fillTelEvent(std::shared_ptr<altel::TelEvent> t
     rTrajVec_NumHitMeas_Origin_PerTraj.clear();
     rTrajVec_NumHitMeas_Matched_PerTraj.clear();
     rTrajVec_Index_To_HitFit.clear();
-
-
+    //++++++++
+    rTrajVec_Chi2.clear();
+    rTrajVec_Ndf.clear();
+//++++++++++
     //matched analysis
     rAnaVec_Matched_DetN.clear();
     rAnaVec_Matched_ResdU.clear();
@@ -159,6 +164,10 @@ void altel::TelEventTTreeWriter::fillTelEvent(std::shared_ptr<altel::TelEvent> t
 
       rNumTraj_PerEvent ++;
       rTrajVec_Index_To_HitFit.push_back(-1);//traj: -1 {M-N} -1 {M-N}
+
+      // 添加这两行
+      rTrajVec_Chi2.push_back(aTraj->chi2());
+      rTrajVec_Ndf.push_back(aTraj->ndf());
 
       int16_t aNumHitFit_PerTraj = 0;
       int16_t aNumHitMeas_Origin_PerTraj = 0;
