@@ -72,6 +72,10 @@ namespace altel{
     std::vector<int16_t> rTrajVec_Index_To_HitFit,
       *pTrajVec_Index_To_HitFit = &rTrajVec_Index_To_HitFit;
 
+    // 添加这两个
+    std::vector<double> rTrajVec_Chi2, *pTrajVec_Chi2 = &rTrajVec_Chi2;
+    std::vector<double> rTrajVec_Ndf, *pTrajVec_Ndf = &rTrajVec_Ndf;
+
     //ana
     std::vector<int16_t> rAnaVec_Matched_DetN, *pAnaVec_Matched_DetN = &rAnaVec_Matched_DetN;
     std::vector<double> rAnaVec_Matched_ResdU, *pAnaVec_Matched_ResdU = &rAnaVec_Matched_ResdU;
