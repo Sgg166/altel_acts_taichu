@@ -1,165 +1,114 @@
 #include "TelSourceLink.hpp"
 #include "Acts/Utilities/Units.hpp"
+#include "myrapidjson.h"
 #include <random>
 using namespace Acts::UnitLiterals;
-
-/*static std::random_device rd;
-static std::mt19937 gen(rd());
-static std::normal_distribution<double> dist_resX(6.0, 1.0);  // 均值6.0，标准差1.0
-static std::normal_distribution<double> dist_resY(6.0, 1.0);  // 均值6.0，标准差1.0
-*/
-TelActs::TelSourceLink::TelSourceLink(const Acts::PlaneLayer &planeLayer, std::shared_ptr<altel::TelMeasHit> hitMeas)
-  : m_hitMeas(hitMeas), m_cov(Acts::BoundMatrix::Zero()), m_surface(&planeLayer){
-  if(!hitMeas){
-    std::fprintf(stderr, "very wrong\n");
-    throw;
+ 
+namespace {
+   struct ResolutionConfig {
+    double u_size1 = 6_um, u_size2 = 6_um, u_sizeOther = 6_um;
+    double v_size1 = 6_um, v_size2 = 6_um, v_sizeOther = 6_um;
+    
+    static ResolutionConfig& getInstance() {
+      static ResolutionConfig instance;
+      return instance;
+    }
+    
+    void loadFromFile(const std::string& filename) {
+      std::string content = JsonUtils::readFile(filename);
+      JsonDocument doc = JsonUtils::createJsonDocument(content);
+      
+      if (doc.HasMember("resolutions")) {
+        const auto& res = doc["resolutions"];
+        if (res.HasMember("u_direction")) {
+          const auto& u = res["u_direction"];
+        //  if (u.HasMember("u")) u = std::stod(u["u"].GetString()) * 1_um;
+          if (u.HasMember("size_1")) u_size1 = std::stod(u["size_1"].GetString()) * 1_um;
+          if (u.HasMember("size_2")) u_size2 = std::stod(u["size_2"].GetString()) * 1_um;
+          if (u.HasMember("size_other")) u_sizeOther = std::stod(u["size_other"].GetString()) * 1_um;
+        }
+        if (res.HasMember("v_direction")) {
+          const auto& v = res["v_direction"];
+        //  if (v.HasMember("v")) v = std::stod(v["v"].GetString()) * 1_um;
+          if (v.HasMember("size_1")) v_size1 = std::stod(v["size_1"].GetString()) * 1_um;
+          if (v.HasMember("size_2")) v_size2 = std::stod(v["size_2"].GetString()) * 1_um;
+          if (v.HasMember("size_other")) v_sizeOther = std::stod(v["size_other"].GetString()) * 1_um;
+        }
+      }
+    }
+  };
+  //Calculate the resolution corresponding to the cluster extension
+  double calculateResolution(size_t clusterSize, bool isUdirection) {
+    auto& config = ResolutionConfig::getInstance();
+    if (isUdirection) {
+   //   return config.u;
+      if (clusterSize == 1) return config.u_size1;
+      else if (clusterSize == 2) return config.u_size2;
+      else return config.u_sizeOther;
+    } else {
+     // return config.v;
+      if (clusterSize == 1) return config.v_size1;
+      else if (clusterSize == 2) return config.v_size2;
+      else return config.v_sizeOther;
+    }
   }
-  m_values << m_hitMeas->PLs[0], m_hitMeas->PLs[1];
-
-  double resX = 6_um;
-  double resY = 6_um;
-
-  m_cov(0, 0) = resX * resX;
-  m_cov(1, 1) = resY * resY;
-
-
-/*  double pitchU = 25_um;  // 像素 pitch = 25 µm 
-  double pitchV = 25_um;
-
-  // 统计 cluster 在 U 和 V 方向上的扩展
-  std::set<uint16_t> unique_u, unique_v;
-  for (const auto& raw : hitMeas->measRaws()) {
-    unique_u.insert(raw.u());
-    unique_v.insert(raw.v());
+ 
+  // Calculate the expansion of the cluster in the U and V directions and set the covariance matrix
+  void setCovarianceFromClusterSize(Acts::BoundMatrix& cov, 
+                                   std::shared_ptr<altel::TelMeasHit> hitMeas) {
+    // Statistically analyze the expansion of the cluster in the U and V directions
+    std::set<uint16_t> unique_u, unique_v;
+    for (const auto& raw : hitMeas->measRaws()) {
+      unique_u.insert(raw.u());
+      unique_v.insert(raw.v());
+    }
+    
+    size_t cluSizeU = unique_u.size();
+    size_t cluSizeV = unique_v.size();
+    
+    double resU = calculateResolution(cluSizeU, true);
+    double resV = calculateResolution(cluSizeV, false);
+    
+    cov(0, 0) = resU * resU;
+    cov(1, 1) = resV * resV;
   }
-  size_t cluSizeU = unique_u.size();
-  size_t cluSizeV = unique_v.size();
-
-  // 分辨率估算: 单像素 = pitch/√12, 多像素 = pitch/(√12 * √N)
-  double resU = (cluSizeU > 0)
-                  ? pitchU / (std::sqrt(12.0) * std::sqrt((double)cluSizeU))
-                  : pitchU / std::sqrt(12.0);
-  double resV = (cluSizeV > 0)
-                  ? pitchV / (std::sqrt(12.0) * std::sqrt((double)cluSizeV))
-                  : pitchV / std::sqrt(12.0);
-
-  m_cov(0, 0) = resU * resU; 
-  m_cov(1, 1) = resV * resV;
-
-
-  double resX = dist_resX(gen) ;
-  double resY = dist_resY(gen) ;
-  m_cov(0, 0) = (resX*1_um) * (resX*1_um);
-  m_cov(1, 1) = (resY*1_um) * (resY*1_um);
-*/
+ 
+  // Verify the effectiveness of hitMeas and set the detector ID
+  void validateAndInitializeHitMeas(std::shared_ptr<altel::TelMeasHit> hitMeas, 
+                                   size_t& detId) {
+    if (!hitMeas) {
+      std::fprintf(stderr, "very wrong\n");
+      throw;
+    }
+    detId = hitMeas->DN;
+  }
 }
-
-
+void TelActs::initializeResolutionConfig(const std::string& configFile) {
+  if (!configFile.empty()) {
+    ResolutionConfig::getInstance().loadFromFile(configFile);
+  }
+}
+ 
+TelActs::TelSourceLink::TelSourceLink(const Acts::PlaneLayer &planeLayer, 
+                                     std::shared_ptr<altel::TelMeasHit> hitMeas)
+  : m_hitMeas(hitMeas), m_cov(Acts::BoundMatrix::Zero()), m_surface(&planeLayer) {
+  validateAndInitializeHitMeas(hitMeas, m_detId);
+  m_values << m_hitMeas->PLs[0], m_hitMeas->PLs[1];
+  setCovarianceFromClusterSize(m_cov, hitMeas);
+}
+ 
 TelActs::TelSourceLink::TelSourceLink(std::shared_ptr<altel::TelMeasHit> hitMeas,
                                       const std::map<size_t, std::shared_ptr<const Acts::PlaneLayer>>& mapDetId2PlaneLayer)
-  :m_hitMeas(hitMeas), m_cov(Acts::BoundMatrix::Zero()){
-  if(!hitMeas){
-    std::fprintf(stderr, "very wrong\n");
-    throw;
-  }
-  size_t detId = hitMeas->DN;
-  auto it = mapDetId2PlaneLayer.find(detId);
-  if(it==mapDetId2PlaneLayer.end()){
+  : m_hitMeas(hitMeas), m_cov(Acts::BoundMatrix::Zero()) {
+  validateAndInitializeHitMeas(hitMeas, m_detId);
+  
+  auto it = mapDetId2PlaneLayer.find(m_detId);
+  if(it == mapDetId2PlaneLayer.end()){
     std::fprintf(stderr, "very wrong\n");
     throw;
   }
   m_surface = it->second.get();
-
+  
   m_values << hitMeas->PLs[0], hitMeas->PLs[1];
-
-  double resX = 6_um;
-  double resY = 6_um;
-  m_cov(0, 0) = resX * resX;
-  m_cov(1, 1) = resY * resY;
-
-
-
-  /*double pitchU = 25_um;  // 像素 pitch = 25 µm 
-  double pitchV = 25_um;
-
-  // 统计 cluster 在 U 和 V 方向上的扩展
-  std::set<uint16_t> unique_u;
-  std::set<uint16_t> unique_v;
-  for (const auto& raw : hitMeas->measRaws()) {
-    unique_u.insert(raw.u());
-    unique_v.insert(raw.v());
-  }
-  size_t cluSizeU = unique_u.size();
-  size_t cluSizeV = unique_v.size();
-
-  // 分辨率估算: 单像素 = pitch/√12, 多像素 = pitch/(√12 * √N)
-  double resU = (cluSizeU > 0)
-                  ? pitchU / (std::sqrt(12.0) * std::sqrt((double)cluSizeU))
-                  : pitchU / std::sqrt(12.0);
-  double resV = (cluSizeV > 0)
-                  ? pitchV / (std::sqrt(12.0) * std::sqrt((double)cluSizeV))
-                  : pitchV / std::sqrt(12.0);
-
-  // 设置协方差矩阵 (只在局部平面位置上的 2x2 部分非零)
-  m_cov(0, 0) = resU * resU;
-  m_cov(1, 1) = resV * resV;
-
-  double resX = dist_resX(gen) ;
-  double resY = dist_resY(gen) ;
-  m_cov(0, 0) = (resX*1_um) * (resX*1_um);
-  m_cov(1, 1) = (resY*1_um) * (resY*1_um);*/
-  m_hitMeas = hitMeas;
-
+  setCovarianceFromClusterSize(m_cov, hitMeas);
 }
-
-
-/*
-std::vector<TelActs::TelSourceLink> TelActs::TelSourceLink::CreateSourceLinks(
-  const JsonValue &js,
-  const std::vector<std::shared_ptr<TelActs::TelElement>> eles)
-{
-
-  std::vector<TelActs::TelSourceLink> sourcelinks;
-  const auto &layers = js["layers"];
-  JsonAllocator jsa;
-  JsonValue js_hits(rapidjson::kArrayType);
-  for (const auto &layer : layers.GetArray()) {
-    size_t id_ext = layer["ext"].GetUint();
-    for (const auto &hit : layer["hit"].GetArray()) {
-      double x_hit = hit["pos"][0].GetDouble() - 0.02924 * 1024 / 2.0;
-      double y_hit = hit["pos"][1].GetDouble() - 0.02688 * 512 / 2.0;
-      JsonValue js_hit(rapidjson::kObjectType);
-      js_hit.AddMember("id", id_ext, jsa);
-      js_hit.AddMember("x", x_hit, jsa);
-      js_hit.AddMember("y", y_hit, jsa);
-      js_hits.PushBack(std::move(js_hit), jsa);
-    }
-  }
-
-  for(const auto &js_hit : js_hits.GetArray()) {
-    size_t id = js_hit["id"].GetUint();
-    std::shared_ptr<TelActs::TelElement> ele;
-    for(const auto& anEle: eles){
-      if(anEle->id() == id){
-        ele = anEle;
-        break;
-      }
-    }
-    if(ele){
-      Acts::Vector2D loc_hit;
-      double x = js_hit["x"].GetDouble();
-      double y = js_hit["y"].GetDouble();
-      loc_hit << x, y;
-      //////////// hit data
-      Acts::BoundMatrix cov_hit = Acts::BoundMatrix::Zero();
-      double resX = 6_um;
-      double resY = 6_um;
-      cov_hit(0, 0) = resX * resX;
-      cov_hit(1, 1) = resY * resY;
-      sourcelinks.emplace_back(ele->surface(), loc_hit, cov_hit);
-    }
-  }
-  return sourcelinks;
-}
-*/
-
