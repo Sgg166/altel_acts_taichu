@@ -54,6 +54,10 @@ void altel::TelEventTTreeReader::setTTree(TTree *pTTree){
 
   tree.SetBranchAddress("TrajVec_TrajHit_Index", &pTrajVec_Index_To_HitFit);
 
+  // 添加这两个
+  tree.SetBranchAddress("TrajVec_Chi2", &pTrajVec_Chi2);
+  tree.SetBranchAddress("TrajVec_Ndf", &pTrajVec_Ndf);
+
   // ana
   tree.SetBranchAddress("AnaVec_Matched_DetN", &pAnaVec_Matched_DetN);
   tree.SetBranchAddress("AnaVec_Matched_ResidU", &pAnaVec_Matched_ResdU);
@@ -237,6 +241,9 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
   auto it_fitHit_index = rTrajVec_Index_To_HitFit.begin();
   auto it_fitHit_index_end = rTrajVec_Index_To_HitFit.end();
 
+  auto it_trajVec_chi2 = rTrajVec_Chi2.begin();
+  auto it_trajVec_ndf = rTrajVec_Ndf.begin();
+
   // std::cout<<"loop traj"<<std::endl;
   while(it_numFitHit_PerTraj != it_numFitHit_PerTraj_end){
     auto traj = std::make_shared<altel::TelTrajectory>();
@@ -250,8 +257,15 @@ std::shared_ptr<altel::TelEvent> altel::TelEventTTreeReader::createTelEvent(size
       }
       it_fitHit_index++;
     }
-    trajs.push_back(traj);
-    it_numFitHit_PerTraj++;
+    //+++++++++
+    traj->setChi2(*it_trajVec_chi2);
+    traj->setNdf(*it_trajVec_ndf);
+    trajs.push_back(traj);//原始
+    it_numFitHit_PerTraj++;//原始
+    it_trajVec_chi2++;  // 迭代器递增
+    it_trajVec_ndf++;   // 迭代器递增
+    //trajIndex++;
+    //+++++++++++
   }
 
 
