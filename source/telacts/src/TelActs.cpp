@@ -40,6 +40,9 @@
 #include "Acts/TrackFitting/GainMatrixSmoother.hpp"
 #include "Acts/TrackFitting/GainMatrixUpdater.hpp"
 
+#include "TelSourceLink.hpp"
+
+using namespace Acts::UnitLiterals;  
 
 Acts::FreeToBoundMatrix
 TelActs::freeToCurvilinearJacobian(const Acts::Vector3D &direction) {
@@ -102,6 +105,10 @@ void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
     std::shared_ptr<altel::TelTrajectory> telTraj(new altel::TelTrajectory);
     telTraj->TN=indexTrack;
 
+ 
+    double total_chi2 = 0.0;
+    size_t nMeasurements = 0.0;
+
     // std::cout<< "================indexTrack"<< indexTrack <<std::endl;
     // std::cout<< "================tip"<< trackTips[indexTrack] <<std::endl;
     fittedStates.visitBackwards(
@@ -125,39 +132,15 @@ void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
                                                                 state.smoothed()[Acts::eBoundLoc1]);
                                    fit_pos_local_err=Acts::Vector2D(std::sqrt(state.smoothedCovariance()(Acts::eBoundLoc0, Acts::eBoundLoc0)),
                                                                    std::sqrt( state.smoothedCovariance()(Acts::eBoundLoc1, Acts::eBoundLoc1)));
-                                   freeParams = Acts::detail::transformBoundToFreeParameters(
-                                     *telSurface, gctx, state.smoothed());
-                                 
-                           /*        std::printf("=== Covariance Matrix Debug ===\n");
-                                   std::printf("Smoothed Cov(0,0): %.6f\n", state.smoothedCovariance()(0,0));
-                                   std::printf("Smoothed Cov(1,1): %.6f\n", state.smoothedCovariance()(1,1));
-                                   std::printf("Smoothed Cov(0,1): %.6f\n", state.smoothedCovariance()(0,1));
-                                   std::printf("Smoothed Cov(1,0): %.6f\n", state.smoothedCovariance()(1,0));
-                                   std::printf("fit_pos_local_err: %.8f, %.8f\n", fit_pos_local_err(0), fit_pos_local_err(1));*/
-                                  // std::printf(" %.8f , %.8f\n", fit_pos_local_err(0), fit_pos_local_err(1));
-                                   
-                                 }
-                                 // if(state.hasFiltered()){
-                                 //   fit_pos_local=Acts::Vector2D(state.filtered()[Acts::eBoundLoc0],
-                                 //                                state.filtered()[Acts::eBoundLoc1]);
-                                 //   freeParams = Acts::detail::transformBoundToFreeParameters(
-                                 //     *telSurface, gctx, state.filtered());
-                                 // }
+                                   freeParams = Acts::detail::transformBoundToFreeParameters(*telSurface, gctx, state.smoothed());                                           
+                                 }       
                                  else{
                                    fit_pos_local=Acts::Vector2D(state.predicted()[Acts::eBoundLoc0],
                                                                 state.predicted()[Acts::eBoundLoc1]);
                                    fit_pos_local_err=Acts::Vector2D(std::sqrt(state.predictedCovariance()(Acts::eBoundLoc0, Acts::eBoundLoc0)),
                                                                    std::sqrt( state.predictedCovariance()(Acts::eBoundLoc1, Acts::eBoundLoc1)));
                                    freeParams = Acts::detail::transformBoundToFreeParameters(
-                                     *telSurface, gctx, state.predicted());
-                                 
-                               /*    std::printf("=== Covariance Matrix Debug ===\n");
-                                   std::printf("Predicted Cov(0,0): %.6f\n", state.predictedCovariance()(0,0));
-                                   std::printf("Predicted Cov(1,1): %.6f\n", state.predictedCovariance()(1,1));
-                                   std::printf("Predicted Cov(0,1): %.6f\n", state.predictedCovariance()(0,1));
-                                   std::printf("Predicted Cov(1,0): %.6f\n", state.predictedCovariance()(1,0));
-                                   std::printf("fit_pos_local_err: %.8f, %.8f\n", fit_pos_local_err(0), fit_pos_local_err(1));*/
-                                  // std::printf(" %.8f , %.8f\n", fit_pos_local_err(0), fit_pos_local_err(1));
+                                     *telSurface, gctx, state.predicted());                                                                
                                  }
                                  Acts::Vector3D fit_dir_global(freeParams[Acts::eFreeDir0],
                                                                freeParams[Acts::eFreeDir1],
@@ -176,6 +159,26 @@ void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
                                    Acts::Vector2D residual_local;
                                    meas_pos_local = state.uncalibrated().value();
                                    residual_local = meas_pos_local -fit_pos_local;
+                                   
+                                   const auto& sourceLink = state.uncalibrated();
+                                   const auto& cov = sourceLink.covariance();
+
+                                   double measErrU = std::sqrt(cov(0, 0));
+                                   double measErrV = std::sqrt(cov(1, 1));
+
+                                   if(measErrU > 0 && measErrV > 0){
+                                     double resU = residual_local(0);
+                                     double resV = residual_local(1);
+
+                                     double chi2_U = (resU * resU) / (measErrU * measErrU);
+                                     double chi2_V = (resV * resV) / (measErrV * measErrV);
+
+                                     total_chi2 += chi2_U + chi2_V;
+                                     nMeasurements++;
+                                   }
+                                   
+                                   
+
                                    telMeasHit = state.uncalibrated().m_hitMeas;
                                  }
                                  std::shared_ptr<altel::TelFitHit> telFitHit;
@@ -193,6 +196,22 @@ void TelActs::fillTelTrajectories(Acts::GeometryContext& gctx,
                                  return true;
                                });
     std::reverse(telTraj->THs.begin(), telTraj->THs.end());
+    if (nMeasurements < 3) {
+    telTraj->setChi2(-1.0);
+    telTraj->setNdf(0.0);
+    telEvent->TJs.push_back(telTraj);
+    continue;
+    }
+    double ndf =  static_cast<double>(2 * nMeasurements -5);
+
+    telTraj->setChi2(total_chi2);
+    telTraj->setNdf(ndf);
+     
+    if(indexTrack < 5){
+      std::printf("Track %lu: chi2=%.2f, ndf=%.1f, chi2/ndf=%.3f, nMeas=%lu\n",
+              indexTrack, total_chi2, ndf, total_chi2/ndf, nMeasurements);
+    }
+
     telEvent->TJs.push_back(telTraj);
   }
 }
@@ -285,6 +304,7 @@ void TelActs::mergeAndMatchExtraTelEvent(std::shared_ptr<altel::TelEvent> aEvent
     size_t id = aMeasHit->DN;
 
     double bestMatchedDist = HUGE_VAL;
+   // double bestMatchedDist = 0.4;
     std::shared_ptr<altel::TelTrajHit> bestMatchedTrajHit;
     for(auto &aTraj: aEvent->TJs){
       size_t fittedHitNum = aTraj->numOriginMeasHit();
@@ -299,7 +319,8 @@ void TelActs::mergeAndMatchExtraTelEvent(std::shared_ptr<altel::TelEvent> aEvent
       Acts::Vector2D xy_meas (aMeasHit->PLs[0], aMeasHit->PLs[1]);
       Acts::Vector2D xy_resid = xy_meas - xy_fit;
       double dist = xy_resid.norm();
-      if(dist>maxMatchDist || dist>bestMatchedDist){
+
+      if(dist > maxMatchDist || dist > bestMatchedDist){
         continue;
       }
 
@@ -350,7 +371,8 @@ void TelActs::mergeAndMatchExtraTelEventForTraj(std::shared_ptr<altel::TelEvent>
         Acts::Vector2D xy_meas (aMeasHit->PLs[0], aMeasHit->PLs[1]);
         Acts::Vector2D xy_resid = xy_meas - xy_fit;
         double dist = xy_resid.norm();
-        if(dist>maxMatchDist || dist>bestMatchedDist){
+
+        if(dist > maxMatchDist ||  dist > bestMatchedDist){
           continue;
         }
         bestMatchedDist = dist;
