@@ -32,6 +32,10 @@ Usage:
   -ResolDefault     [PATH] path to resolution config JSON file
   -rootMode raw     The ROOT file is processed according to the original measurement mode.
   -rootMode traj    The ROOT files are processed according to the trajectory filtering mode.
+  -maxTrackChi2Ndf  <float_X float_Y>
+                                    reject tracks with prefit chi2/ndf above the cut
+  -maxTrackResidual <float_X float_Y>
+                                    reject tracks with max abs prefit residual above the cut [mm]
 
 
 example:
@@ -87,6 +91,8 @@ int main(int argc, char *argv[]) {
                               {"rootfile", required_argument, NULL, 'R'},
                               {"ResolDefault", required_argument,NULL, 'D'},
                               {"rootMode", required_argument, NULL, 'M'},
+                              {"maxTrackChi2Ndf", required_argument, NULL, 'C'},
+                              {"maxTrackResidual", required_argument, NULL, 'A'},
                              {0, 0, 0, 0}};
  
   std::vector<std::string> rawFilePathCol;
@@ -106,6 +112,10 @@ int main(int argc, char *argv[]) {
   std::map<uint16_t, std::pair<double, double>> mapResolDet;
   double resolDefaultU =0.03;
   double resolDefaultV =0.03;
+  double maxTrackChi2NdfX = -1.0;
+  double maxTrackChi2NdfY = -1.0;
+  double maxTrackResidualX = -1.0;
+  double maxTrackResidualY = -1.0;
  
   int c;
   opterr = 1;
@@ -182,6 +192,38 @@ int main(int argc, char *argv[]) {
     case 'M':
       rootMode = std::string(optarg);
       break;
+    case 'C':{
+      optind--;
+      std::vector<double> cutVec;
+      for( ;optind < argc && *argv[optind] != '-'; optind++){
+        cutVec.push_back(std::stod(argv[optind]));
+      }
+      if(cutVec.size()==1){
+        maxTrackChi2NdfX = cutVec[0];
+        maxTrackChi2NdfY = cutVec[0];
+      }
+      else if(cutVec.size()==2){
+        maxTrackChi2NdfX = cutVec[0];
+        maxTrackChi2NdfY = cutVec[1];
+      }
+      break;
+    }
+    case 'A':{
+      optind--;
+      std::vector<double> cutVec;
+      for( ;optind < argc && *argv[optind] != '-'; optind++){
+        cutVec.push_back(std::stod(argv[optind]));
+      }
+      if(cutVec.size()==1){
+        maxTrackResidualX = cutVec[0];
+        maxTrackResidualY = cutVec[0];
+      }
+      else if(cutVec.size()==2){
+        maxTrackResidualX = cutVec[0];
+        maxTrackResidualY = cutVec[1];
+      }
+      break;
+    }
       /////generic part below///////////
     case 0: /* getopt_long() set a variable, just keep going */
       break;
@@ -245,6 +287,8 @@ int main(int argc, char *argv[]) {
   }
   std::fprintf(stdout, "resolDetector:\n");//原数据
   //+++++++++++
+  std::fprintf(stdout, "maxTrackChi2Ndf:    [%f   %f]\n", maxTrackChi2NdfX, maxTrackChi2NdfY);
+  std::fprintf(stdout, "maxTrackResidual:   [%f   %f]\n", maxTrackResidualX, maxTrackResidualY);
  /* for(auto &[detN, resolUV]: mapResolDet){
     std::fprintf(stdout, "  det #%d:  [%f   %f]\n", detN, resolUV.first, resolUV.second);
   }*/
@@ -276,6 +320,8 @@ int main(int argc, char *argv[]) {
  
   altel::TelMille telmille;
   telmille.setGeometry(jsd_geo);
+  telmille.setTrackQualityCuts(maxTrackChi2NdfX, maxTrackChi2NdfY,
+                               maxTrackResidualX, maxTrackResidualY);
   for(auto& [detN, resolUV ]: mapResolDet){
    //++++++++++
     if (resolConfig.loaded) {
@@ -378,8 +424,9 @@ int main(int argc, char *argv[]) {
         continue;
       }
 
-      nTracks++;
-      telmille.fillTrackXYRz(js_track_filtered);
+      if(telmille.fillTrackXYRz(js_track_filtered)){
+        nTracks++;
+      }
     }
 
     // =========================================================
@@ -465,8 +512,9 @@ int main(int argc, char *argv[]) {
 
         // 必须覆盖所有几何 plane    
           if(usedDetNs.size() == geoDetNs.size()){
-            nTracks++;
-            telmille.fillTrackXYRz(js_track_filtered);
+            if(telmille.fillTrackXYRz(js_track_filtered)){
+              nTracks++;
+            }
           }
         }
       }
@@ -549,8 +597,9 @@ int main(int argc, char *argv[]) {
         continue;
       }
  
-      nTracks++;
-      telmille.fillTrackXYRz(js_track_filtered);
+      if(telmille.fillTrackXYRz(js_track_filtered)){
+        nTracks++;
+      }
     }
   }
  
